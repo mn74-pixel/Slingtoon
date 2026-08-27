@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.6.0 — Face Studio
+
+- zastąpiono automatyczne, środkowe kadrowanie pełnym lokalnym edytorem twarzy,
+- dodano przesuwanie zdjęcia palcem lub myszą, pinch-to-zoom, suwak i obrót o 90°,
+- poprawiono obsługę zdjęć z aparatu, formatów z pustym MIME oraz komunikaty błędów,
+- usunięto stałe cartoonowe oczy i usta nakładane na prawdziwą twarz,
+- reakcje avatara są teraz rysowane wokół zdjęcia, dzięki czemu twarz pozostaje czytelna,
+- dodano możliwość ponownej edycji, wymiany i usunięcia zdjęcia w tej samej sesji,
+- rozszerzono cache offline, walidację i testy o Face Studio.
+
 ## 0.5.0 — GitHub PWA
 
 - usunięto zależność od JUCE, Projucera i Xcode podczas testów,

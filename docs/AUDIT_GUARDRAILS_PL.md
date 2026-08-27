@@ -1,6 +1,6 @@
 # SlingToon — twarde ustalenia audytu
 
-**Wersja:** 0.5  
+**Wersja:** 0.6  
 **Data zamrożenia:** 27 sierpnia 2026 r. — przeniesione bez zmian funkcjonalnych do wersji PWA
 
 Ten dokument jest filtrem dla każdej kolejnej zmiany. Jeśli propozycja łamie poniższe zasady, nie trafia do głównej gałęzi bez jawnej decyzji produktowej.

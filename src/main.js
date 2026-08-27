@@ -1,6 +1,7 @@
 import { GameModel, GameMode, GamePhase, modifierName } from "./game.js";
 import { GameRenderer } from "./render.js";
 import { GameAudio } from "./audio.js";
+import { FaceStudio } from "./face-studio.js";
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -25,6 +26,17 @@ const elements = {
   instructionIcon: $("#instructionIcon"),
   instructionTitle: $("#instructionTitle"),
   statusText: $("#statusText"),
+  faceStudio: $("#faceStudio"),
+  faceBackdrop: $("#faceBackdrop"),
+  faceCanvas: $("#faceCanvas"),
+  faceCancel: $("#faceCancel"),
+  faceConfirm: $("#faceConfirm"),
+  faceRemove: $("#faceRemove"),
+  faceReplace: $("#faceReplace"),
+  faceRotate: $("#faceRotate"),
+  faceZoom: $("#faceZoom"),
+  faceStatus: $("#faceStatus"),
+  toast: $("#toast"),
 };
 
 const audio = new GameAudio();
@@ -35,6 +47,53 @@ let activePointer = null;
 let interaction = null;
 let lastFrame = performance.now();
 let resultTimer = null;
+let toastTimer = null;
+
+function showToast(message, isError = false) {
+  clearTimeout(toastTimer);
+  elements.toast.textContent = message;
+  elements.toast.classList.toggle("is-error", isError);
+  elements.toast.hidden = false;
+  toastTimer = window.setTimeout(() => {
+    elements.toast.hidden = true;
+  }, isError ? 5200 : 2800);
+}
+
+function setFaceButton(hasFace) {
+  elements.faceButton.classList.toggle("has-face", hasFace);
+  elements.faceButton.textContent = hasFace ? "✓" : "☺";
+  elements.faceButton.title = hasFace ? "Edytuj lub zmień twarz" : "Dodaj twarz lokalnie";
+  elements.faceButton.setAttribute("aria-label", hasFace ? "Edytuj lub zmień twarz" : "Dodaj twarz lokalnie");
+}
+
+const faceStudio = new FaceStudio(
+  {
+    root: elements.faceStudio,
+    backdrop: elements.faceBackdrop,
+    canvas: elements.faceCanvas,
+    cancel: elements.faceCancel,
+    confirm: elements.faceConfirm,
+    input: elements.faceInput,
+    remove: elements.faceRemove,
+    replace: elements.faceReplace,
+    rotate: elements.faceRotate,
+    status: elements.faceStatus,
+    zoom: elements.faceZoom,
+  },
+  {
+    onApply: (faceCanvas) => {
+      renderer.setFaceImage(faceCanvas);
+      setFaceButton(true);
+      showToast("Twarz gotowa — teraz naprawdę lecisz Ty.");
+    },
+    onRemove: () => {
+      renderer.setFaceImage(null);
+      setFaceButton(false);
+      showToast("Twarz usunięta z tej sesji.");
+    },
+    onError: (message) => showToast(message, true),
+  },
+);
 
 model.onEvent = (event) => {
   renderer.handleGameEvent(event);
@@ -161,21 +220,7 @@ function updateUi() {
   elements.quickMode.disabled = !controlsEnabled;
   elements.oneMoveMode.disabled = !controlsEnabled;
   elements.personality.disabled = !controlsEnabled;
-}
-
-async function loadFace(file) {
-  if (!file?.type.startsWith("image/")) return;
-  const source = URL.createObjectURL(file);
-  try {
-    const image = new Image();
-    image.src = source;
-    await image.decode();
-    renderer.setFaceImage(image);
-    elements.faceButton.textContent = "✓";
-    elements.faceButton.title = "Twarz dodana lokalnie";
-  } finally {
-    URL.revokeObjectURL(source);
-  }
+  elements.faceButton.disabled = !controlsEnabled;
 }
 
 function frame(now) {
@@ -199,8 +244,17 @@ elements.personality.addEventListener("change", (event) => {
   model.setPersonality(event.target.value);
   updateUi();
 });
-elements.faceButton.addEventListener("click", () => elements.faceInput.click());
-elements.faceInput.addEventListener("change", (event) => loadFace(event.target.files?.[0]).catch(() => {}));
+elements.faceButton.addEventListener("click", () => faceStudio.openEditor());
+elements.faceInput.addEventListener("change", async (event) => {
+  const file = event.target.files?.[0];
+  event.target.value = "";
+  if (!file) return;
+  try {
+    await faceStudio.openFile(file);
+  } catch (error) {
+    showToast(error instanceof Error ? error.message : "Nie udało się otworzyć zdjęcia.", true);
+  }
+});
 elements.soundButton.addEventListener("click", () => {
   const muted = audio.toggleMuted();
   elements.soundButton.textContent = muted ? "×" : "♪";

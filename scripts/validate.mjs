@@ -14,6 +14,7 @@ const requiredFiles = [
   "src/game.js",
   "src/render.js",
   "src/audio.js",
+  "src/face-studio.js",
   "assets/logo_slingtoon.svg",
   "assets/stage_morning_mayhem.svg",
   "assets/icon-192.png",
@@ -31,12 +32,13 @@ const requiredFiles = [
 
 await Promise.all(requiredFiles.map((file) => access(resolve(root, file))));
 
-const [html, manifestText, worker, main, game] = await Promise.all([
+const [html, manifestText, worker, main, game, faceStudio] = await Promise.all([
   readFile(resolve(root, "index.html"), "utf8"),
   readFile(resolve(root, "manifest.webmanifest"), "utf8"),
   readFile(resolve(root, "sw.js"), "utf8"),
   readFile(resolve(root, "src/main.js"), "utf8"),
   readFile(resolve(root, "src/game.js"), "utf8"),
+  readFile(resolve(root, "src/face-studio.js"), "utf8"),
 ]);
 
 const manifest = JSON.parse(manifestText);
@@ -52,14 +54,17 @@ assert.match(html, /src\/main\.js/);
 assert.match(main, /serviceWorker\.register\("\.\/sw\.js"\)/);
 assert.match(game, /replayWith\(modifier\)/);
 assert.match(game, /shot\.launchVelocity/);
+assert.match(html, /id="faceStudio"/);
+assert.match(main, /new FaceStudio/);
+assert.match(faceStudio, /createFaceCanvas\(\)/);
 
 for (const file of requiredFiles.filter((file) => !file.startsWith(".github") && !file.startsWith("docs/"))) {
   if (["package.json", ".gitignore", ".gitattributes"].includes(file)) continue;
   if (file === ".nojekyll") continue;
   const cachePath = file === "index.html" ? "./index.html" : `./${file}`;
-  if (["index.html", "styles.css", "manifest.webmanifest", "sw.js", "src/main.js", "src/game.js", "src/render.js", "src/audio.js"].includes(file) || file.startsWith("assets/")) {
+  if (["index.html", "styles.css", "manifest.webmanifest", "sw.js", "src/main.js", "src/game.js", "src/render.js", "src/audio.js", "src/face-studio.js"].includes(file) || file.startsWith("assets/")) {
     assert.ok(worker.includes(`"${cachePath}"`) || file === "sw.js", `${file} is missing from the offline app shell`);
   }
 }
 
-console.log("SlingToon Web 0.5: structure, PWA metadata and offline shell are valid.");
+console.log("SlingToon Web 0.6: structure, Face Studio, PWA metadata and offline shell are valid.");

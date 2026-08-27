@@ -40,8 +40,8 @@
             <option value="zen">Zen</option>
           </select>
         </label>
-        <button id="faceButton" class="icon-button" type="button" title="Dodaj twarz lokalnie" aria-label="Dodaj twarz lokalnie">☺</button>
-        <input id="faceInput" type="file" accept="image/*" hidden>
+        <button id="faceButton" class="icon-button face-button" type="button" title="Dodaj twarz lokalnie" aria-label="Dodaj twarz lokalnie">☺</button>
+        <input id="faceInput" type="file" accept="image/*,.heic,.heif" hidden>
         <button id="soundButton" class="icon-button" type="button" title="Wycisz dźwięk" aria-label="Wycisz dźwięk">♪</button>
       </div>
     </header>
@@ -102,10 +102,55 @@
     </main>
 
     <footer>
-      <span>SLINGTOON WEB 0.5</span>
+      <span>SLINGTOON WEB 0.6</span>
       <span>Offline PWA · GitHub Pages Ready</span>
     </footer>
   </div>
+
+  <section id="faceStudio" class="face-studio" role="dialog" aria-modal="true" aria-labelledby="faceStudioTitle" hidden>
+    <button id="faceBackdrop" class="face-studio__backdrop" type="button" aria-label="Zamknij ustawianie twarzy"></button>
+    <div class="face-studio__panel">
+      <header class="face-studio__header">
+        <div>
+          <span class="face-studio__kicker">TYLKO NA TYM URZĄDZENIU</span>
+          <h2 id="faceStudioTitle">Ustaw twarz bohatera</h2>
+        </div>
+        <button id="faceCancel" class="face-studio__close" type="button" aria-label="Anuluj">×</button>
+      </header>
+
+      <div class="face-studio__workspace">
+        <div class="face-studio__preview">
+          <canvas id="faceCanvas" width="640" height="640" aria-label="Przesuń i powiększ zdjęcie, aby ustawić twarz"></canvas>
+          <div class="face-studio__loading" aria-hidden="true">
+            <span>☺</span>
+            <strong>Ładuję twarz…</strong>
+          </div>
+          <span class="face-studio__drag-hint" aria-hidden="true">PRZESUWAJ PALCEM</span>
+        </div>
+
+        <div class="face-studio__controls">
+          <label class="face-zoom" for="faceZoom">
+            <span>MNIEJ</span>
+            <input id="faceZoom" type="range" min="1" max="4" value="1" step="0.01" aria-label="Powiększenie zdjęcia">
+            <span>WIĘCEJ</span>
+          </label>
+          <div class="face-studio__tool-row">
+            <button id="faceRotate" class="face-tool" type="button">↻ Obróć</button>
+            <button id="faceReplace" class="face-tool" type="button">▣ Inne zdjęcie</button>
+          </div>
+          <p id="faceStatus" class="face-studio__status" aria-live="polite">Przesuń zdjęcie palcem. Twarz powinna wypełnić koło.</p>
+        </div>
+      </div>
+
+      <div class="face-studio__actions">
+        <button id="faceRemove" class="face-remove" type="button" hidden>Usuń twarz</button>
+        <button id="faceConfirm" class="face-confirm" type="button">✓ Gotowe</button>
+      </div>
+      <p class="face-studio__privacy">Zdjęcie jest obrabiane lokalnie i nie trafia do internetu.</p>
+    </div>
+  </section>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
   <noscript>Do uruchomienia SlingToon potrzebna jest obsługa JavaScript.</noscript>
   <script type="module" src="src/main.js"></script>

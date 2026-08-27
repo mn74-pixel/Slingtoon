@@ -1,6 +1,8 @@
-# SlingToon Web 0.5
+# SlingToon Web 0.6
 
 An offline-capable HTML5 Canvas PWA prepared for GitHub Pages. No JUCE, Projucer or native build is required for browser testing.
+
+Version 0.6 adds a fully local Face Studio with manual crop, drag, zoom and rotation.
 
 ![SlingToon Morning Mayhem](docs/game-canvas-preview.png)
 

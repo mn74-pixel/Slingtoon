@@ -657,16 +657,21 @@ export class GameRenderer {
     if (this.faceImage) {
       ctx.save();
       ctx.beginPath();
-      ctx.arc(0, 0, 29, 0, Math.PI * 2);
+      ctx.arc(0, 0, 30, 0, Math.PI * 2);
       ctx.clip();
-      this.drawImageCover(ctx, this.faceImage, -31, -31, 62, 62);
+      this.drawImageCover(ctx, this.faceImage, -30, -30, 60, 60);
+      const photoLight = ctx.createLinearGradient(-24, -28, 26, 30);
+      photoLight.addColorStop(0, "rgba(255,255,255,0.12)");
+      photoLight.addColorStop(0.55, "rgba(255,255,255,0)");
+      photoLight.addColorStop(1, "rgba(28,15,40,0.12)");
+      ctx.fillStyle = photoLight;
+      ctx.fillRect(-31, -31, 62, 62);
       ctx.restore();
-      ctx.globalAlpha = 0.22;
-      ctx.fillStyle = "#ffbd86";
+      ctx.strokeStyle = "rgba(255, 245, 217, 0.76)";
+      ctx.lineWidth = 2.5;
       ctx.beginPath();
-      ctx.arc(0, 0, 29, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.globalAlpha = 1;
+      ctx.arc(0, 0, 30, 0, Math.PI * 2);
+      ctx.stroke();
     } else {
       const shade = ctx.createLinearGradient(-26, -20, 28, 27);
       shade.addColorStop(0, "rgba(255,255,255,0.20)");
@@ -677,7 +682,8 @@ export class GameRenderer {
       ctx.fill();
     }
 
-    this.drawExpression(ctx, expression);
+    if (this.faceImage) this.drawPhotoReaction(ctx, expression);
+    else this.drawExpression(ctx, expression);
 
     if (personality === Personality.PANIC) {
       ctx.strokeStyle = PALETTE.ink;
@@ -769,6 +775,65 @@ export class GameRenderer {
       ctx.arc(0, 7, 9, 0.16 * Math.PI, 0.84 * Math.PI);
     }
     ctx.stroke();
+  }
+
+  drawPhotoReaction(ctx, expression) {
+    const shocked = expression === "panic" || expression === "impact";
+    const victory = expression === "victory";
+    const defeat = expression === "defeat";
+    const nervous = expression === "nervous" || expression === "airborne";
+
+    ctx.save();
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.strokeStyle = PALETTE.ink;
+    ctx.lineWidth = 4;
+
+    if (shocked || nervous) {
+      ctx.fillStyle = shocked ? PALETTE.violetBright : "#87e7f5";
+      ctx.beginPath();
+      ctx.moveTo(27, -28);
+      ctx.quadraticCurveTo(41, -14, 30, -6);
+      ctx.quadraticCurveTo(18, -12, 27, -28);
+      ctx.fill();
+      ctx.stroke();
+    }
+
+    if (shocked) {
+      ctx.strokeStyle = PALETTE.gold;
+      ctx.lineWidth = 4.5;
+      for (const [x1, y1, x2, y2] of [[-38, -26, -48, -35], [-42, 1, -55, 2], [37, 9, 50, 15]]) {
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+      }
+    } else if (victory) {
+      ctx.fillStyle = PALETTE.gold;
+      for (const [x, y, radius] of [[-31, -27, 8], [32, -19, 6]]) {
+        ctx.beginPath();
+        for (let point = 0; point < 8; point += 1) {
+          const r = point % 2 === 0 ? radius : radius * 0.42;
+          const angle = -Math.PI / 2 + (point * Math.PI) / 4;
+          const px = x + Math.cos(angle) * r;
+          const py = y + Math.sin(angle) * r;
+          if (point === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      }
+    } else if (defeat) {
+      ctx.strokeStyle = PALETTE.coral;
+      ctx.lineWidth = 4.5;
+      ctx.beginPath();
+      ctx.moveTo(-24, 32);
+      ctx.quadraticCurveTo(-12, 39, 0, 32);
+      ctx.quadraticCurveTo(13, 25, 25, 33);
+      ctx.stroke();
+    }
+    ctx.restore();
   }
 
   drawPersonalityFront(ctx, personality) {
