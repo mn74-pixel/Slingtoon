@@ -4,8 +4,9 @@
 2. Utwórz na GitHubie puste repozytorium, np. `slingtoon`.
 3. Wgraj **wszystkie pliki i katalogi znajdujące się wewnątrz paczki**. Plik `index.html` musi być widoczny w głównym widoku repozytorium.
 4. Otwórz `Settings → Pages`.
-5. W sekcji `Build and deployment` ustaw `Source: GitHub Actions`.
-6. Wejdź w kartę `Actions` i poczekaj na zielone zakończenie `Deploy SlingToon to GitHub Pages`.
+5. W sekcji `Build and deployment` ustaw `Source: Deploy from a branch`.
+6. Wybierz `main` oraz `/(root)` i kliknij `Save`.
+7. Wejdź w kartę `Actions` i poczekaj na zielone zakończenie `pages build and deployment`.
 
 Gra będzie dostępna pod adresem podobnym do:
 

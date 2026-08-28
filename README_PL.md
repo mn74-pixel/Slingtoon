@@ -1,4 +1,4 @@
-# SlingToon Web 0.6 — GitHub Pages / PWA
+# SlingToon Web 0.7 — GitHub Pages / PWA
 
 Samodzielna gra webowa przygotowana w tym samym modelu publikacji co Castle Conflict. Do uruchomienia i wdrożenia nie potrzeba JUCE, Projucera ani Xcode.
 
@@ -21,10 +21,11 @@ Nie uruchamiaj gry przez dwukrotne kliknięcie `index.html`. Lokalny serwer jest
 1. Utwórz puste repozytorium, np. `slingtoon`.
 2. Wgraj **zawartość tego katalogu** do głównego katalogu repozytorium. `index.html` musi znajdować się w root.
 3. Wejdź w `Settings → Pages`.
-4. W `Build and deployment → Source` wybierz `GitHub Actions`.
-5. Po wypchnięciu zmian workflow sprawdzi projekt i opublikuje grę.
+4. W `Build and deployment → Source` wybierz `Deploy from a branch`.
+5. Ustaw `main` oraz `/(root)`, a następnie kliknij `Save`.
+6. Po każdym nowym wgraniu plików poczekaj na zakończenie publikacji w karcie `Actions`.
 
-Workflow sam tworzy czysty katalog publikacyjny `dist/`; do GitHub Pages nie trafiają testy ani dokumentacja deweloperska.
+Paczka zawiera również workflow dla pracy z Git, ale do prostego wgrywania plików przez stronę GitHub wystarcza publikacja z `main / (root)`.
 
 Adres będzie miał postać:
 
@@ -45,7 +46,8 @@ Gra uruchamia się pełnoekranowo i po pierwszym wczytaniu działa offline.
 - `Quick Sling`: złap bohatera, naciągnij i puść.
 - `One Move`: najpierw przesuń trampolinę dokładnie raz, następnie oddaj strzał.
 - Po porażce `What If?` automatycznie powtarza ten sam zapisany strzał z jednym zmienionym prawem fizyki.
-- Przycisk `☺` otwiera lokalne Face Studio: zdjęcie można przesunąć, powiększyć i obrócić przed zatwierdzeniem. Plik nie jest wysyłany.
+- Przycisk `☺` najpierw otwiera lokalne Face Studio. Dopiero wewnątrz wybierasz zdjęcie, a następnie przesuwasz, powiększasz lub obracasz je przed zatwierdzeniem. Plik nie jest wysyłany.
+- Na telefonie gra jest przeznaczona do pozycji poziomej; cały interfejs automatycznie dopasowuje się do widocznej wysokości Safari.
 
 ## Testy
 

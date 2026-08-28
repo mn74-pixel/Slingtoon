@@ -1,8 +1,8 @@
-# SlingToon Web 0.6
+# SlingToon Web 0.7
 
 An offline-capable HTML5 Canvas PWA prepared for GitHub Pages. No JUCE, Projucer or native build is required for browser testing.
 
-Version 0.6 adds a fully local Face Studio with manual crop, drag, zoom and rotation.
+Version 0.7 fits the full game into short landscape phone viewports and hardens the local Face Studio flow for mobile Safari.
 
 ![SlingToon Morning Mayhem](docs/game-canvas-preview.png)
 
@@ -22,6 +22,6 @@ npm run check
 
 ## Deploy
 
-Push the repository contents with `index.html` at repository root, then select `Settings → Pages → Source → GitHub Actions`. The included workflow validates and deploys the static project.
+Push the repository contents with `index.html` at repository root, then select `Settings → Pages → Deploy from a branch → main → /(root)`. The included workflows remain available for Git-based development.
 
 See `README_PL.md` for full instructions and `docs/MIGRATION_PLAN_PL.md` for the native migration gates.

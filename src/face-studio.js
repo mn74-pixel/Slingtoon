@@ -53,6 +53,11 @@ function imageFromSource(source) {
   });
 }
 
+function imageFromFile(file) {
+  const objectUrl = URL.createObjectURL(file);
+  return imageFromSource(objectUrl).finally(() => URL.revokeObjectURL(objectUrl));
+}
+
 async function decodeImage(file) {
   if (typeof createImageBitmap === "function") {
     try {
@@ -61,7 +66,12 @@ async function decodeImage(file) {
       // Safari supports some camera formats only through HTMLImageElement.
     }
   }
-  return imageFromSource(await fileToDataUrl(file));
+  try {
+    return await imageFromFile(file);
+  } catch {
+    // Data URLs are slower, but remain a useful fallback for older mobile Safari builds.
+    return imageFromSource(await fileToDataUrl(file));
+  }
 }
 
 function imageSize(image) {
@@ -121,7 +131,7 @@ export class FaceStudio {
       this.clampTransform();
       this.render();
     });
-    replace.addEventListener("click", () => this.elements.input.click());
+    replace.addEventListener("click", () => this.requestFile());
     confirm.addEventListener("click", () => this.apply());
     remove.addEventListener("click", () => this.remove());
     cancel.addEventListener("click", () => this.cancel());
@@ -132,12 +142,17 @@ export class FaceStudio {
   }
 
   openEditor() {
-    if (!this.sourceImage) {
-      this.elements.input.click();
-      return;
-    }
     this.beginSession();
     this.show();
+    this.setBusy(false, this.sourceImage
+      ? "Przesuń zdjęcie palcem. Twarz powinna wypełnić koło."
+      : "Wybierz zdjęcie, a potem ustaw twarz w żółtym kole.");
+  }
+
+  requestFile() {
+    // Reset before opening so choosing the same photo twice still fires `change` on iOS.
+    this.elements.input.value = "";
+    this.elements.input.click();
   }
 
   async openFile(file) {
@@ -162,12 +177,15 @@ export class FaceStudio {
       this.clampTransform();
       this.elements.zoom.value = String(this.zoom);
       this.elements.remove.hidden = !this.hasAppliedFace;
+      this.updateReplaceLabel();
       this.setBusy(false, "Przesuń zdjęcie palcem. Twarz powinna wypełnić koło.");
       this.render();
     } catch (error) {
       this.restoreSnapshot();
-      this.snapshot = null;
-      this.hide();
+      const message = error instanceof Error ? error.message : "Nie udało się otworzyć zdjęcia.";
+      this.setBusy(false, message);
+      this.updateReplaceLabel();
+      this.render();
       throw error;
     }
   }
@@ -188,8 +206,19 @@ export class FaceStudio {
     document.body.classList.add("face-studio-open");
     this.elements.remove.hidden = !this.hasAppliedFace;
     this.elements.confirm.disabled = !this.sourceImage;
-    requestAnimationFrame(() => this.elements.cancel.focus({ preventScroll: true }));
+    this.updateReplaceLabel();
+    requestAnimationFrame(() => {
+      try {
+        this.elements.cancel.focus({ preventScroll: true });
+      } catch {
+        this.elements.cancel.focus();
+      }
+    });
     this.render();
+  }
+
+  updateReplaceLabel() {
+    this.elements.replace.textContent = this.sourceImage ? "▣ Inne zdjęcie" : "▣ Wybierz zdjęcie";
   }
 
   hide() {
@@ -240,12 +269,13 @@ export class FaceStudio {
   }
 
   setBusy(isBusy, message) {
+    const editingUnavailable = isBusy || !this.sourceImage;
     this.elements.root.classList.toggle("is-loading", isBusy);
     this.elements.status.textContent = message;
-    this.elements.confirm.disabled = isBusy || !this.sourceImage;
-    this.elements.rotate.disabled = isBusy;
+    this.elements.confirm.disabled = editingUnavailable;
+    this.elements.rotate.disabled = editingUnavailable;
     this.elements.replace.disabled = isBusy;
-    this.elements.zoom.disabled = isBusy;
+    this.elements.zoom.disabled = editingUnavailable;
   }
 
   clampTransform() {
@@ -333,6 +363,17 @@ export class FaceStudio {
     gradient.addColorStop(1, "#231a3b");
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, PREVIEW_SIZE, PREVIEW_SIZE);
+    if (!this.sourceImage) {
+      ctx.save();
+      ctx.textAlign = "center";
+      ctx.fillStyle = "rgba(255, 211, 95, 0.92)";
+      ctx.font = "900 112px system-ui, sans-serif";
+      ctx.fillText("☺", PREVIEW_SIZE / 2, PREVIEW_SIZE / 2 + 18);
+      ctx.fillStyle = "rgba(255, 245, 217, 0.72)";
+      ctx.font = "900 22px system-ui, sans-serif";
+      ctx.fillText("WYBIERZ ZDJĘCIE", PREVIEW_SIZE / 2, PREVIEW_SIZE / 2 + 82);
+      ctx.restore();
+    }
   }
 
   render() {

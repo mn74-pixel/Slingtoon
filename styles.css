@@ -180,6 +180,8 @@ footer,
   white-space: nowrap;
 }
 
+.pill__icon { margin-right: 4px; }
+
 .pill--active {
   border-color: rgba(255, 255, 255, 0.17);
   background: linear-gradient(135deg, var(--violet), #654ccb);
@@ -897,8 +899,9 @@ noscript {
 
 @media (max-width: 620px) {
   .brand-logo { width: 145px; }
-  .top-actions .pill { font-size: 0; width: 38px; padding: 0; }
-  .top-actions .pill::first-letter { font-size: 14px; }
+  .top-actions .pill { width: 38px; padding: 0; }
+  .top-actions .pill__label { display: none; }
+  .top-actions .pill__icon { margin: 0; font-size: 14px; }
   .select-wrap { display: none; }
   .mission-copy h1 { max-width: 55vw; font-size: 14px; }
   .mission-badge:first-child { display: none; }
@@ -907,6 +910,171 @@ noscript {
   .instruction strong { font-size: 11px; }
   .instruction span:last-child { font-size: 10px; }
   .restart-button { padding-inline: 10px; font-size: 10px; }
+}
+
+/* iPhone and other short landscape screens: fit the complete game into one viewport. */
+@media (orientation: landscape) and (max-height: 560px) {
+  html,
+  body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .app-shell {
+    width: min(100%, calc(200dvh - 296px));
+    min-height: 0;
+    height: 100dvh;
+    padding: max(4px, env(safe-area-inset-top)) max(7px, env(safe-area-inset-right)) max(4px, env(safe-area-inset-bottom)) max(7px, env(safe-area-inset-left));
+    grid-template-rows: 38px minmax(0, 1fr);
+    gap: 4px;
+  }
+
+  .topbar {
+    min-height: 38px;
+    height: 38px;
+    gap: 7px;
+  }
+
+  .brand-logo { width: 96px; }
+  .brand-copy,
+  footer { display: none; }
+
+  .top-actions { gap: 4px; }
+  .pill {
+    width: 32px;
+    min-height: 32px;
+    height: 32px;
+    padding: 0;
+  }
+  .pill__label { display: none; }
+  .pill__icon { margin: 0; font-size: 12px; }
+  .select-wrap {
+    min-height: 32px;
+    height: 32px;
+    padding: 3px 7px;
+    display: grid;
+    border-radius: 11px;
+  }
+  .select-wrap > span { display: none; }
+  .select-wrap select {
+    max-width: 90px;
+    padding-right: 13px;
+    font-size: 9px;
+  }
+  .icon-button {
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+  }
+
+  main {
+    min-height: 0;
+    align-items: center;
+  }
+
+  .game-card { border-radius: 14px; }
+  .mission-strip {
+    min-height: 40px;
+    height: 40px;
+    padding: 4px 11px;
+    gap: 8px;
+  }
+  .mission-kicker { font-size: 7px; }
+  .mission-copy h1 {
+    max-width: none;
+    margin-top: 1px;
+    font-size: 12px;
+  }
+  .mission-badge {
+    min-width: 58px;
+    padding: 5px 7px;
+    font-size: 8px;
+  }
+  .mission-badge:first-child { display: none; }
+
+  .stage {
+    min-height: 0;
+    aspect-ratio: 2 / 1;
+  }
+
+  .status-row {
+    min-height: 38px;
+    height: 38px;
+    padding: 3px 8px;
+    gap: 6px;
+  }
+  .instruction { gap: 7px; }
+  .instruction-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 9px;
+    font-size: 15px;
+  }
+  .instruction strong { font-size: 9px; }
+  .instruction span:last-child { font-size: 8px; }
+  .privacy-note { display: none; }
+  .restart-button {
+    min-height: 29px;
+    padding-inline: 9px;
+    font-size: 9px;
+  }
+
+  .result-panel {
+    width: min(390px, 82%);
+    padding: 13px;
+    border-width: 2px;
+    border-radius: 18px;
+  }
+  .result-tag { margin-bottom: 4px; padding: 4px 9px; font-size: 9px; }
+  .result-panel h2 { font-size: 18px; }
+  .result-panel p { margin: 6px 0 9px; font-size: 10px; }
+  .cta { min-height: 34px; padding-inline: 14px; font-size: 10px; }
+
+  .face-studio {
+    padding: max(4px, env(safe-area-inset-top)) max(7px, env(safe-area-inset-right)) max(4px, env(safe-area-inset-bottom)) max(7px, env(safe-area-inset-left));
+  }
+  .face-studio__panel {
+    width: min(760px, 100%);
+    max-height: calc(100dvh - 8px);
+    padding: 10px 14px;
+    border-radius: 18px;
+  }
+  .face-studio__header { margin-bottom: 7px; }
+  .face-studio__header h2 { font-size: 20px; }
+  .face-studio__kicker { font-size: 8px; }
+  .face-studio__close {
+    width: 32px;
+    height: 32px;
+    font-size: 21px;
+  }
+  .face-studio__workspace {
+    grid-template-columns: minmax(180px, 54dvh) minmax(210px, 1fr);
+    gap: 16px;
+  }
+  .face-studio__preview {
+    width: min(54dvh, 250px);
+    border-radius: 17px;
+  }
+  .face-studio__controls { gap: 10px; }
+  .face-studio__status { min-height: 0; font-size: 10px; }
+  .face-tool,
+  .face-remove,
+  .face-confirm {
+    min-height: 36px;
+    font-size: 10px;
+  }
+  .face-studio__actions { margin-top: 8px; }
+  .face-studio__privacy { margin-top: 5px; font-size: 8px; }
+}
+
+@media (orientation: landscape) and (max-height: 370px) {
+  .brand-block { display: none; }
+  .topbar { justify-content: center; }
+  .top-actions {
+    width: 100%;
+    justify-content: center;
+  }
 }
 
 @media (orientation: portrait) and (max-width: 520px) {

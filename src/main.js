@@ -1,7 +1,7 @@
-import { GameModel, GameMode, GamePhase, modifierName } from "./game.js";
-import { GameRenderer } from "./render.js";
-import { GameAudio } from "./audio.js";
-import { FaceStudio } from "./face-studio.js";
+import { GameModel, GameMode, GamePhase, modifierName } from "./game.js?v=0.7.0";
+import { GameRenderer } from "./render.js?v=0.7.0";
+import { GameAudio } from "./audio.js?v=0.7.0";
+import { FaceStudio } from "./face-studio.js?v=0.7.0";
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -247,12 +247,13 @@ elements.personality.addEventListener("change", (event) => {
 elements.faceButton.addEventListener("click", () => faceStudio.openEditor());
 elements.faceInput.addEventListener("change", async (event) => {
   const file = event.target.files?.[0];
-  event.target.value = "";
   if (!file) return;
   try {
     await faceStudio.openFile(file);
   } catch (error) {
     showToast(error instanceof Error ? error.message : "Nie udało się otworzyć zdjęcia.", true);
+  } finally {
+    event.target.value = "";
   }
 });
 elements.soundButton.addEventListener("click", () => {
@@ -270,7 +271,7 @@ elements.whatIfButton.addEventListener("click", () => {
 });
 
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
-  window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(() => {}));
+  window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js?v=0.7.0").catch(() => {}));
 }
 
 renderer

@@ -1,14 +1,14 @@
-# SlingToon Web 0.6.0 — Release Manifest
+# SlingToon Web 0.7.0 — Release Manifest
 
 **Format:** statyczna gra HTML5 Canvas / PWA  
 **Publikacja:** GitHub Pages  
-**Data:** 27 sierpnia 2026 r.
+**Data:** 28 sierpnia 2026 r.
 
 ## Zawartość
 
 - modułowy kod JavaScript bez zależności runtime,
 - lokalne Face Studio z kadrowaniem, zoomem i obrotem zdjęcia,
-- responsywny interfejs HTML/CSS,
+- responsywny interfejs HTML/CSS mieszczący całą grę w poziomym ekranie telefonu,
 - grafika SVG i ikony PNG,
 - service worker i manifest instalacyjny,
 - workflow walidacji i publikacji GitHub Pages,
@@ -24,6 +24,8 @@
 - rzeczywista zmiana fizyki dla wszystkich czterech What If,
 - różne ekspresje i komentarze osobowości,
 - bezpieczne kadrowanie twarzy bez pustych krawędzi oraz obsługa zdjęć z aparatu,
+- mobilny przepływ Face Studio: otwarcie edytora, wybór i ponowny wybór zdjęcia,
+- wersjonowanie zasobów i cache zapobiegające uruchamianiu starej wersji po publikacji,
 - render sceny bazowej i zwycięstwa do obrazu kontrolnego,
 - czysty artefakt statyczny `dist/` oraz test jego serwowania po HTTP.
 

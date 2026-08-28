@@ -1,14 +1,14 @@
-const CACHE_NAME = "slingtoon-web-0.6.0";
+const CACHE_NAME = "slingtoon-web-0.7.0";
 const APP_SHELL = [
   "./",
   "./index.html",
-  "./styles.css",
-  "./manifest.webmanifest",
-  "./src/main.js",
-  "./src/game.js",
-  "./src/render.js",
-  "./src/audio.js",
-  "./src/face-studio.js",
+  "./styles.css?v=0.7.0",
+  "./manifest.webmanifest?v=0.7.0",
+  "./src/main.js?v=0.7.0",
+  "./src/game.js?v=0.7.0",
+  "./src/render.js?v=0.7.0",
+  "./src/audio.js?v=0.7.0",
+  "./src/face-studio.js?v=0.7.0",
   "./assets/logo_slingtoon.svg",
   "./assets/stage_morning_mayhem.svg",
   "./assets/icon-192.png",

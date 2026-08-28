@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.7.0 — Mobile Fit + Safari Face Studio
+
+- dopasowano całą planszę, pasek misji i sterowanie do jednego poziomego ekranu telefonu,
+- dodano osobny zwarty układ dla niskich viewportów Safari z uwzględnieniem bezpiecznych krawędzi i dynamicznego paska adresu,
+- Face Studio otwiera się teraz od razu po stuknięciu ikony twarzy, przed wyborem zdjęcia,
+- dodano wyraźny przycisk `Wybierz zdjęcie`, pusty ekran startowy i możliwość ponownego wskazania tego samego pliku,
+- wczytywanie zdjęć używa oszczędniejszego Blob URL z awaryjnym Data URL dla starszego Safari,
+- błędne zdjęcie nie zamyka już edytora, lecz pozostawia czytelny komunikat i możliwość ponownego wyboru,
+- podbito wersję cache oraz dodano wersjonowane adresy CSS/JS, aby iPhone nie uruchamiał starego interfejsu 0.5,
+- uproszczono instrukcję publikacji przez `main / (root)`, zgodną z aktualnym ustawieniem repozytorium.
+
 ## 0.6.0 — Face Studio
 
 - zastąpiono automatyczne, środkowe kadrowanie pełnym lokalnym edytorem twarzy,
