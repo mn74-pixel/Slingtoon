@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.8.0 — Local Cartoon Face
+
+- dodano lokalny proces przekształcania fotografii w twarz komiksową,
+- filtr łączy wieloprzebiegowe wygładzenie, ograniczenie palety, grading kolorów oraz kontury typu ink,
+- Face Studio pokazuje okrągły podgląd rezultatu jeszcze przed zatwierdzeniem,
+- dodano suwak siły efektu Cartoon z domyślnym ustawieniem 78%,
+- ostateczny avatar używa przetworzonego obrazu 512×512, a nie zwykłej fotografii,
+- wszystkie obliczenia pozostają na urządzeniu; nie dodano serwera ani generatywnego AI,
+- dodano testy zachowania kanału alpha, realnej zmiany obrazu, konturów i budżetu wydajności,
+- podbito wersję cache PWA, aby urządzenia nie uruchamiały starego Face Studio.
+
 ## 0.7.0 — Mobile Fit + Safari Face Studio
 
 - dopasowano całą planszę, pasek misji i sterowanie do jednego poziomego ekranu telefonu,

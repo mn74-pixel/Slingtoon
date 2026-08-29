@@ -14,6 +14,7 @@ const requiredFiles = [
   "src/game.js",
   "src/render.js",
   "src/audio.js",
+  "src/cartoon.js",
   "src/face-studio.js",
   "assets/logo_slingtoon.svg",
   "assets/stage_morning_mayhem.svg",
@@ -32,7 +33,7 @@ const requiredFiles = [
 
 await Promise.all(requiredFiles.map((file) => access(resolve(root, file))));
 
-const [html, css, manifestText, worker, main, game, faceStudio] = await Promise.all([
+const [html, css, manifestText, worker, main, game, faceStudio, cartoon] = await Promise.all([
   readFile(resolve(root, "index.html"), "utf8"),
   readFile(resolve(root, "styles.css"), "utf8"),
   readFile(resolve(root, "manifest.webmanifest"), "utf8"),
@@ -40,6 +41,7 @@ const [html, css, manifestText, worker, main, game, faceStudio] = await Promise.
   readFile(resolve(root, "src/main.js"), "utf8"),
   readFile(resolve(root, "src/game.js"), "utf8"),
   readFile(resolve(root, "src/face-studio.js"), "utf8"),
+  readFile(resolve(root, "src/cartoon.js"), "utf8"),
 ]);
 
 const manifest = JSON.parse(manifestText);
@@ -52,13 +54,17 @@ assert.ok(manifest.icons.some((icon) => icon.purpose === "maskable"));
 assert.match(html, /<canvas id="gameCanvas"/);
 assert.match(html, /manifest\.webmanifest/);
 assert.match(html, /src\/main\.js/);
-assert.match(main, /serviceWorker\.register\("\.\/sw\.js\?v=0\.7\.0"\)/);
+assert.match(main, /serviceWorker\.register\("\.\/sw\.js\?v=0\.8\.0"\)/);
 assert.match(game, /replayWith\(modifier\)/);
 assert.match(game, /shot\.launchVelocity/);
 assert.match(html, /id="faceStudio"/);
+assert.match(html, /id="faceStylePreview"/);
+assert.match(html, /id="faceStyleStrength"/);
 assert.match(main, /new FaceStudio/);
 assert.match(faceStudio, /createFaceCanvas\(\)/);
 assert.match(faceStudio, /requestFile\(\)/);
+assert.match(faceStudio, /cartoonizeCanvas/);
+assert.match(cartoon, /cartoonizePixels/);
 assert.match(css, /orientation:\s*landscape[^}]*max-height:\s*560px/);
 assert.match(css, /width:\s*min\(100%,\s*calc\(200dvh - 296px\)\)/);
 
@@ -78,11 +84,11 @@ for (const file of requiredFiles.filter((file) => !file.startsWith(".github") &&
   if (["package.json", ".gitignore", ".gitattributes"].includes(file)) continue;
   if (file === ".nojekyll") continue;
   const cachePath = file === "index.html" ? "./index.html" : `./${file}`;
-  if (["index.html", "styles.css", "manifest.webmanifest", "sw.js", "src/main.js", "src/game.js", "src/render.js", "src/audio.js", "src/face-studio.js"].includes(file) || file.startsWith("assets/")) {
+  if (["index.html", "styles.css", "manifest.webmanifest", "sw.js", "src/main.js", "src/game.js", "src/render.js", "src/audio.js", "src/cartoon.js", "src/face-studio.js"].includes(file) || file.startsWith("assets/")) {
     const exactPath = worker.includes(`"${cachePath}"`);
     const versionedPath = worker.includes(`"${cachePath}?v=`);
     assert.ok(exactPath || versionedPath || file === "sw.js", `${file} is missing from the offline app shell`);
   }
 }
 
-console.log("SlingToon Web 0.7: mobile viewport, Face Studio, PWA metadata and offline shell are valid.");
+console.log("SlingToon Web 0.8: local Cartoon Face Studio, mobile viewport, PWA metadata and offline shell are valid.");

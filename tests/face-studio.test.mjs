@@ -108,6 +108,9 @@ test("Face Studio opens before the iOS photo picker and can reselect the same fi
       replace,
       rotate: elementMock(),
       status: elementMock(),
+      styleCanvas: canvasMock(),
+      styleStrength: elementMock({ value: "0.78" }),
+      styleValue: elementMock(),
       zoom: elementMock({ value: "1" }),
     });
 

@@ -1,3 +1,9 @@
+import {
+  DEFAULT_CARTOON_STRENGTH,
+  cartoonizeCanvas,
+  normalizeCartoonStrength,
+} from "./cartoon.js?v=0.8.0";
+
 const PREVIEW_SIZE = 640;
 const CROP_RADIUS = 248;
 const OUTPUT_SIZE = 512;
@@ -104,6 +110,8 @@ export class FaceStudio {
     this.zoom = MIN_ZOOM;
     this.offsetX = 0;
     this.offsetY = 0;
+    this.cartoonStrength = normalizeCartoonStrength(elements.styleStrength?.value ?? DEFAULT_CARTOON_STRENGTH);
+    this.cartoonPreviewTimer = null;
     this.hasAppliedFace = false;
     this.snapshot = null;
     this.pointers = new Map();
@@ -112,10 +120,12 @@ export class FaceStudio {
     this.pinchStartZoom = MIN_ZOOM;
     this.bindEvents();
     this.renderEmpty();
+    this.updateCartoonUi();
+    this.renderCartoonPreview();
   }
 
   bindEvents() {
-    const { canvas, backdrop, cancel, confirm, rotate, remove, replace, zoom } = this.elements;
+    const { canvas, backdrop, cancel, confirm, rotate, remove, replace, styleStrength, zoom } = this.elements;
     canvas.addEventListener("pointerdown", (event) => this.pointerDown(event));
     canvas.addEventListener("pointermove", (event) => this.pointerMove(event));
     canvas.addEventListener("pointerup", (event) => this.pointerUp(event));
@@ -125,11 +135,18 @@ export class FaceStudio {
       this.zoom = Number(zoom.value);
       this.clampTransform();
       this.render();
+      this.scheduleCartoonPreview();
     });
     rotate.addEventListener("click", () => {
       this.quarterTurns = (this.quarterTurns + 1) % 4;
       this.clampTransform();
       this.render();
+      this.scheduleCartoonPreview(0);
+    });
+    styleStrength.addEventListener("input", () => {
+      this.cartoonStrength = normalizeCartoonStrength(styleStrength.value);
+      this.updateCartoonUi();
+      this.scheduleCartoonPreview(20);
     });
     replace.addEventListener("click", () => this.requestFile());
     confirm.addEventListener("click", () => this.apply());
@@ -180,12 +197,14 @@ export class FaceStudio {
       this.updateReplaceLabel();
       this.setBusy(false, "Przesuń zdjęcie palcem. Twarz powinna wypełnić koło.");
       this.render();
+      this.scheduleCartoonPreview(0);
     } catch (error) {
       this.restoreSnapshot();
       const message = error instanceof Error ? error.message : "Nie udało się otworzyć zdjęcia.";
       this.setBusy(false, message);
       this.updateReplaceLabel();
       this.render();
+      this.scheduleCartoonPreview(0);
       throw error;
     }
   }
@@ -198,6 +217,7 @@ export class FaceStudio {
       zoom: this.zoom,
       offsetX: this.offsetX,
       offsetY: this.offsetY,
+      cartoonStrength: this.cartoonStrength,
     };
   }
 
@@ -215,6 +235,7 @@ export class FaceStudio {
       }
     });
     this.render();
+    this.scheduleCartoonPreview(0);
   }
 
   updateReplaceLabel() {
@@ -222,6 +243,8 @@ export class FaceStudio {
   }
 
   hide() {
+    clearTimeout(this.cartoonPreviewTimer);
+    this.cartoonPreviewTimer = null;
     this.elements.root.hidden = true;
     document.body.classList.remove("face-studio-open");
     this.pointers.clear();
@@ -241,18 +264,28 @@ export class FaceStudio {
     }
     Object.assign(this, this.snapshot);
     this.elements.zoom.value = String(this.zoom);
+    this.updateCartoonUi();
+    this.scheduleCartoonPreview(0);
   }
 
-  apply() {
+  async apply() {
     if (!this.sourceImage) return;
-    const face = this.createFaceCanvas();
-    if (this.snapshot?.sourceImage && this.snapshot.sourceImage !== this.sourceImage && typeof this.snapshot.sourceImage.close === "function") {
-      this.snapshot.sourceImage.close();
+    this.setBusy(true, "Rysuję komiksową twarz…");
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    try {
+      const face = this.createFaceCanvas();
+      if (this.snapshot?.sourceImage && this.snapshot.sourceImage !== this.sourceImage && typeof this.snapshot.sourceImage.close === "function") {
+        this.snapshot.sourceImage.close();
+      }
+      this.hasAppliedFace = true;
+      this.snapshot = null;
+      this.onApply(face);
+      this.hide();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Nie udało się narysować twarzy Cartoon.";
+      this.setBusy(false, message);
+      this.onError(message);
     }
-    this.hasAppliedFace = true;
-    this.snapshot = null;
-    this.onApply(face);
-    this.hide();
   }
 
   remove() {
@@ -264,6 +297,7 @@ export class FaceStudio {
     this.offsetX = 0;
     this.offsetY = 0;
     this.quarterTurns = 0;
+    this.renderCartoonPreview();
     this.onRemove();
     this.hide();
   }
@@ -275,6 +309,7 @@ export class FaceStudio {
     this.elements.confirm.disabled = editingUnavailable;
     this.elements.rotate.disabled = editingUnavailable;
     this.elements.replace.disabled = isBusy;
+    this.elements.styleStrength.disabled = editingUnavailable;
     this.elements.zoom.disabled = editingUnavailable;
   }
 
@@ -320,6 +355,7 @@ export class FaceStudio {
     }
     this.clampTransform();
     this.render();
+    this.scheduleCartoonPreview();
   }
 
   pointerUp(event) {
@@ -328,6 +364,7 @@ export class FaceStudio {
     if (this.elements.canvas.hasPointerCapture(event.pointerId)) this.elements.canvas.releasePointerCapture(event.pointerId);
     if (this.pointers.size === 1) this.lastDragPoint = [...this.pointers.values()][0];
     else this.lastDragPoint = null;
+    this.scheduleCartoonPreview(0);
   }
 
   wheel(event) {
@@ -336,6 +373,7 @@ export class FaceStudio {
     this.zoom *= Math.exp(-event.deltaY * 0.0015);
     this.clampTransform();
     this.render();
+    this.scheduleCartoonPreview();
   }
 
   drawPhoto(ctx, factor = 1) {
@@ -403,21 +441,73 @@ export class FaceStudio {
     ctx.restore();
   }
 
-  createFaceCanvas() {
+  updateCartoonUi() {
+    this.elements.styleStrength.value = String(this.cartoonStrength);
+    this.elements.styleValue.textContent = `${Math.round(this.cartoonStrength * 100)}%`;
+  }
+
+  scheduleCartoonPreview(delay = 90) {
+    clearTimeout(this.cartoonPreviewTimer);
+    if (!this.sourceImage) {
+      this.renderCartoonPreview();
+      return;
+    }
+    this.cartoonPreviewTimer = setTimeout(() => {
+      this.cartoonPreviewTimer = null;
+      if (!this.elements.root.hidden) this.renderCartoonPreview();
+    }, delay);
+  }
+
+  renderCartoonPreview() {
+    const canvas = this.elements.styleCanvas;
+    const context = canvas.getContext("2d", { alpha: false });
+    const gradient = context.createLinearGradient(0, 0, canvas.width, canvas.height);
+    gradient.addColorStop(0, "#493872");
+    gradient.addColorStop(1, "#21172f");
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    context.fillStyle = gradient;
+    context.fillRect(0, 0, canvas.width, canvas.height);
+
+    context.save();
+    context.beginPath();
+    context.arc(canvas.width / 2, canvas.height / 2, canvas.width / 2 - 5, 0, Math.PI * 2);
+    context.clip();
+    if (this.sourceImage) {
+      const cartoon = this.createFaceCanvas(canvas.width);
+      context.drawImage(cartoon, 0, 0, canvas.width, canvas.height);
+    } else {
+      context.fillStyle = "rgba(255, 211, 95, 0.92)";
+      context.textAlign = "center";
+      context.font = `900 ${Math.round(canvas.width * 0.43)}px system-ui, sans-serif`;
+      context.fillText("☺", canvas.width / 2, canvas.height * 0.64);
+    }
+    context.restore();
+    context.strokeStyle = "rgba(255, 211, 95, 0.92)";
+    context.lineWidth = Math.max(4, canvas.width * 0.035);
+    context.beginPath();
+    context.arc(canvas.width / 2, canvas.height / 2, canvas.width / 2 - 6, 0, Math.PI * 2);
+    context.stroke();
+  }
+
+  createRawFaceCanvas(outputSize = OUTPUT_SIZE) {
     const output = document.createElement("canvas");
-    output.width = OUTPUT_SIZE;
-    output.height = OUTPUT_SIZE;
+    output.width = outputSize;
+    output.height = outputSize;
     const ctx = output.getContext("2d", { alpha: false });
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "high";
     ctx.fillStyle = "#f4b783";
-    ctx.fillRect(0, 0, OUTPUT_SIZE, OUTPUT_SIZE);
-    const factor = OUTPUT_SIZE / (CROP_RADIUS * 2);
+    ctx.fillRect(0, 0, outputSize, outputSize);
+    const factor = outputSize / (CROP_RADIUS * 2);
     ctx.save();
-    ctx.translate(OUTPUT_SIZE / 2, OUTPUT_SIZE / 2);
+    ctx.translate(outputSize / 2, outputSize / 2);
     ctx.translate(-PREVIEW_SIZE / 2 * factor, -PREVIEW_SIZE / 2 * factor);
     this.drawPhoto(ctx, factor);
     ctx.restore();
     return output;
+  }
+
+  createFaceCanvas(outputSize = OUTPUT_SIZE) {
+    return cartoonizeCanvas(this.createRawFaceCanvas(outputSize), this.cartoonStrength);
   }
 }

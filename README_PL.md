@@ -1,4 +1,4 @@
-# SlingToon Web 0.7 — GitHub Pages / PWA
+# SlingToon Web 0.8 — GitHub Pages / PWA
 
 Samodzielna gra webowa przygotowana w tym samym modelu publikacji co Castle Conflict. Do uruchomienia i wdrożenia nie potrzeba JUCE, Projucera ani Xcode.
 
@@ -46,7 +46,7 @@ Gra uruchamia się pełnoekranowo i po pierwszym wczytaniu działa offline.
 - `Quick Sling`: złap bohatera, naciągnij i puść.
 - `One Move`: najpierw przesuń trampolinę dokładnie raz, następnie oddaj strzał.
 - Po porażce `What If?` automatycznie powtarza ten sam zapisany strzał z jednym zmienionym prawem fizyki.
-- Przycisk `☺` najpierw otwiera lokalne Face Studio. Dopiero wewnątrz wybierasz zdjęcie, a następnie przesuwasz, powiększasz lub obracasz je przed zatwierdzeniem. Plik nie jest wysyłany.
+- Przycisk `☺` najpierw otwiera lokalne Face Studio. Wybierasz zdjęcie, ustawiasz kadr, a gra lokalnie przekształca twarz w komiksową ilustrację z uproszczonymi kolorami i konturami. Siłę efektu można zmienić suwakiem, a rezultat jest widoczny w okrągłym podglądzie. Plik nie jest wysyłany.
 - Na telefonie gra jest przeznaczona do pozycji poziomej; cały interfejs automatycznie dopasowuje się do widocznej wysokości Safari.
 
 ## Testy
@@ -57,14 +57,15 @@ npm run build
 npm run smoke
 ```
 
-Testy sprawdzają Quick Sling, One Move, identyczny replay What If, realne działanie czterech modyfikatorów, różnice między osobowościami, matematykę kadrowania twarzy oraz serwowanie gotowego artefaktu GitHub Pages.
+Testy sprawdzają Quick Sling, One Move, identyczny replay What If, realne działanie czterech modyfikatorów, różnice między osobowościami, matematykę kadrowania, cartoonizację obrazu, komiksowe kontury, wydajność 512×512 oraz serwowanie gotowego artefaktu GitHub Pages.
 
 ## Struktura
 
 - `src/game.js` — fizyka i reguły bez zależności od przeglądarkowego UI,
 - `src/render.js` — Canvas, avatar, scena i VFX,
 - `src/audio.js` — lokalny dźwięk proceduralny,
-- `src/face-studio.js` — lokalne wczytanie, kadrowanie, zoom i obrót twarzy,
+- `src/cartoon.js` — lokalne wygładzenie, redukcja kolorów i komiksowe kontury,
+- `src/face-studio.js` — lokalne wczytanie, kadrowanie, zoom, obrót i podgląd twarzy,
 - `src/main.js` — sterowanie i UI,
 - `assets/` — edytowalne assety i ikony,
 - `sw.js` — tryb offline,

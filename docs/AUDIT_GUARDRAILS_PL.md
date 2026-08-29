@@ -1,7 +1,7 @@
 # SlingToon — twarde ustalenia audytu
 
-**Wersja:** 0.7  
-**Data zamrożenia:** 28 sierpnia 2026 r. — zasady produktu bez zmian; poprawiono wyłącznie mobilny układ, Face Studio i publikację PWA
+**Wersja:** 0.8  
+**Data zamrożenia:** 29 sierpnia 2026 r. — zasady produktu bez zmian; Face Studio realizuje teraz ustaloną lokalną cartoonizację zdjęcia
 
 Ten dokument jest filtrem dla każdej kolejnej zmiany. Jeśli propozycja łamie poniższe zasady, nie trafia do głównej gałęzi bez jawnej decyzji produktowej.
 
@@ -29,6 +29,7 @@ Zmiana technologii z JUCE na HTML5 Canvas/PWA nie zmienia żadnej z poniższych 
 2. Brak generatywnego AI w runtime i brak zależności serwerowej.
 3. Osobowości `Drama Queen`, `Tough Guy`, `Panic`, `Zen` zmieniają ruch, strój, mimikę i komentarz — nie tylko etykietę w menu.
 4. Twarz jest wzmacniaczem humoru i shareability, nie ratunkiem dla słabej mechaniki.
+5. Fotografia nie trafia do avatara bezpośrednio: Face Studio tworzy lokalną wersję Cartoon, zachowując rozpoznawalność osoby.
 
 ## Humor i grafika
 
