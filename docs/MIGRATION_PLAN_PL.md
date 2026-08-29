@@ -8,12 +8,15 @@ Cel: możliwie szybko sprawdzić, czy `Sling → Bang → Śmiech → Again` daj
 - modułowa logika fizyki w JavaScript,
 - responsywne sterowanie Pointer Events,
 - lokalne wczytywanie twarzy,
+- lokalna segmentacja głowy i portret wektorowy bez generatywnego AI,
 - działanie offline przez service worker,
 - automatyczna publikacja na GitHub Pages.
 
 ## Etap 2A — opakowanie natywne
 
 Jeżeli zakres PWA pozostanie wystarczający, wersję webową można opakować przez Capacitor. Zachowujemy kod rozgrywki i renderowania, dodając natywne mosty dla haptics, zakupów, udostępniania i sklepów.
+
+Przy pełnej wersji natywnej etap wykrywania twarzy można zastąpić Apple Vision / odpowiednikiem Androida, zachowując ten sam format punktów, maski i wektorowy renderer portretu.
 
 ## Etap 2B — silnik gry
 

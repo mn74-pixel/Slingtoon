@@ -1,7 +1,7 @@
-import { GameModel, GameMode, GamePhase, modifierName } from "./game.js?v=0.8.0";
-import { GameRenderer } from "./render.js?v=0.8.0";
-import { GameAudio } from "./audio.js?v=0.8.0";
-import { FaceStudio } from "./face-studio.js?v=0.8.0";
+import { GameModel, GameMode, GamePhase, modifierName } from "./game.js?v=0.9.0";
+import { GameRenderer } from "./render.js?v=0.9.0";
+import { GameAudio } from "./audio.js?v=0.9.0";
+import { FaceStudio } from "./face-studio.js?v=0.9.0";
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -37,7 +37,6 @@ const elements = {
   faceStylePreview: $("#faceStylePreview"),
   faceStyleStrength: $("#faceStyleStrength"),
   faceStyleValue: $("#faceStyleValue"),
-  faceZoom: $("#faceZoom"),
   faceStatus: $("#faceStatus"),
   toast: $("#toast"),
 };
@@ -84,13 +83,12 @@ const faceStudio = new FaceStudio(
     styleCanvas: elements.faceStylePreview,
     styleStrength: elements.faceStyleStrength,
     styleValue: elements.faceStyleValue,
-    zoom: elements.faceZoom,
   },
   {
-    onApply: (faceCanvas) => {
-      renderer.setFaceImage(faceCanvas);
+    onApply: (portrait) => {
+      renderer.setFaceImage(portrait);
       setFaceButton(true);
-      showToast("Twarz gotowa — teraz naprawdę lecisz Ty.");
+      showToast("Rysunkowa głowa gotowa — bez okrągłej czaszki.");
     },
     onRemove: () => {
       renderer.setFaceImage(null);
@@ -277,7 +275,7 @@ elements.whatIfButton.addEventListener("click", () => {
 });
 
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
-  window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js?v=0.8.0").catch(() => {}));
+  window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js?v=0.9.0").catch(() => {}));
 }
 
 renderer

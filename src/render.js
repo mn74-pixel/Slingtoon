@@ -54,6 +54,7 @@ export class GameRenderer {
     this.model = model;
     this.background = null;
     this.faceImage = null;
+    this.faceMetadata = null;
     this.particles = [];
     this.callouts = [];
     this.trail = [];
@@ -69,8 +70,14 @@ export class GameRenderer {
     this.background = await loadImage("assets/stage_morning_mayhem.svg");
   }
 
-  setFaceImage(image) {
-    this.faceImage = image;
+  setFaceImage(portrait) {
+    if (portrait?.image) {
+      this.faceImage = portrait.image;
+      this.faceMetadata = portrait.metadata ?? portrait.image.slingtoonPortrait ?? null;
+      return;
+    }
+    this.faceImage = portrait ?? null;
+    this.faceMetadata = portrait?.slingtoonPortrait ?? null;
   }
 
   handleGameEvent(event) {
@@ -646,6 +653,48 @@ export class GameRenderer {
   drawHead(ctx, expression, personality) {
     ctx.save();
     ctx.translate(0, -16);
+
+    if (this.faceImage) {
+      ctx.save();
+      ctx.shadowColor = "rgba(18, 11, 29, 0.38)";
+      ctx.shadowBlur = 10;
+      ctx.shadowOffsetY = 5;
+      // The portrait is a transparent, naturally shaped head. It is never
+      // clipped to the stock character's circular skull.
+      ctx.drawImage(this.faceImage, -48, -48, 96, 96);
+      ctx.restore();
+      this.drawPhotoReaction(ctx, expression);
+
+      if (personality === Personality.PANIC) {
+        ctx.strokeStyle = PALETTE.gold;
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.moveTo(-13, -38);
+        ctx.quadraticCurveTo(-20, -55, -5, -49);
+        ctx.moveTo(0, -40);
+        ctx.quadraticCurveTo(7, -58, 13, -45);
+        ctx.moveTo(14, -36);
+        ctx.quadraticCurveTo(27, -49, 25, -32);
+        ctx.stroke();
+      }
+
+      if (personality === Personality.TOUGH_GUY) {
+        ctx.strokeStyle = PALETTE.coral;
+        ctx.lineWidth = 8;
+        ctx.beginPath();
+        ctx.arc(0, -1, 36, Math.PI * 1.08, Math.PI * 1.92);
+        ctx.stroke();
+        ctx.fillStyle = PALETTE.coral;
+        ctx.beginPath();
+        ctx.moveTo(31, -19);
+        ctx.lineTo(49, -8);
+        ctx.lineTo(30, -1);
+        ctx.fill();
+      }
+      ctx.restore();
+      return;
+    }
+
     ctx.shadowColor = "rgba(18, 11, 29, 0.32)";
     ctx.shadowBlur = 9;
     ctx.shadowOffsetY = 4;
@@ -654,36 +703,15 @@ export class GameRenderer {
     strokeFill(ctx, PALETTE.skin, PALETTE.ink, 6);
     ctx.shadowColor = "transparent";
 
-    if (this.faceImage) {
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(0, 0, 30, 0, Math.PI * 2);
-      ctx.clip();
-      this.drawImageCover(ctx, this.faceImage, -30, -30, 60, 60);
-      const photoLight = ctx.createLinearGradient(-24, -28, 26, 30);
-      photoLight.addColorStop(0, "rgba(255,255,255,0.12)");
-      photoLight.addColorStop(0.55, "rgba(255,255,255,0)");
-      photoLight.addColorStop(1, "rgba(28,15,40,0.12)");
-      ctx.fillStyle = photoLight;
-      ctx.fillRect(-31, -31, 62, 62);
-      ctx.restore();
-      ctx.strokeStyle = "rgba(255, 245, 217, 0.76)";
-      ctx.lineWidth = 2.5;
-      ctx.beginPath();
-      ctx.arc(0, 0, 30, 0, Math.PI * 2);
-      ctx.stroke();
-    } else {
-      const shade = ctx.createLinearGradient(-26, -20, 28, 27);
-      shade.addColorStop(0, "rgba(255,255,255,0.20)");
-      shade.addColorStop(1, "rgba(143,64,73,0.18)");
-      ctx.fillStyle = shade;
-      ctx.beginPath();
-      ctx.arc(0, 0, 29, 0, Math.PI * 2);
-      ctx.fill();
-    }
+    const shade = ctx.createLinearGradient(-26, -20, 28, 27);
+    shade.addColorStop(0, "rgba(255,255,255,0.20)");
+    shade.addColorStop(1, "rgba(143,64,73,0.18)");
+    ctx.fillStyle = shade;
+    ctx.beginPath();
+    ctx.arc(0, 0, 29, 0, Math.PI * 2);
+    ctx.fill();
 
-    if (this.faceImage) this.drawPhotoReaction(ctx, expression);
-    else this.drawExpression(ctx, expression);
+    this.drawExpression(ctx, expression);
 
     if (personality === Personality.PANIC) {
       ctx.strokeStyle = PALETTE.ink;

@@ -3,16 +3,17 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; connect-src 'self'; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'none'">
   <meta name="theme-color" content="#24183f">
   <meta name="description" content="SlingToon — błyskawiczna gra fizyczna: Sling, Bang, Laugh, Again.">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="SlingToon">
   <title>SlingToon — Morning Mayhem</title>
-  <link rel="manifest" href="manifest.webmanifest?v=0.8.0">
+  <link rel="manifest" href="manifest.webmanifest?v=0.9.0">
   <link rel="icon" href="assets/icon-192.png" sizes="192x192">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="styles.css?v=0.8.0">
+  <link rel="stylesheet" href="styles.css?v=0.9.0">
 </head>
 <body>
   <div class="ambient ambient--one" aria-hidden="true"></div>
@@ -102,7 +103,7 @@
     </main>
 
     <footer>
-      <span>SLINGTOON WEB 0.8</span>
+      <span>SLINGTOON WEB 0.9</span>
       <span>Offline PWA · GitHub Pages Ready</span>
     </footer>
   </div>
@@ -113,57 +114,57 @@
       <header class="face-studio__header">
         <div>
           <span class="face-studio__kicker">TYLKO NA TYM URZĄDZENIU</span>
-          <h2 id="faceStudioTitle">Ustaw twarz bohatera</h2>
+          <h2 id="faceStudioTitle">Zrób rysunkową głowę</h2>
         </div>
         <button id="faceCancel" class="face-studio__close" type="button" aria-label="Anuluj">×</button>
       </header>
 
       <div class="face-studio__workspace">
         <div class="face-studio__preview">
-          <canvas id="faceCanvas" width="640" height="640" aria-label="Przesuń i powiększ zdjęcie, aby ustawić twarz"></canvas>
+          <canvas id="faceCanvas" width="640" height="640" aria-label="Podgląd automatycznie wykrytej głowy i włosów"></canvas>
           <div class="face-studio__loading" aria-hidden="true">
             <span>☺</span>
-            <strong>Ładuję twarz…</strong>
+            <strong>Wyszparowuję głowę…</strong>
           </div>
-          <span class="face-studio__drag-hint" aria-hidden="true">PRZESUWAJ PALCEM</span>
+          <span class="face-studio__drag-hint" aria-hidden="true">AUTOMATYCZNY KONTUR</span>
         </div>
 
         <div class="face-studio__controls">
-          <label class="face-zoom" for="faceZoom">
-            <span>MNIEJ</span>
-            <input id="faceZoom" type="range" min="1" max="4" value="1" step="0.01" aria-label="Powiększenie zdjęcia">
-            <span>WIĘCEJ</span>
-          </label>
           <div class="face-cartoon">
-            <canvas id="faceStylePreview" width="192" height="192" aria-label="Podgląd komiksowej twarzy"></canvas>
+            <canvas id="faceStylePreview" width="256" height="256" aria-label="Podgląd wyszparowanej rysunkowej głowy"></canvas>
             <label class="face-cartoon__control" for="faceStyleStrength">
               <span class="face-cartoon__heading">
-                <strong>EFEKT CARTOON</strong>
+                <strong>PORTRET RYSUNKOWY</strong>
                 <output id="faceStyleValue" for="faceStyleStrength">78%</output>
               </span>
-              <input id="faceStyleStrength" type="range" min="0.35" max="1" value="0.78" step="0.01" aria-label="Siła efektu Cartoon">
-              <small>Kolory, wygładzenie i komiksowy tusz — wszystko lokalnie.</small>
+              <input id="faceStyleStrength" type="range" min="0.45" max="1" value="0.78" step="0.01" aria-label="Siła stylizacji rysunkowego portretu">
+              <small>Geometria z 478 punktów, osobne włosy i rysowane rysy — to nie filtr na zdjęciu.</small>
             </label>
+          </div>
+          <div class="face-pipeline" aria-label="Etapy tworzenia portretu">
+            <span><b>1</b> TŁO OUT</span>
+            <span><b>2</b> KSZTAŁT</span>
+            <span><b>3</b> TOON</span>
           </div>
           <div class="face-studio__tool-row">
             <button id="faceRotate" class="face-tool" type="button">↻ Obróć</button>
             <button id="faceReplace" class="face-tool" type="button">▣ Wybierz zdjęcie</button>
           </div>
-          <p id="faceStatus" class="face-studio__status" aria-live="polite">Przesuń zdjęcie palcem. Twarz powinna wypełnić koło.</p>
+          <p id="faceStatus" class="face-studio__status" aria-live="polite">Wybierz zdjęcie z przodu. Gra sama oddzieli głowę i włosy od tła.</p>
         </div>
       </div>
 
       <div class="face-studio__actions">
         <button id="faceRemove" class="face-remove" type="button" hidden>Usuń twarz</button>
-        <button id="faceConfirm" class="face-confirm" type="button">✓ Gotowe</button>
+        <button id="faceConfirm" class="face-confirm" type="button">✓ Użyj tej głowy</button>
       </div>
-      <p class="face-studio__privacy">Zdjęcie jest obrabiane lokalnie i nie trafia do internetu.</p>
+      <p class="face-studio__privacy">Zdjęcie jest analizowane lokalnie. Nie opuszcza telefonu i nie trafia do AI w chmurze.</p>
     </div>
   </section>
 
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
   <noscript>Do uruchomienia SlingToon potrzebna jest obsługa JavaScript.</noscript>
-  <script type="module" src="src/main.js?v=0.8.0"></script>
+  <script type="module" src="src/main.js?v=0.9.0"></script>
 </body>
 </html>

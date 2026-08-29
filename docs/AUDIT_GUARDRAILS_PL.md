@@ -1,7 +1,7 @@
 # SlingToon — twarde ustalenia audytu
 
-**Wersja:** 0.8  
-**Data zamrożenia:** 29 sierpnia 2026 r. — zasady produktu bez zmian; Face Studio realizuje teraz ustaloną lokalną cartoonizację zdjęcia
+**Wersja:** 0.9  
+**Data zamrożenia:** 29 sierpnia 2026 r. — zasady produktu bez zmian; Face Studio używa lokalnej segmentacji i rysowania wektorowego zamiast filtra fotografii
 
 Ten dokument jest filtrem dla każdej kolejnej zmiany. Jeśli propozycja łamie poniższe zasady, nie trafia do głównej gałęzi bez jawnej decyzji produktowej.
 
@@ -30,6 +30,8 @@ Zmiana technologii z JUCE na HTML5 Canvas/PWA nie zmienia żadnej z poniższych 
 3. Osobowości `Drama Queen`, `Tough Guy`, `Panic`, `Zen` zmieniają ruch, strój, mimikę i komentarz — nie tylko etykietę w menu.
 4. Twarz jest wzmacniaczem humoru i shareability, nie ratunkiem dla słabej mechaniki.
 5. Fotografia nie trafia do avatara bezpośrednio: Face Studio tworzy lokalną wersję Cartoon, zachowując rozpoznawalność osoby.
+6. Własna twarz zachowuje naturalne proporcje głowy; nie wolno wciskać jej w stałe koło ani obrys czaszki bazowego ludzika.
+7. Polityka CSP blokuje połączenia runtime poza originem gry; lokalna analiza zdjęcia nie może uruchamiać telemetrii ani uploadu.
 
 ## Humor i grafika
 

@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.9.0 — Head Cutout + Vector Portrait
+
+- usunięto odrzucony filtr zdjęcia oraz okrągłą maskę czaszki,
+- dodano lokalne MediaPipe Face Landmarker z mapą 478 punktów twarzy,
+- dodano lokalną segmentację rozróżniającą włosy, skórę twarzy, tło, ubranie i akcesoria,
+- iOS Safari używa celowo delegata CPU, aby uniknąć pomieszania klas maski występującego w trybie GPU,
+- portret jest rysowany od nowa z naturalnej geometrii osoby: osobno sylwetka włosów, owal, oczy, tęczówki, brwi, nos i usta,
+- zachowano kolory skóry i włosów pobrane ze zdjęcia, ale fotografia nie jest nakładana na postać,
+- customowa głowa ma przezroczyste tło i zachowuje własne proporcje; renderer nie rysuje pod nią stałej czaszki,
+- dodano widoczny podgląd maski `głowa + włosy` oraz rysunkowego rezultatu przed zatwierdzeniem,
+- modele i runtime są dostarczone w paczce i po pierwszym użyciu trafiają do cache PWA,
+- dodano testy dla wąskiej twarzy, granic głowy, kategorii maski i integralności modeli.
+
 ## 0.8.0 — Local Cartoon Face
 
 - dodano lokalny proces przekształcania fotografii w twarz komiksową,

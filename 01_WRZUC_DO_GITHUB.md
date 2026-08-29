@@ -3,6 +3,7 @@
 1. Rozpakuj paczkę.
 2. Utwórz na GitHubie puste repozytorium, np. `slingtoon`.
 3. Wgraj **wszystkie pliki i katalogi znajdujące się wewnątrz paczki**. Plik `index.html` musi być widoczny w głównym widoku repozytorium.
+   Nie pomijaj katalogów `models` i `vendor` — bez nich nowe Face Studio nie uruchomi lokalnego wykrywania twarzy.
 4. Otwórz `Settings → Pages`.
 5. W sekcji `Build and deployment` ustaw `Source: Deploy from a branch`.
 6. Wybierz `main` oraz `/(root)` i kliknij `Save`.
@@ -13,5 +14,7 @@ Gra będzie dostępna pod adresem podobnym do:
 `https://TWOJA-NAZWA.github.io/slingtoon/`
 
 Nie wgrywaj samego pliku ZIP jako jedynego pliku repozytorium — GitHub Pages nie rozpakowuje archiwum automatycznie.
+
+Po zastąpieniu starszej wersji 0.8 otwórz grę ponownie i odśwież stronę. W stopce powinno być widoczne `SLINGTOON WEB 0.9`.
 
 Pełna instrukcja, testy i instalacja na iPhonie znajdują się w `README_PL.md`.

@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { FaceStudio, cropTransform, isLikelyImageFile, rotatedDimensions } from "../src/face-studio.js";
+import { FaceStudio, containRect, isLikelyImageFile, rotatedDimensions } from "../src/face-studio.js";
 
 function classListMock() {
   const values = new Set();
@@ -61,21 +61,20 @@ test("swaps dimensions after a quarter turn", () => {
   assert.deepEqual(rotatedDimensions(1200, 800, 3), { width: 800, height: 1200 });
 });
 
-test("cover scale never leaves an empty edge inside the circular crop", () => {
-  const transform = cropTransform(1200, 800, 0, 1, 999, -999);
-  assert.equal(transform.scale, 0.62);
-  assert.equal(transform.maxOffsetX, 124);
-  assert.equal(transform.maxOffsetY, 0);
-  assert.equal(transform.offsetX, 124);
-  assert.equal(transform.offsetY, 0);
+test("source preview is contained without forcing a circular crop", () => {
+  const fit = containRect(1200, 800, 640, 640, 20);
+  assert.equal(fit.width, 600);
+  assert.equal(fit.height, 400);
+  assert.equal(fit.x, 20);
+  assert.equal(fit.y, 120);
 });
 
-test("zoom is clamped and creates room for manual face positioning", () => {
-  const transform = cropTransform(1000, 1000, 0, 99, 9999, 9999);
-  assert.equal(transform.zoom, 4);
-  assert.ok(transform.maxOffsetX > 700);
-  assert.equal(transform.offsetX, transform.maxOffsetX);
-  assert.equal(transform.offsetY, transform.maxOffsetY);
+test("portrait preview preserves the source aspect ratio", () => {
+  const fit = containRect(500, 1000, 640, 640, 20);
+  assert.equal(fit.height, 600);
+  assert.equal(fit.width, 300);
+  assert.equal(fit.x, 170);
+  assert.equal(fit.y, 20);
 });
 
 test("Face Studio opens before the iOS photo picker and can reselect the same file", () => {
@@ -111,7 +110,6 @@ test("Face Studio opens before the iOS photo picker and can reselect the same fi
       styleCanvas: canvasMock(),
       styleStrength: elementMock({ value: "0.78" }),
       styleValue: elementMock(),
-      zoom: elementMock({ value: "1" }),
     });
 
     studio.openEditor();

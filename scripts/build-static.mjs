@@ -12,6 +12,8 @@ await Promise.all(rootFiles.map((file) => cp(resolve(root, file), resolve(destin
 await Promise.all([
   cp(resolve(root, "src"), resolve(destination, "src"), { recursive: true }),
   cp(resolve(root, "assets"), resolve(destination, "assets"), { recursive: true }),
+  cp(resolve(root, "models"), resolve(destination, "models"), { recursive: true }),
+  cp(resolve(root, "vendor"), resolve(destination, "vendor"), { recursive: true }),
 ]);
 
 console.log("Static GitHub Pages artifact created in dist/.");

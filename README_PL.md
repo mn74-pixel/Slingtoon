@@ -1,4 +1,4 @@
-# SlingToon Web 0.8 — GitHub Pages / PWA
+# SlingToon Web 0.9 — GitHub Pages / PWA
 
 Samodzielna gra webowa przygotowana w tym samym modelu publikacji co Castle Conflict. Do uruchomienia i wdrożenia nie potrzeba JUCE, Projucera ani Xcode.
 
@@ -39,14 +39,14 @@ Wszystkie ścieżki są względne, więc projekt działa również jako repozyto
 2. Wybierz `Udostępnij`.
 3. Wybierz `Do ekranu początkowego`.
 
-Gra uruchamia się pełnoekranowo i po pierwszym wczytaniu działa offline.
+Gra uruchamia się pełnoekranowo i po pierwszym wczytaniu działa offline. Face Studio pobiera lokalne modele dopiero przy pierwszym użyciu; po udanej analizie również są zapisywane w cache PWA.
 
 ## Sterowanie
 
 - `Quick Sling`: złap bohatera, naciągnij i puść.
 - `One Move`: najpierw przesuń trampolinę dokładnie raz, następnie oddaj strzał.
 - Po porażce `What If?` automatycznie powtarza ten sam zapisany strzał z jednym zmienionym prawem fizyki.
-- Przycisk `☺` najpierw otwiera lokalne Face Studio. Wybierasz zdjęcie, ustawiasz kadr, a gra lokalnie przekształca twarz w komiksową ilustrację z uproszczonymi kolorami i konturami. Siłę efektu można zmienić suwakiem, a rezultat jest widoczny w okrągłym podglądzie. Plik nie jest wysyłany.
+- Przycisk `☺` otwiera Face Studio 2. Wybierasz zdjęcie z przodu, a lokalny model wykrywa 478 punktów twarzy i osobno segmentuje włosy, skórę oraz tło. Następnie gra rysuje od nowa naturalny kształt twarzy, oczy, brwi, nos i usta, zachowując kolory osoby. Nie ma okrągłej maski ani stałej czaszki. Plik nie jest wysyłany.
 - Na telefonie gra jest przeznaczona do pozycji poziomej; cały interfejs automatycznie dopasowuje się do widocznej wysokości Safari.
 
 ## Testy
@@ -57,17 +57,19 @@ npm run build
 npm run smoke
 ```
 
-Testy sprawdzają Quick Sling, One Move, identyczny replay What If, realne działanie czterech modyfikatorów, różnice między osobowościami, matematykę kadrowania, cartoonizację obrazu, komiksowe kontury, wydajność 512×512 oraz serwowanie gotowego artefaktu GitHub Pages.
+Testy sprawdzają Quick Sling, One Move, identyczny replay What If, realne działanie czterech modyfikatorów, różnice między osobowościami, zachowanie naturalnych proporcji twarzy, maskę głowy, segmentację kategorii oraz serwowanie gotowego artefaktu GitHub Pages.
 
 ## Struktura
 
 - `src/game.js` — fizyka i reguły bez zależności od przeglądarkowego UI,
 - `src/render.js` — Canvas, avatar, scena i VFX,
 - `src/audio.js` — lokalny dźwięk proceduralny,
-- `src/cartoon.js` — lokalne wygładzenie, redukcja kolorów i komiksowe kontury,
-- `src/face-studio.js` — lokalne wczytanie, kadrowanie, zoom, obrót i podgląd twarzy,
+- `src/face-vision.js` — lokalne wykrywanie punktów twarzy i segmentacja głowy,
+- `src/portrait.js` — rysowanie portretu wektorowego z naturalnych proporcji osoby,
+- `src/face-studio.js` — wczytanie, obrót, analiza i podgląd wyszparowanej głowy,
 - `src/main.js` — sterowanie i UI,
 - `assets/` — edytowalne assety i ikony,
+- `models/` oraz `vendor/mediapipe/` — lokalny runtime i modele komputerowego widzenia,
 - `sw.js` — tryb offline,
 - `.github/workflows/` — testy i publikacja GitHub Pages.
 
