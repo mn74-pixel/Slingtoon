@@ -18,6 +18,8 @@ const PALETTE = Object.freeze({
 
 const clamp = (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value));
 const lerp = (a, b, amount) => a + (b - a) * amount;
+const CUSTOM_HEAD_SCALE = 1.2;
+const CUSTOM_HEAD_LIFT = -4;
 
 function roundedRect(ctx, x, y, width, height, radius) {
   const r = Math.min(radius, Math.abs(width) * 0.5, Math.abs(height) * 0.5);
@@ -655,6 +657,11 @@ export class GameRenderer {
     ctx.translate(0, -16);
 
     if (this.faceImage) {
+      // A segmented portrait contains transparent space around the natural
+      // head contour. Scale the complete custom-head layer so facial details
+      // stay readable on a phone without changing the physics body.
+      ctx.translate(0, CUSTOM_HEAD_LIFT);
+      ctx.scale(CUSTOM_HEAD_SCALE, CUSTOM_HEAD_SCALE);
       ctx.save();
       ctx.shadowColor = "rgba(18, 11, 29, 0.38)";
       ctx.shadowBlur = 10;

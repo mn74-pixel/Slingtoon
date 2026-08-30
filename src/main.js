@@ -1,7 +1,7 @@
-import { GameModel, GameMode, GamePhase, modifierName } from "./game.js?v=0.9.1";
-import { GameRenderer } from "./render.js?v=0.9.1";
-import { GameAudio } from "./audio.js?v=0.9.1";
-import { FaceStudio } from "./face-studio.js?v=0.9.1";
+import { GameModel, GameMode, GamePhase, modifierName } from "./game.js?v=0.9.2";
+import { GameRenderer } from "./render.js?v=0.9.2";
+import { GameAudio } from "./audio.js?v=0.9.2";
+import { FaceStudio } from "./face-studio.js?v=0.9.2";
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -292,7 +292,7 @@ elements.whatIfButton.addEventListener("click", () => {
 });
 
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
-  window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js?v=0.9.1").catch(() => {}));
+  window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js?v=0.9.2").catch(() => {}));
 }
 
 renderer

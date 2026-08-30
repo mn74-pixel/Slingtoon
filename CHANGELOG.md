@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.2 — Larger Readable Face
+
+- powiększono własną rysunkową głowę o 20%, aby oczy, brwi i usta były czytelne na telefonie,
+- uniesiono portret nieznacznie, dzięki czemu większa głowa naturalnie łączy się z tułowiem,
+- razem z twarzą skalują się komiksowe reakcje, bez zmiany fizyki ani pola kolizji postaci,
+- podbito cache PWA, aby Safari pobrało nowy renderer zamiast wersji 0.9.1.
+
 ## 0.9.1 — Full-Width iPhone Landscape
 
 - usunięto height-derived skalowanie, które przy widocznych paskach Safari zmieniało grę w małą kartę na środku ekranu,

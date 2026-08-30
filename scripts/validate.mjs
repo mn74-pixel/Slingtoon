@@ -75,7 +75,7 @@ assert.match(html, /<canvas id="gameCanvas"/);
 assert.match(html, /manifest\.webmanifest/);
 assert.match(html, /src\/main\.js/);
 assert.match(html, /connect-src 'self'/);
-assert.match(main, /serviceWorker\.register\("\.\/sw\.js\?v=0\.9\.1"\)/);
+assert.match(main, /serviceWorker\.register\("\.\/sw\.js\?v=0\.9\.2"\)/);
 assert.match(game, /replayWith\(modifier\)/);
 assert.match(game, /shot\.launchVelocity/);
 assert.match(html, /id="faceStudio"/);
@@ -90,6 +90,8 @@ assert.match(faceVision, /FACE_LANDMARKS_FACE_OVAL/);
 assert.match(portrait, /segmented-vector-portrait/);
 assert.match(portrait, /FACE_CATEGORIES\.HAIR/);
 assert.doesNotMatch(render, /ctx\.clip\(\);\s*this\.drawImageCover\(ctx, this\.faceImage/);
+assert.match(render, /const CUSTOM_HEAD_SCALE = 1\.2;/);
+assert.match(render, /ctx\.scale\(CUSTOM_HEAD_SCALE, CUSTOM_HEAD_SCALE\)/);
 assert.match(css, /orientation:\s*landscape[^}]*max-height:\s*560px/);
 assert.match(css, /min-aspect-ratio:\s*2\s*\/\s*1/);
 assert.match(css, /object-fit:\s*cover/);
@@ -123,4 +125,4 @@ for (const file of requiredFiles.filter((file) => !file.startsWith(".github") &&
   }
 }
 
-console.log("SlingToon Web 0.9.1: local head segmentation, vector portrait, full-width mobile viewport and PWA shell are valid.");
+console.log("SlingToon Web 0.9.2: larger readable custom head, vector portrait, full-width mobile viewport and PWA shell are valid.");

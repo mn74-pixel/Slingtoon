@@ -1,4 +1,4 @@
-import { FaceVision } from "./face-vision.js?v=0.9.1";
+import { FaceVision } from "./face-vision.js?v=0.9.2";
 import {
   DEFAULT_PORTRAIT_STYLE,
   connectionPaths,
@@ -6,7 +6,7 @@ import {
   createToonPortrait,
   deriveHeadBounds,
   normalizePortraitStyle,
-} from "./portrait.js?v=0.9.1";
+} from "./portrait.js?v=0.9.2";
 
 const PREVIEW_SIZE = 640;
 const MAX_ANALYSIS_EDGE = 1024;
