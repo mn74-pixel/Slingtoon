@@ -1,4 +1,4 @@
-# SlingToon Web 0.9 — GitHub Pages / PWA
+# SlingToon Web 0.9.1 — GitHub Pages / PWA
 
 Samodzielna gra webowa przygotowana w tym samym modelu publikacji co Castle Conflict. Do uruchomienia i wdrożenia nie potrzeba JUCE, Projucera ani Xcode.
 

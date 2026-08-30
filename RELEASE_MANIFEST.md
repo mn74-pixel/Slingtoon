@@ -1,4 +1,4 @@
-# SlingToon Web 0.9.0 — Release Manifest
+# SlingToon Web 0.9.1 — Release Manifest
 
 **Format:** statyczna gra HTML5 Canvas / PWA  
 **Publikacja:** GitHub Pages  

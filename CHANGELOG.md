@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.9.1 — Full-Width iPhone Landscape
+
+- usunięto height-derived skalowanie, które przy widocznych paskach Safari zmieniało grę w małą kartę na środku ekranu,
+- na bardzo szerokim, niskim ekranie karta wykorzystuje całą bezpieczną szerokość telefonu,
+- pasek misji i dolna instrukcja są nakładane na planszę zamiast zabierać jej wysokość,
+- scena zachowuje proporcje 2:1 i kadruje jedynie górną, nieinteraktywną część pokoju,
+- współrzędne dotyku uwzględniają kadr `cover`, więc proca, trampolina i przyciski reagują w prawidłowych miejscach,
+- podbito cache PWA, aby Safari nie zatrzymywało wadliwego układu 0.9.0.
+
 ## 0.9.0 — Head Cutout + Vector Portrait
 
 - usunięto odrzucony filtr zdjęcia oraz okrągłą maskę czaszki,

@@ -75,7 +75,7 @@ assert.match(html, /<canvas id="gameCanvas"/);
 assert.match(html, /manifest\.webmanifest/);
 assert.match(html, /src\/main\.js/);
 assert.match(html, /connect-src 'self'/);
-assert.match(main, /serviceWorker\.register\("\.\/sw\.js\?v=0\.9\.0"\)/);
+assert.match(main, /serviceWorker\.register\("\.\/sw\.js\?v=0\.9\.1"\)/);
 assert.match(game, /replayWith\(modifier\)/);
 assert.match(game, /shot\.launchVelocity/);
 assert.match(html, /id="faceStudio"/);
@@ -91,18 +91,25 @@ assert.match(portrait, /segmented-vector-portrait/);
 assert.match(portrait, /FACE_CATEGORIES\.HAIR/);
 assert.doesNotMatch(render, /ctx\.clip\(\);\s*this\.drawImageCover\(ctx, this\.faceImage/);
 assert.match(css, /orientation:\s*landscape[^}]*max-height:\s*560px/);
-assert.match(css, /width:\s*min\(100%,\s*calc\(200dvh - 296px\)\)/);
+assert.match(css, /min-aspect-ratio:\s*2\s*\/\s*1/);
+assert.match(css, /object-fit:\s*cover/);
+assert.match(css, /object-position:\s*center bottom/);
+assert.match(main, /style\.objectFit === "cover"/);
+assert.match(main, /offsetY = rect\.height - renderedHeight/);
 
-for (const viewportHeight of [340, 375, 393, 430, 560]) {
-  const shellWidth = (2 * viewportHeight) - 296;
-  const minimumVerticalPadding = 8;
+for (const [viewportWidth, viewportHeight] of [[852, 393], [852, 320], [768, 284], [667, 250]]) {
+  const horizontalPadding = 14;
+  const verticalPadding = 8;
   const compactTopbar = 38;
   const gridGap = 4;
-  const missionStrip = 40;
-  const stageHeight = shellWidth / 2;
-  const statusRow = 38;
-  const fittedHeight = minimumVerticalPadding + compactTopbar + gridGap + missionStrip + stageHeight + statusRow;
-  assert.ok(fittedHeight <= viewportHeight - 19, `compact layout needs safety room at ${viewportHeight}px height`);
+  const cardWidth = viewportWidth - horizontalPadding;
+  const cardHeight = viewportHeight - verticalPadding - compactTopbar - gridGap;
+  const coverScale = Math.max(cardWidth / 1280, cardHeight / 640);
+  const renderedHeight = 640 * coverScale;
+  const visibleWorldTop = Math.max(0, (renderedHeight - cardHeight) / coverScale);
+
+  assert.ok(cardWidth / viewportWidth > 0.96, `landscape card must fill width at ${viewportWidth}x${viewportHeight}`);
+  assert.ok(visibleWorldTop < 330, `sling and targets must remain visible at ${viewportWidth}x${viewportHeight}`);
 }
 
 for (const file of requiredFiles.filter((file) => !file.startsWith(".github") && !file.startsWith("docs/"))) {
@@ -116,4 +123,4 @@ for (const file of requiredFiles.filter((file) => !file.startsWith(".github") &&
   }
 }
 
-console.log("SlingToon Web 0.9: local head segmentation, vector portrait, mobile viewport and PWA shell are valid.");
+console.log("SlingToon Web 0.9.1: local head segmentation, vector portrait, full-width mobile viewport and PWA shell are valid.");

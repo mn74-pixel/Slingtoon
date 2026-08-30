@@ -1,7 +1,7 @@
-import { GameModel, GameMode, GamePhase, modifierName } from "./game.js?v=0.9.0";
-import { GameRenderer } from "./render.js?v=0.9.0";
-import { GameAudio } from "./audio.js?v=0.9.0";
-import { FaceStudio } from "./face-studio.js?v=0.9.0";
+import { GameModel, GameMode, GamePhase, modifierName } from "./game.js?v=0.9.1";
+import { GameRenderer } from "./render.js?v=0.9.1";
+import { GameAudio } from "./audio.js?v=0.9.1";
+import { FaceStudio } from "./face-studio.js?v=0.9.1";
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -115,9 +115,26 @@ model.onEvent = (event) => {
 
 function pointFromPointer(event) {
   const rect = elements.canvas.getBoundingClientRect();
+  const style = getComputedStyle(elements.canvas);
+  let renderedWidth = rect.width;
+  let renderedHeight = rect.height;
+  let offsetX = 0;
+  let offsetY = 0;
+
+  if (style.objectFit === "cover") {
+    const coverScale = Math.max(
+      rect.width / elements.canvas.width,
+      rect.height / elements.canvas.height,
+    );
+    renderedWidth = elements.canvas.width * coverScale;
+    renderedHeight = elements.canvas.height * coverScale;
+    offsetX = (rect.width - renderedWidth) * 0.5;
+    offsetY = rect.height - renderedHeight;
+  }
+
   return {
-    x: ((event.clientX - rect.left) / rect.width) * elements.canvas.width,
-    y: ((event.clientY - rect.top) / rect.height) * elements.canvas.height,
+    x: ((event.clientX - rect.left - offsetX) / renderedWidth) * elements.canvas.width,
+    y: ((event.clientY - rect.top - offsetY) / renderedHeight) * elements.canvas.height,
   };
 }
 
@@ -275,7 +292,7 @@ elements.whatIfButton.addEventListener("click", () => {
 });
 
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
-  window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js?v=0.9.0").catch(() => {}));
+  window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js?v=0.9.1").catch(() => {}));
 }
 
 renderer
