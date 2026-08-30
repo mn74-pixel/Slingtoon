@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.3 — Fullscreen Game + Larger Face
+
+- dodano przycisk pełnego ekranu: korzysta z Fullscreen API tam, gdzie jest dostępne, a na iPhonie pokazuje krótką instrukcję uruchomienia gry jako aplikacji,
+- gra rozpoznaje tryb aplikacji z ekranu początkowego i sygnalizuje aktywny pełny ekran,
+- na niskich ekranach poziomych plansza dochodzi do obu krawędzi, a teksty i przyciski pozostają wewnątrz bezpiecznych stref iPhone'a,
+- zwiększono rysunkową głowę z 120% do 140% rozmiaru bazowego i lekko ją uniesiono,
+- podbito cache PWA, aby Safari pobrało nowy układ i renderer.
+
 ## 0.9.2 — Larger Readable Face
 
 - powiększono własną rysunkową głowę o 20%, aby oczy, brwi i usta były czytelne na telefonie,

@@ -10,10 +10,10 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="SlingToon">
   <title>SlingToon — Morning Mayhem</title>
-  <link rel="manifest" href="manifest.webmanifest?v=0.9.2">
+  <link rel="manifest" href="manifest.webmanifest?v=0.9.3">
   <link rel="icon" href="assets/icon-192.png" sizes="192x192">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="styles.css?v=0.9.2">
+  <link rel="stylesheet" href="styles.css?v=0.9.3">
 </head>
 <body>
   <div class="ambient ambient--one" aria-hidden="true"></div>
@@ -44,6 +44,7 @@
         <button id="faceButton" class="icon-button face-button" type="button" title="Dodaj twarz lokalnie" aria-label="Dodaj twarz lokalnie">☺</button>
         <input id="faceInput" type="file" accept="image/*,.heic,.heif" hidden>
         <button id="soundButton" class="icon-button" type="button" title="Wycisz dźwięk" aria-label="Wycisz dźwięk">♪</button>
+        <button id="fullscreenButton" class="icon-button" type="button" title="Pełny ekran" aria-label="Włącz pełny ekran" aria-pressed="false">⛶</button>
       </div>
     </header>
 
@@ -103,7 +104,7 @@
     </main>
 
     <footer>
-      <span>SLINGTOON WEB 0.9.2</span>
+      <span>SLINGTOON WEB 0.9.3</span>
       <span>Offline PWA · GitHub Pages Ready</span>
     </footer>
   </div>
@@ -162,9 +163,26 @@
     </div>
   </section>
 
+  <section id="fullscreenGuide" class="fullscreen-guide" role="dialog" aria-modal="true" aria-labelledby="fullscreenGuideTitle" hidden>
+    <button id="fullscreenBackdrop" class="fullscreen-guide__backdrop" type="button" aria-label="Zamknij instrukcję pełnego ekranu"></button>
+    <div class="fullscreen-guide__panel">
+      <span class="fullscreen-guide__icon" aria-hidden="true">⛶</span>
+      <div>
+        <span class="fullscreen-guide__kicker">PEŁNY EKRAN NA iPHONIE</span>
+        <h2 id="fullscreenGuideTitle">Uruchom SlingToon jak aplikację</h2>
+        <ol>
+          <li>Stuknij w Safari ikonę <strong>Udostępnij</strong> <span aria-hidden="true">⇧</span>.</li>
+          <li>Wybierz <strong>Dodaj do ekranu początkowego</strong>.</li>
+          <li>Zostaw włączone <strong>Otwórz jako aplikację</strong> i uruchom ikonę SlingToon.</li>
+        </ol>
+      </div>
+      <button id="fullscreenClose" class="fullscreen-guide__close" type="button">Rozumiem</button>
+    </div>
+  </section>
+
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
   <noscript>Do uruchomienia SlingToon potrzebna jest obsługa JavaScript.</noscript>
-  <script type="module" src="src/main.js?v=0.9.2"></script>
+  <script type="module" src="src/main.js?v=0.9.3"></script>
 </body>
 </html>

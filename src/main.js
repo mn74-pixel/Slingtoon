@@ -1,7 +1,7 @@
-import { GameModel, GameMode, GamePhase, modifierName } from "./game.js?v=0.9.2";
-import { GameRenderer } from "./render.js?v=0.9.2";
-import { GameAudio } from "./audio.js?v=0.9.2";
-import { FaceStudio } from "./face-studio.js?v=0.9.2";
+import { GameModel, GameMode, GamePhase, modifierName } from "./game.js?v=0.9.3";
+import { GameRenderer } from "./render.js?v=0.9.3";
+import { GameAudio } from "./audio.js?v=0.9.3";
+import { FaceStudio } from "./face-studio.js?v=0.9.3";
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -14,6 +14,7 @@ const elements = {
   faceButton: $("#faceButton"),
   faceInput: $("#faceInput"),
   soundButton: $("#soundButton"),
+  fullscreenButton: $("#fullscreenButton"),
   modeBadge: $("#modeBadge"),
   shotBadge: $("#shotBadge"),
   resultPanel: $("#resultPanel"),
@@ -38,6 +39,9 @@ const elements = {
   faceStyleStrength: $("#faceStyleStrength"),
   faceStyleValue: $("#faceStyleValue"),
   faceStatus: $("#faceStatus"),
+  fullscreenGuide: $("#fullscreenGuide"),
+  fullscreenBackdrop: $("#fullscreenBackdrop"),
+  fullscreenClose: $("#fullscreenClose"),
   toast: $("#toast"),
 };
 
@@ -50,6 +54,64 @@ let interaction = null;
 let lastFrame = performance.now();
 let resultTimer = null;
 let toastTimer = null;
+let installPrompt = null;
+
+function isStandaloneMode() {
+  return window.navigator.standalone === true
+    || window.matchMedia("(display-mode: fullscreen)").matches
+    || window.matchMedia("(display-mode: standalone)").matches;
+}
+
+function updateFullscreenUi() {
+  const active = isStandaloneMode() || Boolean(document.fullscreenElement);
+  document.body.classList.toggle("is-standalone", isStandaloneMode());
+  elements.fullscreenButton.classList.toggle("is-active", active);
+  elements.fullscreenButton.setAttribute("aria-pressed", String(active));
+  elements.fullscreenButton.setAttribute("aria-label", active ? "Pełny ekran jest włączony" : "Włącz pełny ekran");
+  elements.fullscreenButton.title = active ? "Pełny ekran jest włączony" : "Włącz pełny ekran";
+}
+
+function openFullscreenGuide() {
+  elements.fullscreenGuide.hidden = false;
+  document.body.classList.add("fullscreen-guide-open");
+}
+
+function closeFullscreenGuide() {
+  elements.fullscreenGuide.hidden = true;
+  document.body.classList.remove("fullscreen-guide-open");
+  elements.fullscreenButton.focus({ preventScroll: true });
+}
+
+async function enterFullscreen() {
+  if (isStandaloneMode()) {
+    showToast("Pełny ekran aplikacji jest już włączony.");
+    return;
+  }
+
+  if (document.fullscreenElement) {
+    await document.exitFullscreen?.();
+    return;
+  }
+
+  if (document.documentElement.requestFullscreen && document.fullscreenEnabled) {
+    try {
+      await document.documentElement.requestFullscreen({ navigationUI: "hide" });
+      screen.orientation?.lock?.("landscape")?.catch(() => {});
+      return;
+    } catch {
+      // Safari on iPhone falls through to the Home Screen web-app guide.
+    }
+  }
+
+  if (installPrompt) {
+    installPrompt.prompt();
+    await installPrompt.userChoice;
+    installPrompt = null;
+    return;
+  }
+
+  openFullscreenGuide();
+}
 
 function showToast(message, isError = false) {
   clearTimeout(toastTimer);
@@ -283,6 +345,14 @@ elements.soundButton.addEventListener("click", () => {
   elements.soundButton.setAttribute("aria-pressed", String(muted));
   elements.soundButton.title = muted ? "Włącz dźwięk" : "Wycisz dźwięk";
 });
+elements.fullscreenButton.addEventListener("click", () => enterFullscreen().catch(() => openFullscreenGuide()));
+elements.fullscreenBackdrop.addEventListener("click", closeFullscreenGuide);
+elements.fullscreenClose.addEventListener("click", closeFullscreenGuide);
+document.addEventListener("fullscreenchange", updateFullscreenUi);
+window.addEventListener("beforeinstallprompt", (event) => {
+  event.preventDefault();
+  installPrompt = event;
+});
 elements.restartButton.addEventListener("click", () => model.resetLevel(true));
 elements.againButton.addEventListener("click", () => model.resetLevel(false));
 elements.whatIfButton.addEventListener("click", () => {
@@ -292,8 +362,10 @@ elements.whatIfButton.addEventListener("click", () => {
 });
 
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
-  window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js?v=0.9.2").catch(() => {}));
+  window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js?v=0.9.3").catch(() => {}));
 }
+
+updateFullscreenUi();
 
 renderer
   .load()
