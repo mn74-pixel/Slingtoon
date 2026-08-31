@@ -1,7 +1,7 @@
-import { GameModel, GameMode, GamePhase, modifierName } from "./game.js?v=0.9.5";
-import { GameRenderer } from "./render.js?v=0.9.5";
-import { GameAudio } from "./audio.js?v=0.9.5";
-import { FaceStudio } from "./face-studio.js?v=0.9.5";
+import { GameModel, GameMode, GamePhase, modifierName } from "./game.js?v=0.9.6";
+import { GameRenderer } from "./render.js?v=0.9.6";
+import { GameAudio } from "./audio.js?v=0.9.6";
+import { FaceStudio } from "./face-studio.js?v=0.9.6";
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -41,6 +41,7 @@ const elements = {
   faceStatus: $("#faceStatus"),
   fullscreenGuide: $("#fullscreenGuide"),
   fullscreenBackdrop: $("#fullscreenBackdrop"),
+  fullscreenStart: $("#fullscreenStart"),
   fullscreenClose: $("#fullscreenClose"),
   toast: $("#toast"),
 };
@@ -55,7 +56,7 @@ let lastFrame = performance.now();
 let resultTimer = null;
 let toastTimer = null;
 let installPrompt = null;
-const FULLSCREEN_TIP_KEY = "slingtoon-fullscreen-tip-0.9.5";
+const FULLSCREEN_TIP_KEY = "slingtoon-fullscreen-tip-0.9.6";
 
 function isStandaloneMode() {
   return window.navigator.standalone === true
@@ -118,22 +119,19 @@ function scheduleFullscreenSuggestion() {
   }, 700);
 }
 
-async function enterFullscreen() {
+async function requestGameFullscreen() {
   if (isStandaloneMode()) {
-    showToast("Pełny ekran aplikacji jest już włączony.");
-    return;
+    return true;
   }
 
-  if (document.fullscreenElement) {
-    await document.exitFullscreen?.();
-    return;
-  }
+  if (document.fullscreenElement) return true;
 
   if (document.documentElement.requestFullscreen && document.fullscreenEnabled) {
     try {
       await document.documentElement.requestFullscreen({ navigationUI: "hide" });
       screen.orientation?.lock?.("landscape")?.catch(() => {});
-      return;
+      updateFullscreenUi();
+      return true;
     } catch {
       // Safari on iPhone falls through to the Home Screen web-app guide.
     }
@@ -141,12 +139,39 @@ async function enterFullscreen() {
 
   if (installPrompt) {
     installPrompt.prompt();
-    await installPrompt.userChoice;
+    const choice = await installPrompt.userChoice;
     installPrompt = null;
+    return choice.outcome === "accepted";
+  }
+
+  return false;
+}
+
+async function enterFullscreen() {
+  if (document.fullscreenElement) {
+    await document.exitFullscreen?.();
     return;
   }
 
+  if (isStandaloneMode()) {
+    showToast("Pełny ekran aplikacji jest już włączony.");
+    return;
+  }
+
+  if (await requestGameFullscreen()) return;
   openFullscreenGuide();
+}
+
+async function startFullscreenFromGuide() {
+  const entered = await requestGameFullscreen();
+  if (entered) {
+    closeFullscreenGuide();
+    showToast("Pełny ekran włączony — zaczynamy chaos!");
+    return;
+  }
+
+  elements.fullscreenGuide.dataset.fallback = "true";
+  showToast("Jeśli Safari odmówiło, dodaj grę do ekranu początkowego.", true);
 }
 
 function showToast(message, isError = false) {
@@ -383,6 +408,10 @@ elements.soundButton.addEventListener("click", () => {
 });
 elements.fullscreenButton.addEventListener("click", () => enterFullscreen().catch(() => openFullscreenGuide()));
 elements.fullscreenBackdrop.addEventListener("click", closeFullscreenGuide);
+elements.fullscreenStart.addEventListener("click", () => startFullscreenFromGuide().catch(() => {
+  elements.fullscreenGuide.dataset.fallback = "true";
+  showToast("Nie udało się włączyć pełnego ekranu. Użyj instrukcji poniżej.", true);
+}));
 elements.fullscreenClose.addEventListener("click", closeFullscreenGuide);
 document.addEventListener("fullscreenchange", updateFullscreenUi);
 window.addEventListener("beforeinstallprompt", (event) => {
@@ -399,7 +428,7 @@ elements.whatIfButton.addEventListener("click", () => {
 
 window.addEventListener("load", () => {
   if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
-    navigator.serviceWorker.register("./sw.js?v=0.9.5").catch(() => {});
+    navigator.serviceWorker.register("./sw.js?v=0.9.6").catch(() => {});
   }
   scheduleFullscreenSuggestion();
 });

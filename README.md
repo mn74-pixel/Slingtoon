@@ -1,4 +1,4 @@
-# SlingToon Web 0.9.5
+# SlingToon Web 0.9.6
 
 An offline-capable HTML5 Canvas PWA prepared for GitHub Pages. No JUCE, Projucer or native build is required for browser testing.
 

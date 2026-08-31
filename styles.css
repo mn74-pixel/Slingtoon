@@ -973,18 +973,34 @@ body.fullscreen-guide-open {
 .fullscreen-guide li + li { margin-top: 4px; }
 .fullscreen-guide strong { color: var(--cream); }
 
-.fullscreen-guide__close {
+.fullscreen-guide__actions {
   grid-column: 2;
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.fullscreen-guide__start,
+.fullscreen-guide__close {
   min-height: 42px;
   padding: 0 20px;
-  justify-self: end;
-  border: 1px solid rgba(255, 211, 95, 0.45);
   border-radius: 999px;
-  color: var(--ink);
-  background: linear-gradient(135deg, var(--gold), #ffb754);
   font-size: 12px;
   font-weight: 950;
   cursor: pointer;
+}
+
+.fullscreen-guide__start {
+  border: 1px solid rgba(255, 211, 95, 0.45);
+  color: var(--ink);
+  background: linear-gradient(135deg, var(--gold), #ffb754);
+}
+
+.fullscreen-guide__close {
+  border: 1px solid rgba(255, 245, 217, 0.18);
+  color: var(--cream-dim);
+  background: rgba(18, 12, 32, 0.48);
 }
 
 .fullscreen-guide[data-automatic="true"] .fullscreen-guide__panel {
@@ -1292,6 +1308,7 @@ noscript {
   .fullscreen-guide h2 { margin-bottom: 5px; font-size: 18px; }
   .fullscreen-guide__note { margin-bottom: 5px; font-size: 9px; line-height: 1.3; }
   .fullscreen-guide ol { font-size: 10px; line-height: 1.35; }
+  .fullscreen-guide__start,
   .fullscreen-guide__close { min-height: 32px; padding-inline: 14px; font-size: 10px; }
 }
 
@@ -1382,6 +1399,79 @@ noscript {
   .top-actions {
     width: 100%;
     justify-content: center;
+  }
+}
+
+/*
+ * In true fullscreen the browser chrome is gone, so the controls and mission
+ * can share one translucent row. The canvas then receives the complete screen
+ * height instead of losing a separate topbar row; this reduces the old upper
+ * crop from roughly 150 world pixels to about 50 on an iPhone in landscape.
+ */
+@media (orientation: landscape) and (max-height: 560px) {
+  body.is-fullscreen-active .app-shell {
+    width: 100%;
+    height: 100dvh;
+    padding: 0;
+    grid-template-rows: minmax(0, 1fr);
+    gap: 0;
+  }
+
+  body.is-fullscreen-active .topbar {
+    position: absolute;
+    z-index: 14;
+    top: 0;
+    right: 0;
+    left: 0;
+    height: 42px;
+    min-height: 42px;
+    padding-right: max(7px, env(safe-area-inset-right));
+    padding-left: max(7px, env(safe-area-inset-left));
+    justify-content: flex-end;
+    pointer-events: none;
+  }
+
+  body.is-fullscreen-active .brand-block { display: none; }
+  body.is-fullscreen-active .top-actions { pointer-events: auto; }
+
+  body.is-fullscreen-active main {
+    grid-row: 1;
+    height: 100%;
+    min-height: 0;
+    align-items: stretch;
+  }
+
+  body.is-fullscreen-active .game-card {
+    height: 100%;
+    border: 0;
+    border-radius: 0;
+  }
+
+  body.is-fullscreen-active .mission-strip {
+    top: 0;
+    height: 42px;
+    min-height: 42px;
+    padding-right: 56vw;
+  }
+
+  body.is-fullscreen-active .mission-copy h1 {
+    max-width: 39vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  body.is-fullscreen-active .mission-badges { display: none; }
+
+  body.is-fullscreen-active .stage {
+    width: 100%;
+    height: 100%;
+  }
+
+  body.is-fullscreen-active .status-row {
+    height: calc(38px + env(safe-area-inset-bottom));
+    min-height: calc(38px + env(safe-area-inset-bottom));
+    padding-bottom: env(safe-area-inset-bottom);
   }
 }
 

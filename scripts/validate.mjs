@@ -78,7 +78,7 @@ assert.match(html, /src\/main\.js/);
 assert.match(html, /connect-src 'self'/);
 assert.doesNotMatch(html, /script-src[^;]*\s'unsafe-eval'/);
 assert.doesNotMatch(html, /style-src[^;]*'unsafe-inline'/);
-assert.match(main, /serviceWorker\.register\("\.\/sw\.js\?v=0\.9\.5"\)/);
+assert.match(main, /serviceWorker\.register\("\.\/sw\.js\?v=0\.9\.6"\)/);
 assert.match(game, /replayWith\(modifier\)/);
 assert.match(game, /shot\.launchVelocity/);
 assert.match(html, /id="faceStudio"/);
@@ -103,9 +103,11 @@ assert.match(html, /id="fullscreenGuide"/);
 assert.match(main, /window\.navigator\.standalone/);
 assert.match(main, /requestFullscreen/);
 assert.match(main, /beforeinstallprompt/);
-assert.match(main, /slingtoon-fullscreen-tip-0\.9\.5/);
+assert.match(main, /slingtoon-fullscreen-tip-0\.9\.6/);
 assert.match(main, /shouldSuggestFullscreen/);
-assert.match(html, /Graj teraz w Safari/);
+assert.match(main, /requestGameFullscreen/);
+assert.match(html, /id="fullscreenStart"/);
+assert.match(html, /Graj pełny ekran/);
 assert.match(css, /padding-right:\s*0;\s*padding-left:\s*0;/);
 assert.match(css, /orientation:\s*landscape[^}]*max-height:\s*560px/);
 assert.match(css, /min-aspect-ratio:\s*2\s*\/\s*1/);
@@ -127,6 +129,15 @@ for (const [viewportWidth, viewportHeight] of [[852, 393], [852, 320], [768, 284
 
   assert.ok(cardWidth / viewportWidth > 0.995, `landscape card must reach both edges at ${viewportWidth}x${viewportHeight}`);
   assert.ok(visibleWorldTop < 330, `sling and targets must remain visible at ${viewportWidth}x${viewportHeight}`);
+
+}
+
+// Fullscreen removes Safari's browser chrome, so its viewport is materially
+// taller than the shallow in-browser cases above.
+for (const [viewportWidth, viewportHeight] of [[852, 393], [768, 354], [667, 375]]) {
+  const fullscreenScale = Math.max(viewportWidth / 1280, viewportHeight / 640);
+  const fullscreenWorldTop = Math.max(0, (640 * fullscreenScale - viewportHeight) / fullscreenScale);
+  assert.ok(fullscreenWorldTop < 90, `fullscreen must reveal the room top at ${viewportWidth}x${viewportHeight}`);
 }
 
 for (const file of requiredFiles.filter((file) => !file.startsWith(".github") && !file.startsWith("docs/"))) {
@@ -140,4 +151,4 @@ for (const file of requiredFiles.filter((file) => !file.startsWith(".github") &&
   }
 }
 
-console.log("SlingToon Web 0.9.5: automatic fullscreen guidance, larger expressive face and edge-to-edge play are valid.");
+console.log("SlingToon Web 0.9.6: one-tap fullscreen and expanded room framing are valid.");

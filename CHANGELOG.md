@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.9.6 — One-Tap Fullscreen + Expanded Room
+
+- ekran startowy na iPhonie ma teraz bezpośredni przycisk `Graj pełny ekran`, który wywołuje Fullscreen API w ramach wymaganego gestu użytkownika,
+- pozostawiono instrukcję dodania do ekranu początkowego jako wariant zapasowy dla urządzeń, które odrzucą Fullscreen API,
+- w aktywnym trybie pełnoekranowym pasek misji i kontrolki zajmują wspólny, pojedynczy rząd,
+- canvas otrzymuje całą wysokość ekranu, dzięki czemu górny fragment pokoju nie jest już agresywnie przycinany,
+- dolny pasek respektuje bezpieczny obszar wskaźnika Home,
+- podbito cache PWA, aby iPhone pobrał nowy układ i sterowanie pełnym ekranem.
+
 ## 0.9.5 — iPhone Fullscreen Onboarding + Expressive Head
 
 - na iPhonie używanym w Safari gra automatycznie pokazuje jednorazową, konkretną instrukcję uruchomienia bez pasków przeglądarki,
