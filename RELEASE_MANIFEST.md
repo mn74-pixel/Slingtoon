@@ -1,4 +1,4 @@
-# SlingToon Web 0.9.4 — Release Manifest
+# SlingToon Web 0.9.5 — Release Manifest
 
 **Format:** statyczna gra HTML5 Canvas / PWA  
 **Publikacja:** GitHub Pages  
@@ -12,7 +12,8 @@
 - portret wektorowy 512×512 z automatycznym kadrem twarzy niezależnym od odległości aparatu,
 - lokalny runtime MediaPipe Tasks Vision 1.0.1 oraz dwa modele ML,
 - responsywny interfejs edge-to-edge mieszczący całą grę w poziomym ekranie telefonu,
-- przycisk pełnego ekranu oraz instrukcja uruchomienia jako aplikacji na iPhonie,
+- automatyczna instrukcja uruchomienia jako aplikacji na iPhonie oraz aktywny przycisk pełnego ekranu,
+- powiększona do 162% rysunkowa głowa z czytelną mimiką, bez zmiany pola kolizji,
 - grafika SVG i ikony PNG,
 - service worker i manifest instalacyjny,
 - workflow walidacji i publikacji GitHub Pages,

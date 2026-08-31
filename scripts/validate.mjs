@@ -58,6 +58,7 @@ const manifest = JSON.parse(manifestText);
 assert.equal(manifest.start_url, "./");
 assert.equal(manifest.scope, "./");
 assert.equal(manifest.display, "fullscreen");
+assert.deepEqual(manifest.display_override, ["fullscreen", "standalone"]);
 assert.equal(manifest.orientation, "landscape");
 assert.ok(manifest.icons.some((icon) => icon.purpose === "maskable"));
 
@@ -77,7 +78,7 @@ assert.match(html, /src\/main\.js/);
 assert.match(html, /connect-src 'self'/);
 assert.doesNotMatch(html, /script-src[^;]*\s'unsafe-eval'/);
 assert.doesNotMatch(html, /style-src[^;]*'unsafe-inline'/);
-assert.match(main, /serviceWorker\.register\("\.\/sw\.js\?v=0\.9\.4"\)/);
+assert.match(main, /serviceWorker\.register\("\.\/sw\.js\?v=0\.9\.5"\)/);
 assert.match(game, /replayWith\(modifier\)/);
 assert.match(game, /shot\.launchVelocity/);
 assert.match(html, /id="faceStudio"/);
@@ -95,13 +96,16 @@ assert.match(portrait, /autoFaceZoom:\s*true/);
 assert.match(portrait, /FACE_CATEGORIES\.HAIR/);
 assert.match(html, /AUTO ZOOM/);
 assert.doesNotMatch(render, /ctx\.clip\(\);\s*this\.drawImageCover\(ctx, this\.faceImage/);
-assert.match(render, /const CUSTOM_HEAD_SCALE = 1\.4;/);
+assert.match(render, /const CUSTOM_HEAD_SCALE = 1\.62;/);
 assert.match(render, /ctx\.scale\(CUSTOM_HEAD_SCALE, CUSTOM_HEAD_SCALE\)/);
 assert.match(html, /id="fullscreenButton"/);
 assert.match(html, /id="fullscreenGuide"/);
 assert.match(main, /window\.navigator\.standalone/);
 assert.match(main, /requestFullscreen/);
 assert.match(main, /beforeinstallprompt/);
+assert.match(main, /slingtoon-fullscreen-tip-0\.9\.5/);
+assert.match(main, /shouldSuggestFullscreen/);
+assert.match(html, /Graj teraz w Safari/);
 assert.match(css, /padding-right:\s*0;\s*padding-left:\s*0;/);
 assert.match(css, /orientation:\s*landscape[^}]*max-height:\s*560px/);
 assert.match(css, /min-aspect-ratio:\s*2\s*\/\s*1/);
@@ -136,4 +140,4 @@ for (const file of requiredFiles.filter((file) => !file.startsWith(".github") &&
   }
 }
 
-console.log("SlingToon Web 0.9.4: automatic face framing, edge-to-edge play and fullscreen app flow are valid.");
+console.log("SlingToon Web 0.9.5: automatic fullscreen guidance, larger expressive face and edge-to-edge play are valid.");

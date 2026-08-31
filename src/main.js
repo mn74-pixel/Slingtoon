@@ -1,7 +1,7 @@
-import { GameModel, GameMode, GamePhase, modifierName } from "./game.js?v=0.9.4";
-import { GameRenderer } from "./render.js?v=0.9.4";
-import { GameAudio } from "./audio.js?v=0.9.4";
-import { FaceStudio } from "./face-studio.js?v=0.9.4";
+import { GameModel, GameMode, GamePhase, modifierName } from "./game.js?v=0.9.5";
+import { GameRenderer } from "./render.js?v=0.9.5";
+import { GameAudio } from "./audio.js?v=0.9.5";
+import { FaceStudio } from "./face-studio.js?v=0.9.5";
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -55,6 +55,7 @@ let lastFrame = performance.now();
 let resultTimer = null;
 let toastTimer = null;
 let installPrompt = null;
+const FULLSCREEN_TIP_KEY = "slingtoon-fullscreen-tip-0.9.5";
 
 function isStandaloneMode() {
   return window.navigator.standalone === true
@@ -62,24 +63,59 @@ function isStandaloneMode() {
     || window.matchMedia("(display-mode: standalone)").matches;
 }
 
+function isAppleTouchDevice() {
+  return /iPad|iPhone|iPod/i.test(window.navigator.userAgent)
+    || (window.navigator.platform === "MacIntel" && window.navigator.maxTouchPoints > 1);
+}
+
+function shouldSuggestFullscreen() {
+  let alreadySeen = false;
+  try {
+    alreadySeen = window.sessionStorage.getItem(FULLSCREEN_TIP_KEY) === "seen";
+  } catch {
+    // Some privacy modes disable storage; the guide can still work normally.
+  }
+  return isAppleTouchDevice()
+    && !isStandaloneMode()
+    && window.matchMedia("(orientation: landscape)").matches
+    && !alreadySeen;
+}
+
 function updateFullscreenUi() {
   const active = isStandaloneMode() || Boolean(document.fullscreenElement);
   document.body.classList.toggle("is-standalone", isStandaloneMode());
+  document.body.classList.toggle("is-fullscreen-active", active);
   elements.fullscreenButton.classList.toggle("is-active", active);
   elements.fullscreenButton.setAttribute("aria-pressed", String(active));
   elements.fullscreenButton.setAttribute("aria-label", active ? "Pełny ekran jest włączony" : "Włącz pełny ekran");
   elements.fullscreenButton.title = active ? "Pełny ekran jest włączony" : "Włącz pełny ekran";
 }
 
-function openFullscreenGuide() {
+function openFullscreenGuide({ automatic = false } = {}) {
   elements.fullscreenGuide.hidden = false;
+  elements.fullscreenGuide.dataset.automatic = String(automatic);
   document.body.classList.add("fullscreen-guide-open");
 }
 
 function closeFullscreenGuide() {
+  try {
+    window.sessionStorage.setItem(FULLSCREEN_TIP_KEY, "seen");
+  } catch {
+    // Closing the guide must never depend on storage being available.
+  }
   elements.fullscreenGuide.hidden = true;
+  delete elements.fullscreenGuide.dataset.automatic;
   document.body.classList.remove("fullscreen-guide-open");
   elements.fullscreenButton.focus({ preventScroll: true });
+}
+
+function scheduleFullscreenSuggestion() {
+  if (!shouldSuggestFullscreen()) return;
+  window.setTimeout(() => {
+    if (shouldSuggestFullscreen() && elements.faceStudio.hidden && elements.resultPanel.hidden) {
+      openFullscreenGuide({ automatic: true });
+    }
+  }, 700);
 }
 
 async function enterFullscreen() {
@@ -361,9 +397,12 @@ elements.whatIfButton.addEventListener("click", () => {
   model.replayWith(modifier);
 });
 
-if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
-  window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js?v=0.9.4").catch(() => {}));
-}
+window.addEventListener("load", () => {
+  if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
+    navigator.serviceWorker.register("./sw.js?v=0.9.5").catch(() => {});
+  }
+  scheduleFullscreenSuggestion();
+});
 
 updateFullscreenUi();
 

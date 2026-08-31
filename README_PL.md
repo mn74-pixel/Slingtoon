@@ -1,4 +1,4 @@
-# SlingToon Web 0.9.4 — GitHub Pages / PWA
+# SlingToon Web 0.9.5 — GitHub Pages / PWA
 
 Samodzielna gra webowa przygotowana w tym samym modelu publikacji co Castle Conflict. Do uruchomienia i wdrożenia nie potrzeba JUCE, Projucera ani Xcode.
 
@@ -40,6 +40,8 @@ Wszystkie ścieżki są względne, więc projekt działa również jako repozyto
 3. Wybierz `Do ekranu początkowego`.
 
 Gra uruchamia się pełnoekranowo i po pierwszym wczytaniu działa offline. Face Studio pobiera lokalne modele dopiero przy pierwszym użyciu; po udanej analizie również są zapisywane w cache PWA.
+
+Safari na iPhonie nie udostępnia stronom zwykłego przycisku do programowego ukrycia pasków przeglądarki. Dlatego SlingToon pokazuje jednorazową instrukcję dodania ikony do ekranu początkowego; uruchomienie z tej ikony daje właściwy tryb aplikacji bez pasków Safari.
 
 ## Sterowanie
 

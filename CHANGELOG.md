@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.9.5 — iPhone Fullscreen Onboarding + Expressive Head
+
+- na iPhonie używanym w Safari gra automatycznie pokazuje jednorazową, konkretną instrukcję uruchomienia bez pasków przeglądarki,
+- przycisk pełnego ekranu pozostaje widoczny i delikatnie pulsuje, dopóki gra nie działa jako aplikacja,
+- manifest preferuje pełny ekran, z bezpiecznym trybem `standalone` jako wariantem zapasowym,
+- rysunkowa głowa rośnie z 140% do 162% rozmiaru bazowego i jest wyżej osadzona, aby oczy, usta oraz reakcje były czytelne na telefonie,
+- większa głowa pozostaje wyłącznie zmianą wizualną; pole kolizji i fizyka są bez zmian,
+- podbito cache PWA, aby Safari pobrało nowy renderer i przepływ pełnoekranowy.
+
 ## 0.9.4 — Automatic Face Framing
 
 - automatyczny zoom opiera się na punktach owalu twarzy, więc dalsze zdjęcie daje taki sam rozmiar Cartoon jak selfie,

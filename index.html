@@ -10,10 +10,10 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="SlingToon">
   <title>SlingToon — Morning Mayhem</title>
-  <link rel="manifest" href="manifest.webmanifest?v=0.9.4">
+  <link rel="manifest" href="manifest.webmanifest?v=0.9.5">
   <link rel="icon" href="assets/icon-192.png" sizes="192x192">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="styles.css?v=0.9.4">
+  <link rel="stylesheet" href="styles.css?v=0.9.5">
 </head>
 <body>
   <div class="ambient ambient--one" aria-hidden="true"></div>
@@ -104,7 +104,7 @@
     </main>
 
     <footer>
-      <span>SLINGTOON WEB 0.9.4</span>
+      <span>SLINGTOON WEB 0.9.5</span>
       <span>Offline PWA · GitHub Pages Ready</span>
     </footer>
   </div>
@@ -169,20 +169,21 @@
       <span class="fullscreen-guide__icon" aria-hidden="true">⛶</span>
       <div>
         <span class="fullscreen-guide__kicker">PEŁNY EKRAN NA iPHONIE</span>
-        <h2 id="fullscreenGuideTitle">Uruchom SlingToon jak aplikację</h2>
+        <h2 id="fullscreenGuideTitle">Odzyskaj całą wysokość ekranu</h2>
+        <p class="fullscreen-guide__note">Safari nie pozwala grze samodzielnie ukryć pasków przeglądarki. Uruchom SlingToon z własnej ikony, a plansza otworzy się bez nich.</p>
         <ol>
           <li>Stuknij w Safari ikonę <strong>Udostępnij</strong> <span aria-hidden="true">⇧</span>.</li>
           <li>Wybierz <strong>Dodaj do ekranu początkowego</strong>.</li>
           <li>Zostaw włączone <strong>Otwórz jako aplikację</strong> i uruchom ikonę SlingToon.</li>
         </ol>
       </div>
-      <button id="fullscreenClose" class="fullscreen-guide__close" type="button">Rozumiem</button>
+      <button id="fullscreenClose" class="fullscreen-guide__close" type="button">Graj teraz w Safari</button>
     </div>
   </section>
 
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
   <noscript>Do uruchomienia SlingToon potrzebna jest obsługa JavaScript.</noscript>
-  <script type="module" src="src/main.js?v=0.9.4"></script>
+  <script type="module" src="src/main.js?v=0.9.5"></script>
 </body>
 </html>

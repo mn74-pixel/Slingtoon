@@ -18,8 +18,11 @@ const PALETTE = Object.freeze({
 
 const clamp = (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value));
 const lerp = (a, b, amount) => a + (b - a) * amount;
-const CUSTOM_HEAD_SCALE = 1.4;
-const CUSTOM_HEAD_LIFT = -6;
+// Keep the face readable after the complete 1280×640 room is reduced to a
+// phone screen. This is deliberately visual-only: GameModel still uses the
+// original avatar radius for aiming and collisions.
+const CUSTOM_HEAD_SCALE = 1.62;
+const CUSTOM_HEAD_LIFT = -10;
 
 function roundedRect(ctx, x, y, width, height, radius) {
   const r = Math.min(radius, Math.abs(width) * 0.5, Math.abs(height) * 0.5);
