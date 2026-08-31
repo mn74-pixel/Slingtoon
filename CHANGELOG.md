@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.4 — Automatic Face Framing
+
+- automatyczny zoom opiera się na punktach owalu twarzy, więc dalsze zdjęcie daje taki sam rozmiar Cartoon jak selfie,
+- zmniejszono sztuczny zapas dawnej „czaszki”; kadr rozszerza się tylko wtedy, gdy segmentacja rzeczywiście wykryje włosy,
+- skrajne piksele maski włosów są liczone percentylami, aby pojedynczy błąd segmentacji nie pomniejszał twarzy,
+- Face Studio pokazuje etap `AUTO ZOOM` i zapisuje informację o wypełnieniu kadru,
+- podbito cache PWA, aby iPhone pobrał nowy algorytm portretu.
+
 ## 0.9.3 — Fullscreen Game + Larger Face
 
 - dodano przycisk pełnego ekranu: korzysta z Fullscreen API tam, gdzie jest dostępne, a na iPhonie pokazuje krótką instrukcję uruchomienia gry jako aplikacji,

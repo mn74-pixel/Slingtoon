@@ -1,7 +1,7 @@
-import { GameModel, GameMode, GamePhase, modifierName } from "./game.js?v=0.9.3";
-import { GameRenderer } from "./render.js?v=0.9.3";
-import { GameAudio } from "./audio.js?v=0.9.3";
-import { FaceStudio } from "./face-studio.js?v=0.9.3";
+import { GameModel, GameMode, GamePhase, modifierName } from "./game.js?v=0.9.4";
+import { GameRenderer } from "./render.js?v=0.9.4";
+import { GameAudio } from "./audio.js?v=0.9.4";
+import { FaceStudio } from "./face-studio.js?v=0.9.4";
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -362,7 +362,7 @@ elements.whatIfButton.addEventListener("click", () => {
 });
 
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
-  window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js?v=0.9.3").catch(() => {}));
+  window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js?v=0.9.4").catch(() => {}));
 }
 
 updateFullscreenUi();

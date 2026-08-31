@@ -75,7 +75,9 @@ assert.match(html, /<canvas id="gameCanvas"/);
 assert.match(html, /manifest\.webmanifest/);
 assert.match(html, /src\/main\.js/);
 assert.match(html, /connect-src 'self'/);
-assert.match(main, /serviceWorker\.register\("\.\/sw\.js\?v=0\.9\.3"\)/);
+assert.doesNotMatch(html, /script-src[^;]*\s'unsafe-eval'/);
+assert.doesNotMatch(html, /style-src[^;]*'unsafe-inline'/);
+assert.match(main, /serviceWorker\.register\("\.\/sw\.js\?v=0\.9\.4"\)/);
 assert.match(game, /replayWith\(modifier\)/);
 assert.match(game, /shot\.launchVelocity/);
 assert.match(html, /id="faceStudio"/);
@@ -88,7 +90,10 @@ assert.match(faceVision, /ImageSegmenter\.createFromOptions/);
 assert.match(faceVision, /delegate:\s*"CPU"/);
 assert.match(faceVision, /FACE_LANDMARKS_FACE_OVAL/);
 assert.match(portrait, /segmented-vector-portrait/);
+assert.match(portrait, /createPortraitTransform/);
+assert.match(portrait, /autoFaceZoom:\s*true/);
 assert.match(portrait, /FACE_CATEGORIES\.HAIR/);
+assert.match(html, /AUTO ZOOM/);
 assert.doesNotMatch(render, /ctx\.clip\(\);\s*this\.drawImageCover\(ctx, this\.faceImage/);
 assert.match(render, /const CUSTOM_HEAD_SCALE = 1\.4;/);
 assert.match(render, /ctx\.scale\(CUSTOM_HEAD_SCALE, CUSTOM_HEAD_SCALE\)/);
@@ -131,4 +136,4 @@ for (const file of requiredFiles.filter((file) => !file.startsWith(".github") &&
   }
 }
 
-console.log("SlingToon Web 0.9.3: edge-to-edge play, fullscreen app flow and larger readable custom head are valid.");
+console.log("SlingToon Web 0.9.4: automatic face framing, edge-to-edge play and fullscreen app flow are valid.");

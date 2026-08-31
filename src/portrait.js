@@ -49,23 +49,24 @@ export function connectionPaths(connections = []) {
 
 export function deriveHeadBounds(landmarks, mask) {
   const face = boundsFromLandmarks(landmarks);
-  const initial = {
-    left: clamp(face.left - face.width * 0.3, 0, 1),
-    right: clamp(face.right + face.width * 0.3, 0, 1),
-    top: clamp(face.top - face.height * 0.62, 0, 1),
-    bottom: clamp(face.bottom + face.height * 0.16, 0, 1),
+  // Follow the detected face instead of reserving a large fixed skull area.
+  // This gives a distant face the same final framing as a close selfie.
+  const fallback = {
+    left: clamp(face.left - face.width * 0.16, 0, 1),
+    right: clamp(face.right + face.width * 0.16, 0, 1),
+    top: clamp(face.top - face.height * 0.27, 0, 1),
+    bottom: clamp(face.bottom + face.height * 0.11, 0, 1),
   };
 
-  let hairLeft = initial.left;
-  let hairRight = initial.right;
-  let hairTop = initial.top;
+  const hairX = [];
+  const hairY = [];
   let foundHair = false;
-  const scanLeft = clamp(face.left - face.width * 0.48, 0, 1);
-  const scanRight = clamp(face.right + face.width * 0.48, 0, 1);
+  const scanLeft = clamp(face.left - face.width * 0.52, 0, 1);
+  const scanRight = clamp(face.right + face.width * 0.52, 0, 1);
   const scanTop = clamp(face.top - face.height * 0.95, 0, 1);
-  const scanBottom = clamp(face.top + face.height * 0.66, 0, 1);
+  const scanBottom = clamp(face.top + face.height * 0.62, 0, 1);
 
-  if (mask?.categories?.length === mask.width * mask.height) {
+  if (mask && mask.categories?.length === mask.width * mask.height) {
     for (let y = 0; y < mask.height; y += 1) {
       const normalizedY = (y + 0.5) / mask.height;
       if (normalizedY < scanTop || normalizedY > scanBottom) continue;
@@ -73,18 +74,26 @@ export function deriveHeadBounds(landmarks, mask) {
         const normalizedX = (x + 0.5) / mask.width;
         if (normalizedX < scanLeft || normalizedX > scanRight) continue;
         if (mask.categories[y * mask.width + x] !== FACE_CATEGORIES.HAIR) continue;
-        foundHair = true;
-        hairLeft = Math.min(hairLeft, normalizedX);
-        hairRight = Math.max(hairRight, normalizedX);
-        hairTop = Math.min(hairTop, normalizedY);
+        hairX.push(normalizedX);
+        hairY.push(normalizedY);
       }
     }
   }
 
-  const left = clamp(Math.min(initial.left, hairLeft - (foundHair ? face.width * 0.035 : 0)), 0, 1);
-  const right = clamp(Math.max(initial.right, hairRight + (foundHair ? face.width * 0.035 : 0)), 0, 1);
-  const top = clamp(Math.min(initial.top, hairTop - (foundHair ? face.height * 0.035 : 0)), 0, 1);
-  const bottom = initial.bottom;
+  foundHair = hairX.length >= 2;
+  hairX.sort((a, b) => a - b);
+  hairY.sort((a, b) => a - b);
+  const percentile = (values, amount, fallbackValue) => values.length
+    ? values[Math.round((values.length - 1) * amount)]
+    : fallbackValue;
+  const hairLeft = percentile(hairX, 0.02, fallback.left);
+  const hairRight = percentile(hairX, 0.98, fallback.right);
+  const hairTop = percentile(hairY, 0.02, fallback.top);
+
+  const left = clamp(Math.min(fallback.left, hairLeft - (foundHair ? face.width * 0.055 : 0)), 0, 1);
+  const right = clamp(Math.max(fallback.right, hairRight + (foundHair ? face.width * 0.055 : 0)), 0, 1);
+  const top = clamp(Math.min(fallback.top, hairTop - (foundHair ? face.height * 0.045 : 0)), 0, 1);
+  const bottom = fallback.bottom;
   return { left, top, right, bottom, width: right - left, height: bottom - top, face, foundHair };
 }
 
@@ -195,7 +204,7 @@ function stylizeColor(color, strength, kind) {
   return color;
 }
 
-function imageTransform(bounds, imageWidth, imageHeight, outputSize, padding = 34) {
+export function createPortraitTransform(bounds, imageWidth, imageHeight, outputSize, padding = 34) {
   const left = bounds.left * imageWidth;
   const top = bounds.top * imageHeight;
   const width = Math.max(1, bounds.width * imageWidth);
@@ -277,7 +286,7 @@ export function createToonPortrait(sourceCanvas, analysis, style = DEFAULT_PORTR
   const { landmarks, mask, contours } = analysis;
   const headBounds = analysis.headBounds ?? deriveHeadBounds(landmarks, mask);
   const face = headBounds.face;
-  const transform = imageTransform(headBounds, sourceCanvas.width, sourceCanvas.height, outputSize);
+  const transform = createPortraitTransform(headBounds, sourceCanvas.width, sourceCanvas.height, outputSize);
   const canvas = createCanvas(outputSize, outputSize);
   const context = canvas.getContext("2d");
   context.imageSmoothingEnabled = true;
@@ -427,8 +436,11 @@ export function createToonPortrait(sourceCanvas, analysis, style = DEFAULT_PORTR
   }
 
   const metadata = {
-    version: 2,
+    version: 3,
     technique: "segmented-vector-portrait",
+    autoFaceZoom: true,
+    faceFillRatio: faceHeightPixels / outputSize,
+    sourceFaceHeightPixels: face.height * sourceCanvas.height,
     headAspect: (headBounds.width * sourceCanvas.width) / Math.max(1, headBounds.height * sourceCanvas.height),
     faceAspect: (face.width * sourceCanvas.width) / Math.max(1, face.height * sourceCanvas.height),
     hasHairMask: headBounds.foundHair,
@@ -436,4 +448,3 @@ export function createToonPortrait(sourceCanvas, analysis, style = DEFAULT_PORTR
   canvas.slingtoonPortrait = metadata;
   return { image: canvas, metadata, headBounds };
 }
-

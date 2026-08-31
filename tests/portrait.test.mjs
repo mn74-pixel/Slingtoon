@@ -5,6 +5,7 @@ import {
   FACE_CATEGORIES,
   boundsFromLandmarks,
   connectionPaths,
+  createPortraitTransform,
   deriveHeadBounds,
   isHeadPixel,
   normalizePortraitStyle,
@@ -58,6 +59,32 @@ test("head bounds expand to actual segmented hair", () => {
   assert.ok(bounds.right > 0.64);
 });
 
+test("automatic framing gives a distant face the same cartoon size as a selfie", () => {
+  const selfie = [
+    { x: 0.36, y: 0.22 },
+    { x: 0.64, y: 0.22 },
+    { x: 0.65, y: 0.64 },
+    { x: 0.5, y: 0.78 },
+    { x: 0.35, y: 0.64 },
+  ];
+  const distant = [
+    { x: 0.455, y: 0.41 },
+    { x: 0.545, y: 0.41 },
+    { x: 0.548, y: 0.545 },
+    { x: 0.5, y: 0.59 },
+    { x: 0.452, y: 0.545 },
+  ];
+  const selfieBounds = deriveHeadBounds(selfie, null);
+  const distantBounds = deriveHeadBounds(distant, null);
+  const selfieTransform = createPortraitTransform(selfieBounds, 1024, 1024, 512);
+  const distantTransform = createPortraitTransform(distantBounds, 1024, 1024, 512);
+  const selfieFill = selfieBounds.face.height * 1024 * selfieTransform.scale / 512;
+  const distantFill = distantBounds.face.height * 1024 * distantTransform.scale / 512;
+
+  assert.ok(selfieFill > 0.6 && selfieFill < 0.67);
+  assert.ok(Math.abs(selfieFill - distantFill) < 0.001);
+});
+
 test("head mask keeps hair and face but rejects clothing", () => {
   const headBounds = {
     left: 0.2,
@@ -71,4 +98,3 @@ test("head mask keeps hair and face but rejects clothing", () => {
   assert.equal(isHeadPixel(FACE_CATEGORIES.CLOTHES, 0.5, 0.8, headBounds), false);
   assert.equal(isHeadPixel(FACE_CATEGORIES.BODY_SKIN, 0.5, 0.87, headBounds), false);
 });
-

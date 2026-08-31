@@ -1,4 +1,4 @@
-# SlingToon Web 0.9.3 — Release Manifest
+# SlingToon Web 0.9.4 — Release Manifest
 
 **Format:** statyczna gra HTML5 Canvas / PWA  
 **Publikacja:** GitHub Pages  
@@ -9,7 +9,7 @@
 - modułowy kod JavaScript bez serwera aplikacyjnego,
 - Face Studio 2 z lokalnym wykrywaniem 478 punktów twarzy,
 - segmentacja głowy rozróżniająca włosy, skórę, tło, ubranie i akcesoria,
-- portret wektorowy 512×512 rysowany z naturalnej geometrii i kolorów osoby oraz powiększony w grze dla czytelności na telefonie,
+- portret wektorowy 512×512 z automatycznym kadrem twarzy niezależnym od odległości aparatu,
 - lokalny runtime MediaPipe Tasks Vision 1.0.1 oraz dwa modele ML,
 - responsywny interfejs edge-to-edge mieszczący całą grę w poziomym ekranie telefonu,
 - przycisk pełnego ekranu oraz instrukcja uruchomienia jako aplikacji na iPhonie,

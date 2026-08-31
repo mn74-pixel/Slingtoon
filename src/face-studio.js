@@ -1,4 +1,4 @@
-import { FaceVision } from "./face-vision.js?v=0.9.3";
+import { FaceVision } from "./face-vision.js?v=0.9.4";
 import {
   DEFAULT_PORTRAIT_STYLE,
   connectionPaths,
@@ -6,7 +6,7 @@ import {
   createToonPortrait,
   deriveHeadBounds,
   normalizePortraitStyle,
-} from "./portrait.js?v=0.9.3";
+} from "./portrait.js?v=0.9.4";
 
 const PREVIEW_SIZE = 640;
 const MAX_ANALYSIS_EDGE = 1024;
@@ -233,8 +233,8 @@ export class FaceStudio {
     this.setBusy(
       false,
       analysis.headBounds.foundHair
-        ? "Gotowe: tło usunięte, naturalny kształt twarzy zachowany, włosy wykryte."
-        : "Gotowe: twarz wykryta. Włosy są słabo widoczne, ale nie używam już okrągłej maski.",
+        ? "Gotowe: automatyczny zoom dopasował twarz, tło usunięte i włosy wykryte."
+        : "Gotowe: automatyczny zoom dopasował twarz. Włosy są słabo widoczne, ale nie używam okrągłej maski.",
     );
   }
 
