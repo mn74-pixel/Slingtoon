@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { DEFAULT_LEVEL, GameModel, GameMode, GamePhase, Modifier, Personality } from "../src/game.js";
+import { DEFAULT_LEVEL, GameModel, GameMode, GamePhase, LEVELS, Modifier, Personality } from "../src/game.js";
 
 function advance(model, frames) {
   for (let frame = 0; frame < frames && model.phase === GamePhase.FLYING; frame += 1) {
@@ -107,6 +107,63 @@ test("Morning Mayhem has a verified winning shot in both modes", () => {
   startShot(oneMove, { x: 65, y: 520 });
   finish(oneMove);
   assert.equal(oneMove.phase, GamePhase.SUCCEEDED);
+});
+
+test("all five missions have unique goals and a verified fair route", () => {
+  assert.equal(LEVELS.length, 5);
+  assert.equal(new Set(LEVELS.map((level) => level.id)).size, LEVELS.length);
+  assert.equal(new Set(LEVELS.map((level) => level.goal.kind)).size, LEVELS.length);
+
+  for (const level of LEVELS) {
+    assert.ok(level.mission.title.length > 12);
+    assert.ok(level.visual.gag.length > 8);
+    assert.ok(level.speech.succeeded.dramaQueen);
+    assert.ok(level.speech.failed.zen);
+
+    for (const mode of [GameMode.QUICK, GameMode.ONE_MOVE]) {
+      const model = new GameModel(() => {}, level);
+      if (mode === GameMode.ONE_MOVE) {
+        model.setMode(mode);
+        const trampoline = model.trampolineBounds;
+        const grip = { x: trampoline.x + 30, y: trampoline.y + 5 };
+        assert.equal(model.beginTrampolineMove(grip), true);
+        model.dragTrampoline(grip);
+        assert.equal(model.endTrampolineMove(), true);
+      }
+
+      assert.equal(model.beginSling(model.avatarPosition), true);
+      model.dragSling(level.assistPull);
+      assert.equal(model.predictShot(24).reachesGoal, true, `${level.id} should preview a winning route`);
+      assert.equal(model.releaseSling(), true);
+      finish(model);
+      assert.equal(model.phase, GamePhase.SUCCEEDED, `${level.id} should be beatable in ${mode}`);
+    }
+  }
+});
+
+test("later missions form a deliberate difficulty curve", () => {
+  const rates = LEVELS.map((level) => {
+    let playable = 0;
+    let wins = 0;
+    for (let x = 35; x <= 165; x += 10) {
+      for (let y = 350; y <= 580; y += 10) {
+        const model = new GameModel(() => {}, level);
+        if (!model.beginSling(model.avatarPosition)) continue;
+        model.dragSling({ x, y });
+        if (!model.releaseSling()) continue;
+        finish(model);
+        playable += 1;
+        if (model.phase === GamePhase.SUCCEEDED) wins += 1;
+      }
+    }
+    return wins / playable;
+  });
+
+  assert.ok(rates[0] > rates[1]);
+  assert.ok(rates[1] > rates[2]);
+  assert.ok(rates[2] > rates[3]);
+  assert.ok(rates[3] > rates[4]);
+  assert.ok(rates[4] >= 0.04, `final mission became unfair at ${(rates[4] * 100).toFixed(1)}%`);
 });
 
 test("Morning Mayhem keeps a forgiving beginner success window", () => {

@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.11.0 — Breakfast Chapter
+
+- rozbudowano `Morning Mayhem` z jednej planszy do pięciu kolejno odblokowywanych misji,
+- dodano nowe cele z osobną animacją, mimiką i komiksowym copy: kawę, uciekającą skarpetę, zaginiony pilot oraz zbuntowany toster,
+- każda misja wprowadza nową kombinację znanych elementów: skrzynkę, podmuch wentylatora, wysoki łuk i finałowe połączenie przeszkód,
+- zachowano lubianą paletę, a każda plansza otrzymała subtelny wash kolorystyczny i własny żart tła,
+- wprowadzono trwałe odblokowywanie postępu i kompaktową nawigację między ukończonymi poziomami,
+- po dwóch porażkach gra pokazuje adaptacyjną wskazówkę kierunku, ale nadal wymaga od gracza znalezienia dokładnego miętowego toru,
+- dodano unikalne kwestie sukcesu i porażki dla czterech osobowości oraz krótkie dźwiękowe puenty zależne od celu,
+- zweryfikowano prawdziwą drogę do zwycięstwa w Quick Sling i One Move dla każdej misji,
+- krzywa trudności przechodzi od szerokiego okna wejścia w poziomie 1 do wymagającego, lecz uczciwego finału,
+- podbito wersję zasobów oraz cache PWA.
+
 ## 0.10.0 — Crop-Free Camera + Level Core
 
 - przebudowano pierwszy poziom jako właściwy onboarding: usunięto skrzynkę, wentylator i wysoką ścianę, pozostawiając procę, bezpieczną trampolinę oraz czytelny cel,

@@ -1,4 +1,4 @@
-# SlingToon Web 0.10.0 — GitHub Pages / PWA
+# SlingToon Web 0.11.0 — GitHub Pages / PWA
 
 Samodzielna gra webowa przygotowana w tym samym modelu publikacji co Castle Conflict. Do uruchomienia i wdrożenia nie potrzeba JUCE, Projucera ani Xcode.
 
@@ -47,6 +47,8 @@ Na współczesnym iPhonie SlingToon pokazuje jednorazowy przycisk `Graj pełny e
 
 - `Quick Sling`: złap bohatera, naciągnij i puść.
 - `One Move`: najpierw przesuń trampolinę dokładnie raz, następnie oddaj strzał.
+- Rozdział `Morning Mayhem` zawiera pięć kolejno odblokowywanych misji: budzik, kawę, uciekającą skarpetę, zaginiony pilot i finałową apokalipsę tostową.
+- Po dwóch nieudanych próbach pojawia się dyskretna podpowiedź kierunku; miętowy tor zawsze oznacza fizycznie potwierdzone trafienie.
 - Po porażce `What If?` automatycznie powtarza ten sam zapisany strzał z jednym zmienionym prawem fizyki.
 - Przycisk `☺` otwiera Face Studio 2. Wybierasz zdjęcie z przodu, a lokalny model wykrywa 478 punktów twarzy i osobno segmentuje włosy, skórę oraz tło. Następnie gra rysuje od nowa naturalny kształt twarzy, oczy, brwi, nos i usta, zachowując kolory osoby. Nie ma okrągłej maski ani stałej czaszki. Plik nie jest wysyłany.
 - Na telefonie gra jest przeznaczona do pozycji poziomej; kamera zawsze pokazuje cały pokój i odsłania dodatkową przestrzeń dla proporcji danego ekranu, zamiast przycinać górę albo rozciągać scenę.
@@ -59,7 +61,7 @@ npm run build
 npm run smoke
 ```
 
-Testy sprawdzają Quick Sling, One Move, identyczny replay What If, realne działanie czterech modyfikatorów, różnice między osobowościami, zachowanie naturalnych proporcji twarzy, maskę głowy, segmentację kategorii oraz serwowanie gotowego artefaktu GitHub Pages.
+Testy sprawdzają Quick Sling, One Move, grywalną drogę przez wszystkie pięć misji, malejącą tolerancję kolejnych poziomów, identyczny replay What If, realne działanie czterech modyfikatorów, różnice między osobowościami, zachowanie naturalnych proporcji twarzy, maskę głowy, segmentację kategorii oraz serwowanie gotowego artefaktu GitHub Pages.
 
 ## Struktura
 

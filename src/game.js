@@ -1,6 +1,6 @@
-import { DEFAULT_LEVEL, WORLD } from "./levels.js?v=0.10.0";
+import { DEFAULT_LEVEL, WORLD } from "./levels.js?v=0.11.0";
 
-export { DEFAULT_LEVEL, LEVELS, WORLD, getLevel } from "./levels.js?v=0.10.0";
+export { DEFAULT_LEVEL, LEVELS, WORLD, getLevel } from "./levels.js?v=0.11.0";
 
 export const GameMode = Object.freeze({
   QUICK: "quickSling",
@@ -304,6 +304,8 @@ export class GameModel {
     this.emit(success ? "success" : "failure", {
       position: copyPoint(this.avatarPosition),
       attempt: this.attempts,
+      levelId: this.level.id,
+      goalKind: this.level.goal.kind,
     });
   }
 
@@ -556,12 +558,15 @@ export class GameModel {
 
   get statusText() {
     if (this.mode === GameMode.ONE_MOVE && this.phase === GamePhase.READY && !this.moveUsed) {
-      return "ONE MOVE: przesuń trampolinę raz. Potem ucisz budzik.";
+      return `ONE MOVE: przesuń trampolinę raz. Potem: ${this.level.mission.title.toLocaleLowerCase("pl-PL")}.`;
     }
     if (this.mode === GameMode.QUICK && this.phase === GamePhase.READY && this.attempts === 0) {
-      return this.level.tutorial?.status ?? "Pociągnij bohatera w dół i w lewo, a potem puść.";
+      return this.level.tutorial?.status ?? this.level.status?.ready ?? "Pociągnij bohatera i znajdź właściwy tor.";
     }
-    return {
+    if (this.mode === GameMode.QUICK && this.phase === GamePhase.READY && this.attempts >= 2 && this.level.assistPull) {
+      return "Mała podpowiedź: pociągnij w stronę strzałki i puść, gdy tor zrobi się miętowy.";
+    }
+    return this.level.status?.[this.phase] ?? {
       [GamePhase.READY]: "Złap bohatera. Budzik sam się nie uciszy.",
       [GamePhase.AIMING]: "Naciągnij. Godność odzyskamy później.",
       [GamePhase.FLYING]: "SLING → BANG → SNOOZE → AGAIN",
@@ -571,6 +576,8 @@ export class GameModel {
   }
 
   get speechText() {
+    const levelLine = this.level.speech?.[this.phase]?.[this.personality];
+    if (levelLine) return levelLine;
     const lines = {
       [GamePhase.SUCCEEDED]: {
         [Personality.DRAMA_QUEEN]: "NATURALNY TALENT DO SPANIA!",

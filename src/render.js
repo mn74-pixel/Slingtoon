@@ -1,5 +1,5 @@
-import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.10.0";
-import { clientPointToWorld, createCropFreeViewport } from "./viewport.js?v=0.10.0";
+import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.11.0";
+import { clientPointToWorld, createCropFreeViewport } from "./viewport.js?v=0.11.0";
 
 const PALETTE = Object.freeze({
   ink: "#19142d",
@@ -143,11 +143,20 @@ export class GameRenderer {
       this.clockWobble = 1.6;
       this.successPulse = 1;
       this.spawnConfetti(event.position.x, event.position.y, 64);
-      this.callouts.push({ x: 1115, y: 386, text: "SNOOZE!", age: 0, life: 1.6, angle: -0.08 });
+      const goal = this.model.goalCentre;
+      this.callouts.push({ x: goal.x, y: goal.y - 100, text: this.model.level.result.successTag, age: 0, life: 1.6, angle: -0.08 });
     }
 
     if (event.type === "failure") {
-      this.callouts.push({ x: event.position.x, y: event.position.y - 52, text: "FLOP!", age: 0, life: 1.05, angle: 0.07 });
+      this.callouts.push({
+        x: event.position.x,
+        y: event.position.y - 52,
+        text: this.model.level.result.failureTag,
+        failure: true,
+        age: 0,
+        life: 1.05,
+        angle: 0.07,
+      });
     }
   }
 
@@ -237,14 +246,39 @@ export class GameRenderer {
   drawBackground(ctx) {
     if (this.background) {
       ctx.drawImage(this.background, 0, 0, WORLD.width, WORLD.height);
-      return;
+    } else {
+      const gradient = ctx.createLinearGradient(0, 0, WORLD.width, WORLD.height);
+      gradient.addColorStop(0, "#41346c");
+      gradient.addColorStop(0.55, "#765e9f");
+      gradient.addColorStop(1, "#a96e91");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, WORLD.width, WORLD.height);
     }
-    const gradient = ctx.createLinearGradient(0, 0, WORLD.width, WORLD.height);
-    gradient.addColorStop(0, "#41346c");
-    gradient.addColorStop(0.55, "#765e9f");
-    gradient.addColorStop(1, "#a96e91");
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, WORLD.width, WORLD.height);
+
+    const visual = this.model.level.visual;
+    if (visual?.wash) {
+      ctx.fillStyle = visual.wash;
+      ctx.fillRect(0, 0, WORLD.width, WORLD.height);
+    }
+    if (visual?.gag) this.drawSceneGag(ctx, visual.gag, visual.accent);
+  }
+
+  drawSceneGag(ctx, text, accent = PALETTE.gold) {
+    ctx.save();
+    ctx.translate(914, 158);
+    ctx.rotate(-0.035);
+    roundedRect(ctx, -126, -18, 252, 36, 15);
+    ctx.fillStyle = "rgba(27, 20, 45, 0.78)";
+    ctx.fill();
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.fillStyle = PALETTE.cream;
+    ctx.font = "900 12px system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(text, 0, 1);
+    ctx.restore();
   }
 
   drawModifierAtmosphere(ctx) {
@@ -287,7 +321,18 @@ export class GameRenderer {
       this.drawFan(ctx);
     }
     if (this.model.wallBounds?.enabled) this.drawWall(ctx);
-    if (this.model.level.goal.kind === "alarm") this.drawAlarmClock(ctx);
+    this.drawGoalTarget(ctx);
+  }
+
+  drawGoalTarget(ctx) {
+    const drawers = {
+      alarm: () => this.drawAlarmClock(ctx),
+      coffee: () => this.drawCoffee(ctx),
+      sock: () => this.drawSock(ctx),
+      remote: () => this.drawRemote(ctx),
+      toaster: () => this.drawToaster(ctx),
+    };
+    (drawers[this.model.level.goal.kind] ?? drawers.alarm)();
   }
 
   drawCrate(ctx) {
@@ -517,6 +562,174 @@ export class GameRenderer {
       ctx.font = "900 12px system-ui, sans-serif";
       ctx.fillText("HIT ME", 0, 79);
     }
+    ctx.restore();
+  }
+
+  drawCoffee(ctx) {
+    const centre = this.model.goalCentre;
+    const displayScale = this.model.level.goal.displayScale ?? 1;
+    const wobble = Math.sin(this.time * 5.4) * 0.018 + this.clockWobble * 0.04;
+    ctx.save();
+    ctx.translate(centre.x, centre.y);
+    ctx.rotate(wobble);
+    ctx.scale(displayScale, displayScale);
+    ctx.shadowColor = "rgba(17, 10, 28, 0.48)";
+    ctx.shadowBlur = 18;
+    ctx.shadowOffsetY = 10;
+    ctx.beginPath();
+    ctx.ellipse(0, 52, 67, 14, 0, 0, Math.PI * 2);
+    strokeFill(ctx, "#f5d39a", PALETTE.ink, 6);
+    roundedRect(ctx, -52, -45, 96, 92, 20);
+    const mug = ctx.createLinearGradient(-45, -40, 45, 45);
+    mug.addColorStop(0, PALETTE.gold);
+    mug.addColorStop(1, "#ee8f5c");
+    strokeFill(ctx, mug, PALETTE.ink, 7);
+    ctx.shadowColor = "transparent";
+    ctx.strokeStyle = PALETTE.ink;
+    ctx.lineWidth = 11;
+    ctx.beginPath();
+    ctx.arc(49, 1, 27, -Math.PI * 0.5, Math.PI * 0.55);
+    ctx.stroke();
+    ctx.fillStyle = "#4a2631";
+    ctx.beginPath();
+    ctx.ellipse(-4, -29, 37, 10, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = PALETTE.ink;
+    ctx.beginPath(); ctx.arc(-19, 4, 4, 0, Math.PI * 2); ctx.arc(13, 4, 4, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = PALETTE.ink;
+    ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.arc(-3, 14, 14, 0.15, Math.PI - 0.15); ctx.stroke();
+    ctx.strokeStyle = PALETTE.cream;
+    ctx.lineWidth = 6;
+    ctx.lineCap = "round";
+    for (let index = -1; index <= 1; index += 1) {
+      const sway = Math.sin(this.time * 2.3 + index) * 7;
+      ctx.beginPath();
+      ctx.moveTo(index * 22, -53);
+      ctx.bezierCurveTo(index * 18 + sway, -72, index * 25 - sway, -87, index * 18, -105);
+      ctx.stroke();
+    }
+    ctx.fillStyle = PALETTE.ink;
+    ctx.font = "900 10px system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(this.model.phase === GamePhase.SUCCEEDED ? "HUMAN MODE" : "NO TALK", -4, 36);
+    ctx.restore();
+  }
+
+  drawSock(ctx) {
+    const centre = this.model.goalCentre;
+    const displayScale = this.model.level.goal.displayScale ?? 1;
+    const float = Math.sin(this.time * 3.1) * 8;
+    ctx.save();
+    ctx.translate(centre.x, centre.y + float);
+    ctx.rotate(-0.22 + Math.sin(this.time * 2.4) * 0.08 + this.clockWobble * 0.06);
+    ctx.scale(displayScale, displayScale);
+    ctx.shadowColor = "rgba(17, 10, 28, 0.42)";
+    ctx.shadowBlur = 17;
+    ctx.shadowOffsetY = 9;
+    ctx.beginPath();
+    ctx.moveTo(-38, -73);
+    ctx.lineTo(32, -73);
+    ctx.lineTo(28, 8);
+    ctx.quadraticCurveTo(67, 12, 69, 43);
+    ctx.quadraticCurveTo(67, 72, 35, 72);
+    ctx.lineTo(-24, 72);
+    ctx.quadraticCurveTo(-55, 67, -51, 39);
+    ctx.lineTo(-38, -73);
+    ctx.closePath();
+    strokeFill(ctx, "#5ce1bd", PALETTE.ink, 7);
+    ctx.shadowColor = "transparent";
+    ctx.fillStyle = PALETTE.coral;
+    ctx.fillRect(-35, -52, 66, 17);
+    ctx.fillRect(-48, 33, 40, 22);
+    ctx.strokeStyle = PALETTE.ink;
+    ctx.lineWidth = 5;
+    ctx.strokeRect(-35, -52, 66, 17);
+    ctx.fillStyle = PALETTE.ink;
+    ctx.beginPath(); ctx.arc(-15, -4, 4, 0, Math.PI * 2); ctx.arc(12, -4, 4, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(-1, 11, 11, 0.12, Math.PI - 0.12); ctx.stroke();
+    ctx.fillStyle = PALETTE.cream;
+    ctx.font = "900 11px system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(this.model.phase === GamePhase.SUCCEEDED ? "REUNITED" : "SOLO TOUR", 0, -61);
+    ctx.restore();
+  }
+
+  drawRemote(ctx) {
+    const centre = this.model.goalCentre;
+    const displayScale = this.model.level.goal.displayScale ?? 1;
+    ctx.save();
+    ctx.translate(centre.x, centre.y);
+    ctx.rotate(0.16 + Math.sin(this.time * 4) * 0.02 + this.clockWobble * 0.05);
+    ctx.scale(displayScale, displayScale);
+    ctx.shadowColor = "rgba(17, 10, 28, 0.5)";
+    ctx.shadowBlur = 19;
+    ctx.shadowOffsetY = 10;
+    roundedRect(ctx, -45, -78, 90, 156, 24);
+    const body = ctx.createLinearGradient(-42, -74, 40, 75);
+    body.addColorStop(0, "#a28bff");
+    body.addColorStop(1, "#5c45b7");
+    strokeFill(ctx, body, PALETTE.ink, 8);
+    ctx.shadowColor = "transparent";
+    ctx.fillStyle = PALETTE.coral;
+    ctx.beginPath(); ctx.arc(0, -48, 14, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = PALETTE.gold;
+    for (const [x, y] of [[-19, -14], [19, -14], [-19, 16], [19, 16], [-19, 46], [19, 46]]) {
+      ctx.beginPath(); ctx.arc(x, y, 8, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.fillStyle = PALETTE.ink;
+    ctx.font = "900 10px system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(this.model.phase === GamePhase.SUCCEEDED ? "BATTERY?" : "LOST", 0, 69);
+    ctx.restore();
+  }
+
+  drawToaster(ctx) {
+    const centre = this.model.goalCentre;
+    const displayScale = this.model.level.goal.displayScale ?? 1;
+    const angry = this.model.phase !== GamePhase.SUCCEEDED;
+    ctx.save();
+    ctx.translate(centre.x, centre.y);
+    ctx.rotate(Math.sin(this.time * 15) * (angry ? 0.018 : 0.006) + this.clockWobble * 0.05);
+    ctx.scale(displayScale, displayScale);
+    ctx.shadowColor = "rgba(17, 10, 28, 0.5)";
+    ctx.shadowBlur = 20;
+    ctx.shadowOffsetY = 11;
+    roundedRect(ctx, -72, -29, 144, 91, 26);
+    const body = ctx.createLinearGradient(-65, -25, 65, 58);
+    body.addColorStop(0, "#ff7c8f");
+    body.addColorStop(1, "#d93f70");
+    strokeFill(ctx, body, PALETTE.ink, 8);
+    ctx.shadowColor = "transparent";
+    ctx.strokeStyle = PALETTE.ink;
+    ctx.lineWidth = 7;
+    ctx.beginPath(); ctx.moveTo(-43, 62); ctx.lineTo(-51, 76); ctx.moveTo(43, 62); ctx.lineTo(51, 76); ctx.stroke();
+    roundedRect(ctx, -48, -43, 96, 18, 8);
+    ctx.fillStyle = "#2c203d"; ctx.fill(); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(-36, -40); ctx.lineTo(-29, -99); ctx.quadraticCurveTo(0, -116, 30, -98); ctx.lineTo(38, -40); ctx.closePath();
+    strokeFill(ctx, angry ? "#9a552f" : PALETTE.gold, PALETTE.ink, 7);
+    ctx.fillStyle = PALETTE.ink;
+    ctx.beginPath(); ctx.arc(-13, -78, 4, 0, Math.PI * 2); ctx.arc(14, -78, 4, 0, Math.PI * 2); ctx.fill();
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    if (angry) { ctx.moveTo(-15, -64); ctx.lineTo(15, -64); }
+    else { ctx.arc(0, -70, 14, 0.12, Math.PI - 0.12); }
+    ctx.stroke();
+    ctx.strokeStyle = PALETTE.cream;
+    ctx.lineWidth = 5;
+    for (let index = 0; index < 3; index += 1) {
+      ctx.globalAlpha = 0.5 - index * 0.1;
+      ctx.beginPath();
+      ctx.moveTo(-25 + index * 25, -110);
+      ctx.bezierCurveTo(-38 + index * 25, -128, -10 + index * 25, -139, -24 + index * 25, -155);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = PALETTE.cream;
+    ctx.font = "900 11px system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(angry ? "BURN MODE" : "CRUNCH OK", 0, 43);
     ctx.restore();
   }
 
@@ -1136,7 +1349,7 @@ export class GameRenderer {
       ctx.lineWidth = 9;
       ctx.strokeStyle = PALETTE.ink;
       ctx.strokeText(callout.text, 0, 0);
-      ctx.fillStyle = callout.text === "FLOP!" ? PALETTE.coral : PALETTE.gold;
+      ctx.fillStyle = callout.failure ? PALETTE.coral : PALETTE.gold;
       ctx.fillText(callout.text, 0, 0);
       ctx.restore();
     }
@@ -1158,10 +1371,13 @@ export class GameRenderer {
     ctx.stroke();
 
     const tutorial = this.model.level.tutorial;
-    const showPullGuide = this.model.mode === GameMode.QUICK && this.model.attempts === 0 && tutorial?.pull;
+    const showFirstGuide = this.model.mode === GameMode.QUICK && this.model.attempts === 0 && tutorial?.pull;
+    const showRetryGuide = this.model.mode === GameMode.QUICK && this.model.attempts >= 2 && this.model.level.assistPull;
+    const pullGuide = showFirstGuide ? tutorial.pull : showRetryGuide ? this.model.level.assistPull : null;
+    const showPullGuide = Boolean(pullGuide);
     if (showPullGuide) {
       const anchor = this.model.anchor;
-      const pull = tutorial.pull;
+      const pull = pullGuide;
       const goal = this.model.goalCentre;
       const goalRadius = this.model.level.goal.shape === "circle" ? this.model.level.goal.radius + 10 : 62;
       ctx.globalAlpha = 0.44 + Math.sin(this.time * 4) * 0.12;
@@ -1219,7 +1435,9 @@ export class GameRenderer {
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     const hintText = showPullGuide
-      ? "CIĄGNIJ TUTAJ ↙"
+      ? showRetryGuide
+        ? "MAŁA PODPOWIEDŹ ↙"
+        : "CIĄGNIJ TUTAJ ↙"
       : this.model.canAim()
         ? "ZŁAP · NACIĄGNIJ · PUŚĆ"
         : "NAJPIERW ONE MOVE";

@@ -1,4 +1,4 @@
-# SlingToon Web 0.10.0 — Release Manifest
+# SlingToon Web 0.11.0 — Release Manifest
 
 **Format:** statyczna gra HTML5 Canvas / PWA  
 **Publikacja:** GitHub Pages  
@@ -17,6 +17,9 @@
 - powiększona do 192% rysunkowa głowa z czytelną mimiką i większym polem chwytu, bez zmiany pola kolizji,
 - deklaratywny rdzeń poziomów oddzielający geometrię, cele i teksty misji od modelu fizyki,
 - przyjazny onboarding pierwszego poziomu z jednym uczonym czasownikiem, szerszym oknem sukcesu i predykcją opartą na prawdziwej fizyce,
+- pięciopoziomowy rozdział śniadaniowy z odblokowywanym postępem, nawigacją i rosnącą trudnością,
+- pięć humorystycznych, proceduralnie rysowanych celów oraz osobne reakcje czterech osobowości,
+- adaptacyjna podpowiedź po dwóch porażkach i dźwiękowe puenty zależne od celu,
 - grafika SVG i ikony PNG,
 - service worker i manifest instalacyjny,
 - workflow walidacji i publikacji GitHub Pages,
@@ -28,6 +31,8 @@
 - składnia wszystkich modułów JavaScript,
 - Quick Sling i One Move,
 - grywalna droga do zwycięstwa w obu trybach,
+- grywalna droga do zwycięstwa dla każdego z pięciu poziomów,
+- malejące okno sukcesu na kolejnych etapach oraz uczciwa dolna granica finału,
 - co najmniej 34% zwycięskich strzałów w kontrolnej siatce wejść pierwszego poziomu,
 - dokładny replay zapisanego strzału,
 - rzeczywista zmiana fizyki dla wszystkich czterech What If,

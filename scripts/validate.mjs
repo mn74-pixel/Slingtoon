@@ -82,13 +82,26 @@ assert.match(html, /src\/main\.js/);
 assert.match(html, /connect-src 'self'/);
 assert.doesNotMatch(html, /script-src[^;]*\s'unsafe-eval'/);
 assert.doesNotMatch(html, /style-src[^;]*'unsafe-inline'/);
-assert.match(main, /serviceWorker\.register\("\.\/sw\.js\?v=0\.10\.0"\)/);
+assert.match(main, /serviceWorker\.register\("\.\/sw\.js\?v=0\.11\.0"\)/);
 assert.match(game, /replayWith\(modifier\)/);
 assert.match(game, /shot\.launchVelocity/);
 assert.match(game, /this\.level\.goal/);
 assert.match(levels, /id:\s*"morning-mayhem"/);
+assert.match(levels, /id:\s*"coffee-consequences"/);
+assert.match(levels, /id:\s*"sock-escape"/);
+assert.match(levels, /id:\s*"remote-archaeology"/);
+assert.match(levels, /id:\s*"toast-apocalypse"/);
 assert.match(levels, /export const LEVELS/);
 assert.match(levels, /pull:\s*freezePoint/);
+assert.match(levels, /assistPull:\s*freezePoint/g);
+assert.match(html, /id="previousLevel"/);
+assert.match(html, /id="nextLevel"/);
+assert.match(main, /slingtoon-progress-v1/);
+assert.match(main, /highestUnlockedLevel/);
+assert.match(render, /drawCoffee/);
+assert.match(render, /drawSock/);
+assert.match(render, /drawRemote/);
+assert.match(render, /drawToaster/);
 assert.match(render, /showPullGuide/);
 assert.match(game, /predictShot\(numberOfDots/);
 assert.match(render, /prediction\.reachesGoal/);
@@ -115,7 +128,7 @@ assert.match(html, /id="fullscreenGuide"/);
 assert.match(main, /window\.navigator\.standalone/);
 assert.match(main, /requestFullscreen/);
 assert.match(main, /beforeinstallprompt/);
-assert.match(main, /slingtoon-fullscreen-tip-0\.10\.0/);
+assert.match(main, /slingtoon-fullscreen-tip-0\.11\.0/);
 assert.match(main, /shouldSuggestFullscreen/);
 assert.match(main, /requestGameFullscreen/);
 assert.match(html, /id="fullscreenStart"/);
@@ -143,4 +156,4 @@ for (const file of requiredFiles.filter((file) => !file.startsWith(".github") &&
   }
 }
 
-console.log("SlingToon Web 0.10.0: crop-free mobile camera, expressive head and level core are valid.");
+console.log("SlingToon Web 0.11.0: five-level breakfast chapter, progression and adaptive assists are valid.");

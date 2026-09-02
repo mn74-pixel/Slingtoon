@@ -27,7 +27,7 @@ export class GameAudio {
     if (this.muted || !this.context) return;
     if (event.type === "launch" || event.type === "what-if") this.boing(event.type === "what-if" ? 1.14 : 1);
     if (event.type === "impact") this.impact(event.speed, event.surface);
-    if (event.type === "success") this.success();
+    if (event.type === "success") this.success(event.goalKind);
     if (event.type === "failure") this.failure();
     if (event.type === "move-complete") this.pop(240, 0.07);
   }
@@ -82,12 +82,29 @@ export class GameAudio {
     this.tone({ frequency, endFrequency: frequency * 1.8, duration, type: "triangle", volume: 0.08 });
   }
 
-  success() {
+  success(goalKind = "alarm") {
     [0, 0.09, 0.18, 0.31].forEach((delay, index) => {
       const notes = [392, 523.25, 659.25, 783.99];
       this.tone({ frequency: notes[index], endFrequency: notes[index] * 1.02, duration: 0.26, type: "triangle", volume: 0.085, delay });
     });
     this.noise(0.22, 0.035, 0.16);
+
+    const punchlines = {
+      coffee: () => {
+        this.tone({ frequency: 860, endFrequency: 1120, duration: 0.09, type: "sine", volume: 0.06, delay: 0.36 });
+        this.tone({ frequency: 1040, endFrequency: 1360, duration: 0.08, type: "sine", volume: 0.05, delay: 0.45 });
+      },
+      sock: () => this.tone({ frequency: 245, endFrequency: 490, duration: 0.24, type: "triangle", volume: 0.055, delay: 0.35 }),
+      remote: () => {
+        this.tone({ frequency: 880, duration: 0.065, type: "square", volume: 0.035, delay: 0.36 });
+        this.tone({ frequency: 1175, duration: 0.065, type: "square", volume: 0.03, delay: 0.45 });
+      },
+      toaster: () => {
+        this.noise(0.07, 0.075, 0.35);
+        this.tone({ frequency: 190, endFrequency: 420, duration: 0.16, type: "triangle", volume: 0.07, delay: 0.39 });
+      },
+    };
+    punchlines[goalKind]?.();
   }
 
   failure() {

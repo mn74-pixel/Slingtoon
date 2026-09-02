@@ -263,6 +263,47 @@ main {
 
 .mission-copy {
   min-width: 0;
+  flex: 1 1 auto;
+}
+
+.level-nav {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex: 0 0 auto;
+}
+
+.level-nav__button {
+  width: 34px;
+  height: 34px;
+  padding: 0 0 3px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 12px;
+  color: var(--cream);
+  background: rgba(15, 11, 27, 0.48);
+  font-size: 25px;
+  font-weight: 900;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.level-nav__button:not(:disabled):hover {
+  border-color: var(--gold);
+  background: rgba(255, 211, 95, 0.14);
+}
+
+.level-nav__button:disabled {
+  cursor: not-allowed;
+  opacity: 0.26;
+}
+
+.level-nav__indicator {
+  min-width: 43px;
+  color: var(--gold);
+  font-size: 11px;
+  font-weight: 950;
+  letter-spacing: 0.05em;
+  text-align: center;
 }
 
 .mission-kicker {
@@ -1123,6 +1164,7 @@ noscript {
   .top-actions .pill__icon { margin: 0; font-size: 14px; }
   .select-wrap { display: none; }
   .mission-copy h1 { max-width: 55vw; font-size: 14px; }
+  .level-nav__indicator { display: none; }
   .mission-badge:first-child { display: none; }
   .status-row { padding-inline: 10px; gap: 7px; }
   .instruction-icon { width: 33px; height: 33px; }
@@ -1199,6 +1241,14 @@ noscript {
     padding: 4px 11px;
     gap: 8px;
   }
+  .level-nav { gap: 3px; }
+  .level-nav__button {
+    width: 28px;
+    height: 28px;
+    border-radius: 9px;
+    font-size: 20px;
+  }
+  .level-nav__indicator { min-width: 34px; font-size: 8px; }
   .mission-kicker { font-size: 7px; }
   .mission-copy h1 {
     max-width: none;
@@ -1455,13 +1505,14 @@ noscript {
   }
 
   body.is-fullscreen-active .mission-copy h1 {
-    max-width: 39vw;
+    max-width: 30vw;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
   body.is-fullscreen-active .mission-badges { display: none; }
+  body.is-fullscreen-active .level-nav__indicator { display: none; }
 
   body.is-fullscreen-active .stage {
     width: 100%;

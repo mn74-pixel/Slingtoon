@@ -1,8 +1,8 @@
-# SlingToon Web 0.10.0
+# SlingToon Web 0.11.0
 
 An offline-capable HTML5 Canvas PWA prepared for GitHub Pages. No JUCE, Projucer or native build is required for browser testing.
 
-Version 0.10 adds a crop-free mobile camera, a larger 192% expressive custom head with a touch-friendly grab area, and a data-driven level core. The local head segmentation and landmark-driven vector portrait remain fully on-device.
+Version 0.11 turns Morning Mayhem into a five-mission breakfast chapter with persistent progression, distinct comic targets, a deliberate difficulty curve, adaptive retry hints and goal-specific sound punchlines. The crop-free mobile camera and fully local Face Studio remain intact.
 
 ![SlingToon Morning Mayhem](docs/game-canvas-preview.png)
 
