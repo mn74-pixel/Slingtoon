@@ -1,13 +1,16 @@
-import { GameModel, GameMode, GamePhase, modifierName } from "./game.js?v=0.9.6";
-import { GameRenderer } from "./render.js?v=0.9.6";
-import { GameAudio } from "./audio.js?v=0.9.6";
-import { FaceStudio } from "./face-studio.js?v=0.9.6";
+import { GameModel, GameMode, GamePhase, modifierName } from "./game.js?v=0.10.0";
+import { GameRenderer } from "./render.js?v=0.10.0";
+import { GameAudio } from "./audio.js?v=0.10.0";
+import { FaceStudio } from "./face-studio.js?v=0.10.0";
 
 const $ = (selector) => document.querySelector(selector);
 
 const elements = {
   canvas: $("#gameCanvas"),
+  stage: $("#stage"),
   loading: $("#loadingPanel"),
+  missionKicker: $("#missionKicker"),
+  missionTitle: $("#missionTitle"),
   quickMode: $("#quickMode"),
   oneMoveMode: $("#oneMoveMode"),
   personality: $("#personality"),
@@ -56,7 +59,7 @@ let lastFrame = performance.now();
 let resultTimer = null;
 let toastTimer = null;
 let installPrompt = null;
-const FULLSCREEN_TIP_KEY = "slingtoon-fullscreen-tip-0.9.6";
+const FULLSCREEN_TIP_KEY = "slingtoon-fullscreen-tip-0.10.0";
 
 function isStandaloneMode() {
   return window.navigator.standalone === true
@@ -90,6 +93,7 @@ function updateFullscreenUi() {
   elements.fullscreenButton.setAttribute("aria-pressed", String(active));
   elements.fullscreenButton.setAttribute("aria-label", active ? "Pełny ekran jest włączony" : "Włącz pełny ekran");
   elements.fullscreenButton.title = active ? "Pełny ekran jest włączony" : "Włącz pełny ekran";
+  requestAnimationFrame(syncGameViewport);
 }
 
 function openFullscreenGuide({ automatic = false } = {}) {
@@ -227,6 +231,7 @@ model.onEvent = (event) => {
   audio.handleGameEvent(event);
 
   if (["reset", "mode", "launch", "what-if"].includes(event.type)) hideResult();
+  if (event.type === "level") updateMissionUi();
   if (event.type === "success" || event.type === "failure") {
     clearTimeout(resultTimer);
     resultTimer = window.setTimeout(() => {
@@ -237,28 +242,19 @@ model.onEvent = (event) => {
 };
 
 function pointFromPointer(event) {
-  const rect = elements.canvas.getBoundingClientRect();
-  const style = getComputedStyle(elements.canvas);
-  let renderedWidth = rect.width;
-  let renderedHeight = rect.height;
-  let offsetX = 0;
-  let offsetY = 0;
+  return renderer.clientPoint(event.clientX, event.clientY);
+}
 
-  if (style.objectFit === "cover") {
-    const coverScale = Math.max(
-      rect.width / elements.canvas.width,
-      rect.height / elements.canvas.height,
-    );
-    renderedWidth = elements.canvas.width * coverScale;
-    renderedHeight = elements.canvas.height * coverScale;
-    offsetX = (rect.width - renderedWidth) * 0.5;
-    offsetY = rect.height - renderedHeight;
-  }
+function syncGameViewport() {
+  const rect = elements.stage.getBoundingClientRect();
+  if (rect.width > 0 && rect.height > 0) renderer.resizeView(rect.width, rect.height);
+}
 
-  return {
-    x: ((event.clientX - rect.left - offsetX) / renderedWidth) * elements.canvas.width,
-    y: ((event.clientY - rect.top - offsetY) / renderedHeight) * elements.canvas.height,
-  };
+function updateMissionUi() {
+  const mission = model.level.mission;
+  elements.missionKicker.textContent = mission.kicker;
+  elements.missionTitle.textContent = mission.title;
+  elements.canvas.setAttribute("aria-label", mission.canvasLabel);
 }
 
 function beginPointer(event) {
@@ -316,11 +312,12 @@ function setMode(mode) {
 
 function showResult() {
   const success = model.phase === GamePhase.SUCCEEDED;
+  const result = model.level.result;
   elements.resultPanel.hidden = false;
   elements.resultPanel.classList.toggle("is-success", success);
   elements.resultPanel.classList.toggle("is-failure", !success);
-  elements.resultTag.textContent = success ? "SNOOZE!" : "FLOP!";
-  elements.resultTitle.textContent = success ? "Poranek oficjalnie przełożony." : "Budzik nadal rządzi sypialnią.";
+  elements.resultTag.textContent = success ? result.successTag : result.failureTag;
+  elements.resultTitle.textContent = success ? result.successTitle : result.failureTitle;
   elements.resultSpeech.textContent = model.speechText;
   elements.whatIfButton.hidden = success || !model.previousShot;
   elements.whatIfButton.textContent = `WHAT IF? · ${modifierName(model.suggestedModifier)}`;
@@ -334,6 +331,9 @@ function hideResult() {
 function instructionForState() {
   if (model.mode === GameMode.ONE_MOVE && model.phase === GamePhase.READY && !model.moveUsed) {
     return { icon: "↔", title: "Przesuń trampolinę dokładnie raz" };
+  }
+  if (model.mode === GameMode.QUICK && model.phase === GamePhase.READY && model.attempts === 0 && model.level.tutorial) {
+    return { icon: "↙", title: model.level.tutorial.title };
   }
   if (model.phase === GamePhase.AIMING) return { icon: "◎", title: "Wybierz kierunek i puść" };
   if (model.phase === GamePhase.FLYING) return { icon: "⚡", title: "Teraz fizyka robi swoje" };
@@ -414,6 +414,13 @@ elements.fullscreenStart.addEventListener("click", () => startFullscreenFromGuid
 }));
 elements.fullscreenClose.addEventListener("click", closeFullscreenGuide);
 document.addEventListener("fullscreenchange", updateFullscreenUi);
+window.addEventListener("orientationchange", () => requestAnimationFrame(syncGameViewport));
+window.visualViewport?.addEventListener("resize", () => requestAnimationFrame(syncGameViewport));
+if ("ResizeObserver" in window) {
+  new ResizeObserver(syncGameViewport).observe(elements.stage);
+} else {
+  window.addEventListener("resize", syncGameViewport);
+}
 window.addEventListener("beforeinstallprompt", (event) => {
   event.preventDefault();
   installPrompt = event;
@@ -428,11 +435,14 @@ elements.whatIfButton.addEventListener("click", () => {
 
 window.addEventListener("load", () => {
   if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
-    navigator.serviceWorker.register("./sw.js?v=0.9.6").catch(() => {});
+    navigator.serviceWorker.register("./sw.js?v=0.10.0").catch(() => {});
   }
   scheduleFullscreenSuggestion();
+  syncGameViewport();
 });
 
+updateMissionUi();
+syncGameViewport();
 updateFullscreenUi();
 
 renderer

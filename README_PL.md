@@ -1,4 +1,4 @@
-# SlingToon Web 0.9.6 — GitHub Pages / PWA
+# SlingToon Web 0.10.0 — GitHub Pages / PWA
 
 Samodzielna gra webowa przygotowana w tym samym modelu publikacji co Castle Conflict. Do uruchomienia i wdrożenia nie potrzeba JUCE, Projucera ani Xcode.
 
@@ -49,7 +49,7 @@ Na współczesnym iPhonie SlingToon pokazuje jednorazowy przycisk `Graj pełny e
 - `One Move`: najpierw przesuń trampolinę dokładnie raz, następnie oddaj strzał.
 - Po porażce `What If?` automatycznie powtarza ten sam zapisany strzał z jednym zmienionym prawem fizyki.
 - Przycisk `☺` otwiera Face Studio 2. Wybierasz zdjęcie z przodu, a lokalny model wykrywa 478 punktów twarzy i osobno segmentuje włosy, skórę oraz tło. Następnie gra rysuje od nowa naturalny kształt twarzy, oczy, brwi, nos i usta, zachowując kolory osoby. Nie ma okrągłej maski ani stałej czaszki. Plik nie jest wysyłany.
-- Na telefonie gra jest przeznaczona do pozycji poziomej; cały interfejs automatycznie dopasowuje się do widocznej wysokości Safari.
+- Na telefonie gra jest przeznaczona do pozycji poziomej; kamera zawsze pokazuje cały pokój i odsłania dodatkową przestrzeń dla proporcji danego ekranu, zamiast przycinać górę albo rozciągać scenę.
 
 ## Testy
 
@@ -64,7 +64,9 @@ Testy sprawdzają Quick Sling, One Move, identyczny replay What If, realne dzia�
 ## Struktura
 
 - `src/game.js` — fizyka i reguły bez zależności od przeglądarkowego UI,
+- `src/levels.js` — deklaratywne dane misji, geometrii, obiektów i celów,
 - `src/render.js` — Canvas, avatar, scena i VFX,
+- `src/viewport.js` — adaptacyjna kamera oraz mapowanie dotyku bez kadrowania,
 - `src/audio.js` — lokalny dźwięk proceduralny,
 - `src/face-vision.js` — lokalne wykrywanie punktów twarzy i segmentacja głowy,
 - `src/portrait.js` — rysowanie portretu wektorowego z naturalnych proporcji osoby,

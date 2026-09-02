@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { GameModel, GameMode, GamePhase, Modifier, Personality, WORLD } from "../src/game.js";
+import { DEFAULT_LEVEL, GameModel, GameMode, GamePhase, Modifier, Personality } from "../src/game.js";
 
 function advance(model, frames) {
   for (let frame = 0; frame < frames && model.phase === GamePhase.FLYING; frame += 1) {
@@ -42,7 +42,35 @@ test("Quick Sling stores launch position and velocity", () => {
   assert.equal(model.phase, GamePhase.FLYING);
   assert.ok(model.previousShot);
   assert.ok(Math.hypot(model.previousShot.launchVelocity.x, model.previousShot.launchVelocity.y) > 100);
-  assert.notDeepEqual(model.previousShot.launchPosition, WORLD.anchor);
+  assert.notDeepEqual(model.previousShot.launchPosition, model.anchor);
+  assert.equal(model.previousShot.levelId, DEFAULT_LEVEL.id);
+});
+
+test("large visual head keeps a forgiving touch target without changing collision radius", () => {
+  const model = new GameModel();
+  assert.ok(model.avatarGrabRadius > model.avatarRadius * 2.5);
+  assert.equal(model.beginSling({ x: model.avatarPosition.x + 88, y: model.avatarPosition.y }), true);
+  assert.equal(model.avatarRadius, 35);
+});
+
+test("level data drives geometry and supports future rectangular goals", () => {
+  const level = {
+    ...DEFAULT_LEVEL,
+    id: "test-level",
+    anchor: { x: 205, y: 430 },
+    groundY: 580,
+    trampoline: { ...DEFAULT_LEVEL.trampoline, x: 520, minX: 410, maxX: 590 },
+    goal: { kind: "test", shape: "rect", x: 1010, y: 430, width: 90, height: 80 },
+  };
+  const model = new GameModel();
+  assert.equal(model.setLevel(level), true);
+  assert.deepEqual(model.avatarPosition, level.anchor);
+  assert.equal(model.trampolineX, 520);
+  assert.deepEqual(model.goalCentre, { x: 1055, y: 470 });
+
+  model.avatarPosition = { x: 1020, y: 460 };
+  model.avatarVelocity = { x: 10, y: 10 };
+  assert.equal(model.goalReached(), true);
 });
 
 test("One Move requires one trampoline move before aiming", () => {
@@ -59,7 +87,14 @@ test("One Move requires one trampoline move before aiming", () => {
 
 test("Morning Mayhem has a verified winning shot in both modes", () => {
   const quick = new GameModel();
-  startShot(quick, { x: 65, y: 520 });
+  assert.equal(quick.level.fan.enabled, false);
+  assert.equal(quick.level.crate.enabled, false);
+  assert.equal(quick.beginSling(quick.avatarPosition), true);
+  quick.dragSling(quick.level.tutorial.pull);
+  const prediction = quick.predictShot(24);
+  assert.equal(prediction.reachesGoal, true);
+  assert.ok(prediction.points.length > 10);
+  assert.equal(quick.releaseSling(), true);
   finish(quick);
   assert.equal(quick.phase, GamePhase.SUCCEEDED);
 
@@ -72,6 +107,28 @@ test("Morning Mayhem has a verified winning shot in both modes", () => {
   startShot(oneMove, { x: 65, y: 520 });
   finish(oneMove);
   assert.equal(oneMove.phase, GamePhase.SUCCEEDED);
+});
+
+test("Morning Mayhem keeps a forgiving beginner success window", () => {
+  let testedShots = 0;
+  let winningShots = 0;
+
+  for (let x = 35; x <= 165; x += 10) {
+    for (let y = 440; y <= 570; y += 10) {
+      const model = new GameModel();
+      assert.equal(model.beginSling(model.avatarPosition), true);
+      model.dragSling({ x, y });
+      // Points almost touching the anchor intentionally cancel instead of
+      // launching, so they are not part of the playable shot sample.
+      if (!model.releaseSling()) continue;
+      finish(model);
+      testedShots += 1;
+      if (model.phase === GamePhase.SUCCEEDED) winningShots += 1;
+    }
+  }
+
+  const successRate = winningShots / testedShots;
+  assert.ok(successRate >= 0.34, `beginner success window regressed to ${(successRate * 100).toFixed(1)}%`);
 });
 
 test("What If repeats exactly the stored shot", () => {
@@ -100,7 +157,7 @@ test("What If modifiers change real physics, not only labels", () => {
   const fan = new GameModel();
   startKnownFailure(fan);
   fan.resetLevel(true);
-  startShot(fan, { x: 70, y: 530 });
+  startShot(fan, { x: 55, y: 525 });
   const normalFan = advance(fan, 90);
   finish(fan);
   assert.equal(fan.phase, GamePhase.FAILED);

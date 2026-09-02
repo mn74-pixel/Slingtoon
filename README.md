@@ -1,8 +1,8 @@
-# SlingToon Web 0.9.6
+# SlingToon Web 0.10.0
 
 An offline-capable HTML5 Canvas PWA prepared for GitHub Pages. No JUCE, Projucer or native build is required for browser testing.
 
-Version 0.9 replaces the photo filter and circular skull crop with local head segmentation plus a landmark-driven vector portrait. Hair, face skin and background are separated on-device; the photograph never leaves the device.
+Version 0.10 adds a crop-free mobile camera, a larger 192% expressive custom head with a touch-friendly grab area, and a data-driven level core. The local head segmentation and landmark-driven vector portrait remain fully on-device.
 
 ![SlingToon Morning Mayhem](docs/game-canvas-preview.png)
 

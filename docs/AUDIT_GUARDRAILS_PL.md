@@ -59,6 +59,7 @@ Nie dodajemy jeszcze:
 Poziom może wejść do vertical slice, jeśli bez zdjęcia twarzy:
 
 - wiadomo, co jest celem w ciągu pierwszej sekundy,
+- pierwszy poziom pokazuje gest w grze i zachowuje szerokie, testowane okno sukcesu,
 - strzał daje czytelny feedback,
 - istnieje powód do natychmiastowego retry,
 - rezultat zawiera puentę wizualną,

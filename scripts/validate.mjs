@@ -13,7 +13,9 @@ const requiredFiles = [
   ".nojekyll",
   "src/main.js",
   "src/game.js",
+  "src/levels.js",
   "src/render.js",
+  "src/viewport.js",
   "src/audio.js",
   "src/face-vision.js",
   "src/portrait.js",
@@ -41,14 +43,16 @@ const requiredFiles = [
 
 await Promise.all(requiredFiles.map((file) => access(resolve(root, file))));
 
-const [html, css, manifestText, worker, main, game, render, faceStudio, faceVision, portrait] = await Promise.all([
+const [html, css, manifestText, worker, main, game, levels, render, viewport, faceStudio, faceVision, portrait] = await Promise.all([
   readFile(resolve(root, "index.html"), "utf8"),
   readFile(resolve(root, "styles.css"), "utf8"),
   readFile(resolve(root, "manifest.webmanifest"), "utf8"),
   readFile(resolve(root, "sw.js"), "utf8"),
   readFile(resolve(root, "src/main.js"), "utf8"),
   readFile(resolve(root, "src/game.js"), "utf8"),
+  readFile(resolve(root, "src/levels.js"), "utf8"),
   readFile(resolve(root, "src/render.js"), "utf8"),
+  readFile(resolve(root, "src/viewport.js"), "utf8"),
   readFile(resolve(root, "src/face-studio.js"), "utf8"),
   readFile(resolve(root, "src/face-vision.js"), "utf8"),
   readFile(resolve(root, "src/portrait.js"), "utf8"),
@@ -78,9 +82,16 @@ assert.match(html, /src\/main\.js/);
 assert.match(html, /connect-src 'self'/);
 assert.doesNotMatch(html, /script-src[^;]*\s'unsafe-eval'/);
 assert.doesNotMatch(html, /style-src[^;]*'unsafe-inline'/);
-assert.match(main, /serviceWorker\.register\("\.\/sw\.js\?v=0\.9\.6"\)/);
+assert.match(main, /serviceWorker\.register\("\.\/sw\.js\?v=0\.10\.0"\)/);
 assert.match(game, /replayWith\(modifier\)/);
 assert.match(game, /shot\.launchVelocity/);
+assert.match(game, /this\.level\.goal/);
+assert.match(levels, /id:\s*"morning-mayhem"/);
+assert.match(levels, /export const LEVELS/);
+assert.match(levels, /pull:\s*freezePoint/);
+assert.match(render, /showPullGuide/);
+assert.match(game, /predictShot\(numberOfDots/);
+assert.match(render, /prediction\.reachesGoal/);
 assert.match(html, /id="faceStudio"/);
 assert.match(html, /id="faceStylePreview"/);
 assert.match(html, /id="faceStyleStrength"/);
@@ -96,14 +107,15 @@ assert.match(portrait, /autoFaceZoom:\s*true/);
 assert.match(portrait, /FACE_CATEGORIES\.HAIR/);
 assert.match(html, /AUTO ZOOM/);
 assert.doesNotMatch(render, /ctx\.clip\(\);\s*this\.drawImageCover\(ctx, this\.faceImage/);
-assert.match(render, /const CUSTOM_HEAD_SCALE = 1\.62;/);
+assert.match(render, /const CUSTOM_HEAD_SCALE = 1\.92;/);
 assert.match(render, /ctx\.scale\(CUSTOM_HEAD_SCALE, CUSTOM_HEAD_SCALE\)/);
+assert.match(game, /avatarGrabRadius/);
 assert.match(html, /id="fullscreenButton"/);
 assert.match(html, /id="fullscreenGuide"/);
 assert.match(main, /window\.navigator\.standalone/);
 assert.match(main, /requestFullscreen/);
 assert.match(main, /beforeinstallprompt/);
-assert.match(main, /slingtoon-fullscreen-tip-0\.9\.6/);
+assert.match(main, /slingtoon-fullscreen-tip-0\.10\.0/);
 assert.match(main, /shouldSuggestFullscreen/);
 assert.match(main, /requestGameFullscreen/);
 assert.match(html, /id="fullscreenStart"/);
@@ -111,44 +123,24 @@ assert.match(html, /Graj pełny ekran/);
 assert.match(css, /padding-right:\s*0;\s*padding-left:\s*0;/);
 assert.match(css, /orientation:\s*landscape[^}]*max-height:\s*560px/);
 assert.match(css, /min-aspect-ratio:\s*2\s*\/\s*1/);
-assert.match(css, /object-fit:\s*cover/);
-assert.match(css, /object-position:\s*center bottom/);
-assert.match(main, /style\.objectFit === "cover"/);
-assert.match(main, /offsetY = rect\.height - renderedHeight/);
-
-for (const [viewportWidth, viewportHeight] of [[852, 393], [852, 320], [768, 284], [667, 250]]) {
-  const horizontalPadding = 0;
-  const verticalPadding = 8;
-  const compactTopbar = 38;
-  const gridGap = 4;
-  const cardWidth = viewportWidth - horizontalPadding;
-  const cardHeight = viewportHeight - verticalPadding - compactTopbar - gridGap;
-  const coverScale = Math.max(cardWidth / 1280, cardHeight / 640);
-  const renderedHeight = 640 * coverScale;
-  const visibleWorldTop = Math.max(0, (renderedHeight - cardHeight) / coverScale);
-
-  assert.ok(cardWidth / viewportWidth > 0.995, `landscape card must reach both edges at ${viewportWidth}x${viewportHeight}`);
-  assert.ok(visibleWorldTop < 330, `sling and targets must remain visible at ${viewportWidth}x${viewportHeight}`);
-
-}
-
-// Fullscreen removes Safari's browser chrome, so its viewport is materially
-// taller than the shallow in-browser cases above.
-for (const [viewportWidth, viewportHeight] of [[852, 393], [768, 354], [667, 375]]) {
-  const fullscreenScale = Math.max(viewportWidth / 1280, viewportHeight / 640);
-  const fullscreenWorldTop = Math.max(0, (640 * fullscreenScale - viewportHeight) / fullscreenScale);
-  assert.ok(fullscreenWorldTop < 90, `fullscreen must reveal the room top at ${viewportWidth}x${viewportHeight}`);
-}
+assert.match(css, /object-fit:\s*fill/);
+assert.doesNotMatch(css, /object-fit:\s*cover/);
+assert.match(main, /ResizeObserver/);
+assert.match(main, /visualViewport/);
+assert.match(render, /createCropFreeViewport/);
+assert.match(viewport, /viewWidth = Math\.ceil\(safeWorldHeight \* stageAspect\)/);
+assert.match(viewport, /viewHeight = Math\.ceil\(safeWorldWidth \/ stageAspect\)/);
+assert.match(viewport, /clientPointToWorld/);
 
 for (const file of requiredFiles.filter((file) => !file.startsWith(".github") && !file.startsWith("docs/"))) {
   if (["package.json", ".gitignore", ".gitattributes"].includes(file)) continue;
   if (file === ".nojekyll") continue;
   const cachePath = file === "index.html" ? "./index.html" : `./${file}`;
-  if (["index.html", "styles.css", "manifest.webmanifest", "sw.js", "src/main.js", "src/game.js", "src/render.js", "src/audio.js", "src/face-vision.js", "src/portrait.js", "src/face-studio.js"].includes(file) || file.startsWith("assets/")) {
+  if (["index.html", "styles.css", "manifest.webmanifest", "sw.js", "src/main.js", "src/game.js", "src/levels.js", "src/render.js", "src/viewport.js", "src/audio.js", "src/face-vision.js", "src/portrait.js", "src/face-studio.js"].includes(file) || file.startsWith("assets/")) {
     const exactPath = worker.includes(`"${cachePath}"`);
     const versionedPath = worker.includes(`"${cachePath}?v=`);
     assert.ok(exactPath || versionedPath || file === "sw.js", `${file} is missing from the offline app shell`);
   }
 }
 
-console.log("SlingToon Web 0.9.6: one-tap fullscreen and expanded room framing are valid.");
+console.log("SlingToon Web 0.10.0: crop-free mobile camera, expressive head and level core are valid.");

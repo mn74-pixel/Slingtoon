@@ -1,8 +1,8 @@
-# SlingToon Web 0.9.6 — Release Manifest
+# SlingToon Web 0.10.0 — Release Manifest
 
 **Format:** statyczna gra HTML5 Canvas / PWA  
 **Publikacja:** GitHub Pages  
-**Data:** 29 sierpnia 2026 r.
+**Data:** 2 września 2026 r.
 
 ## Zawartość
 
@@ -11,10 +11,12 @@
 - segmentacja głowy rozróżniająca włosy, skórę, tło, ubranie i akcesoria,
 - portret wektorowy 512×512 z automatycznym kadrem twarzy niezależnym od odległości aparatu,
 - lokalny runtime MediaPipe Tasks Vision 1.0.1 oraz dwa modele ML,
-- responsywny interfejs edge-to-edge mieszczący całą grę w poziomym ekranie telefonu,
+- responsywny interfejs edge-to-edge z kamerą pokazującą cały świat bez przycięcia i deformacji,
 - jednorazowy ekran startowy z bezpośrednim przyciskiem pełnego ekranu oraz instrukcją zapasową dla starszego Safari,
 - rozszerzony kadr pokoju w trybie pełnoekranowym dzięki połączeniu górnych pasków w jeden rząd,
-- powiększona do 162% rysunkowa głowa z czytelną mimiką, bez zmiany pola kolizji,
+- powiększona do 192% rysunkowa głowa z czytelną mimiką i większym polem chwytu, bez zmiany pola kolizji,
+- deklaratywny rdzeń poziomów oddzielający geometrię, cele i teksty misji od modelu fizyki,
+- przyjazny onboarding pierwszego poziomu z jednym uczonym czasownikiem, szerszym oknem sukcesu i predykcją opartą na prawdziwej fizyce,
 - grafika SVG i ikony PNG,
 - service worker i manifest instalacyjny,
 - workflow walidacji i publikacji GitHub Pages,
@@ -26,6 +28,7 @@
 - składnia wszystkich modułów JavaScript,
 - Quick Sling i One Move,
 - grywalna droga do zwycięstwa w obu trybach,
+- co najmniej 34% zwycięskich strzałów w kontrolnej siatce wejść pierwszego poziomu,
 - dokładny replay zapisanego strzału,
 - rzeczywista zmiana fizyki dla wszystkich czterech What If,
 - różne ekspresje i komentarze osobowości,
@@ -37,6 +40,7 @@
 - brak stałej czaszki i brak okrągłego clippingu w rendererze avatara,
 - zgodność sum kontrolnych obu lokalnych modeli,
 - wersjonowanie zasobów i cache zapobiegające uruchamianiu starej wersji po publikacji,
+- mapowanie dotyku przez odwrotną transformację adaptacyjnej kamery na szerokich i wysokich ekranach,
 - render sceny bazowej i zwycięstwa do obrazu kontrolnego,
 - czysty artefakt statyczny `dist/` oraz test jego serwowania po HTTP.
 

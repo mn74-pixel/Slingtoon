@@ -1,9 +1,6 @@
-export const WORLD = Object.freeze({
-  width: 1280,
-  height: 640,
-  groundY: 586,
-  anchor: Object.freeze({ x: 173, y: 455 }),
-});
+import { DEFAULT_LEVEL, WORLD } from "./levels.js?v=0.10.0";
+
+export { DEFAULT_LEVEL, LEVELS, WORLD, getLevel } from "./levels.js?v=0.10.0";
 
 export const GameMode = Object.freeze({
   QUICK: "quickSling",
@@ -54,8 +51,9 @@ const distanceSquared = (a, b) => {
 };
 
 export class GameModel {
-  constructor(onEvent = () => {}) {
+  constructor(onEvent = () => {}, level = DEFAULT_LEVEL) {
     this.onEvent = onEvent;
+    this.level = level ?? DEFAULT_LEVEL;
     this.mode = GameMode.QUICK;
     this.phase = GamePhase.READY;
     this.modifier = Modifier.NONE;
@@ -82,13 +80,21 @@ export class GameModel {
     this.emit("personality", { personality });
   }
 
+  setLevel(level) {
+    if (!level?.id || !level?.anchor || !level?.goal) return false;
+    this.level = level;
+    this.resetLevel(true);
+    this.emit("level", { levelId: level.id });
+    return true;
+  }
+
   resetLevel(resetAttempts = false) {
     this.phase = GamePhase.READY;
     this.modifier = Modifier.NONE;
-    this.avatarPosition = copyPoint(WORLD.anchor);
+    this.avatarPosition = copyPoint(this.anchor);
     this.avatarVelocity = { x: 0, y: 0 };
     this.rotation = 0;
-    this.trampolineX = 575;
+    this.trampolineX = this.level.trampoline.x;
     this.trampolineGrabOffset = 0;
     this.movingTrampoline = false;
     this.moveUsed = false;
@@ -110,7 +116,7 @@ export class GameModel {
 
   beginSling(point) {
     if (!this.canAim()) return false;
-    const grabRadius = this.avatarRadius + 34;
+    const grabRadius = this.avatarGrabRadius;
     if (distanceSquared(point, this.avatarPosition) > grabRadius * grabRadius) return false;
 
     this.phase = GamePhase.AIMING;
@@ -123,8 +129,8 @@ export class GameModel {
     if (this.phase !== GamePhase.AIMING) return;
     this.avatarPosition = this.clampedSlingPoint(point);
     const direction = {
-      x: WORLD.anchor.x - this.avatarPosition.x,
-      y: WORLD.anchor.y - this.avatarPosition.y,
+      x: this.anchor.x - this.avatarPosition.x,
+      y: this.anchor.y - this.avatarPosition.y,
     };
     this.rotation = Math.atan2(direction.y, direction.x);
   }
@@ -133,8 +139,8 @@ export class GameModel {
     if (this.phase !== GamePhase.AIMING) return false;
 
     const pull = {
-      x: WORLD.anchor.x - this.avatarPosition.x,
-      y: WORLD.anchor.y - this.avatarPosition.y,
+      x: this.anchor.x - this.avatarPosition.x,
+      y: this.anchor.y - this.avatarPosition.y,
     };
     const launchVelocity = {
       x: pull.x * LAUNCH_MULTIPLIER,
@@ -143,7 +149,7 @@ export class GameModel {
 
     if (length(launchVelocity) < MIN_LAUNCH_SPEED) {
       this.phase = GamePhase.READY;
-      this.avatarPosition = copyPoint(WORLD.anchor);
+      this.avatarPosition = copyPoint(this.anchor);
       this.rotation = 0;
       this.emit("cancel-shot");
       return false;
@@ -153,13 +159,14 @@ export class GameModel {
       launchVelocity: copyPoint(launchVelocity),
       launchPosition: copyPoint(this.avatarPosition),
       trampolineX: this.trampolineX,
+      levelId: this.level.id,
     };
     this.startFlight(launchVelocity, true, this.avatarPosition);
     return true;
   }
 
   beginTrampolineMove(point) {
-    if (this.mode !== GameMode.ONE_MOVE || this.phase !== GamePhase.READY || this.moveUsed) return false;
+    if (!this.level.trampoline.enabled || this.mode !== GameMode.ONE_MOVE || this.phase !== GamePhase.READY || this.moveUsed) return false;
     const bounds = this.trampolineBounds;
     const hitArea = {
       x: bounds.x - 24,
@@ -177,7 +184,11 @@ export class GameModel {
 
   dragTrampoline(point) {
     if (!this.movingTrampoline) return;
-    this.trampolineX = clamp(point.x - this.trampolineGrabOffset, 340, 660);
+    this.trampolineX = clamp(
+      point.x - this.trampolineGrabOffset,
+      this.level.trampoline.minX,
+      this.level.trampoline.maxX,
+    );
   }
 
   endTrampolineMove() {
@@ -207,7 +218,12 @@ export class GameModel {
   }
 
   replayWith(modifier) {
-    if (this.phase !== GamePhase.FAILED || !this.previousShot || modifier === Modifier.NONE) return false;
+    if (
+      this.phase !== GamePhase.FAILED
+      || !this.previousShot
+      || this.previousShot.levelId !== this.level.id
+      || modifier === Modifier.NONE
+    ) return false;
 
     const shot = this.previousShot;
     this.modifier = modifier;
@@ -234,16 +250,18 @@ export class GameModel {
     this.avatarVelocity.y += 725 * this.gravityScale * dt;
 
     const fan = this.fanBounds;
-    const fanInfluence = {
-      x: fan.x - 125,
-      y: fan.y - 70,
-      width: fan.width + 250,
-      height: fan.height + 95,
-    };
-    if (this.rectContains(fanInfluence, this.avatarPosition)) {
-      const closeness = 1 - clamp(Math.abs(this.avatarPosition.x - (fan.x + fan.width * 0.5)) / 215, 0, 1);
-      this.avatarVelocity.y -= (530 + 250 * closeness) * this.fanScale * dt;
-      this.avatarVelocity.x += 92 * this.fanScale * dt;
+    if (fan && (fan.enabled || this.modifier === Modifier.STRONGER_FAN)) {
+      const fanInfluence = {
+        x: fan.x - 125,
+        y: fan.y - 70,
+        width: fan.width + 250,
+        height: fan.height + 95,
+      };
+      if (this.rectContains(fanInfluence, this.avatarPosition)) {
+        const closeness = 1 - clamp(Math.abs(this.avatarPosition.x - (fan.x + fan.width * 0.5)) / 215, 0, 1);
+        this.avatarVelocity.y -= (530 + 250 * closeness) * this.fanScale * dt;
+        this.avatarVelocity.x += 92 * this.fanScale * dt;
+      }
     }
 
     const drag = Math.pow(0.9982, dt * 60);
@@ -255,12 +273,7 @@ export class GameModel {
 
     this.resolveWorldCollisions();
 
-    const goalDistance = this.avatarRadius + this.goalRadius;
-    if (
-      distanceSquared(this.avatarPosition, this.goalCentre) <= goalDistance * goalDistance &&
-      Math.abs(this.avatarVelocity.x) < 900 &&
-      Math.abs(this.avatarVelocity.y) < 1000
-    ) {
+    if (this.goalReached()) {
       this.finishAttempt(true);
       return;
     }
@@ -277,7 +290,7 @@ export class GameModel {
 
     if (
       this.flightTime > 2 &&
-      this.avatarPosition.y + this.avatarRadius >= WORLD.groundY - 1 &&
+      this.avatarPosition.y + this.avatarRadius >= this.groundY - 1 &&
       length(this.avatarVelocity) < 42
     ) {
       this.finishAttempt(false);
@@ -297,36 +310,57 @@ export class GameModel {
   resolveWorldCollisions() {
     const radius = this.avatarRadius;
 
-    if (this.avatarPosition.y + radius > WORLD.groundY) {
-      this.avatarPosition.y = WORLD.groundY - radius;
+    if (this.avatarPosition.y + radius > this.groundY) {
+      this.avatarPosition.y = this.groundY - radius;
       if (this.avatarVelocity.y > 0) {
         const speed = Math.abs(this.avatarVelocity.y);
         this.avatarVelocity.y = -speed * 0.52 * this.bounceScale;
         this.avatarVelocity.x *= 0.83;
         if (Math.abs(this.avatarVelocity.y) < 31) this.avatarVelocity.y = 0;
-        this.triggerImpact(speed, this.avatarPosition.x, WORLD.groundY);
+        this.triggerImpact(speed, this.avatarPosition.x, this.groundY);
       }
     }
 
     const trampoline = this.trampolineBounds;
-    const withinTrampoline =
-      this.avatarPosition.x + radius >= trampoline.x &&
-      this.avatarPosition.x - radius <= trampoline.x + trampoline.width;
-    const hittingFromAbove =
-      this.avatarPosition.y + radius >= trampoline.y &&
-      this.avatarPosition.y - radius < trampoline.y &&
-      this.avatarVelocity.y > 0;
+    if (trampoline?.enabled) {
+      const withinTrampoline =
+        this.avatarPosition.x + radius >= trampoline.x &&
+        this.avatarPosition.x - radius <= trampoline.x + trampoline.width;
+      const hittingFromAbove =
+        this.avatarPosition.y + radius >= trampoline.y &&
+        this.avatarPosition.y - radius < trampoline.y &&
+        this.avatarVelocity.y > 0;
 
-    if (withinTrampoline && hittingFromAbove) {
-      const speed = Math.abs(this.avatarVelocity.y);
-      this.avatarPosition.y = trampoline.y - radius;
-      this.avatarVelocity.y = -Math.max(545, speed * 1.08) * this.bounceScale;
-      this.avatarVelocity.x += 172;
-      this.triggerImpact(Math.max(speed, 480), this.avatarPosition.x, trampoline.y, "trampoline");
+      if (withinTrampoline && hittingFromAbove) {
+        const speed = Math.abs(this.avatarVelocity.y);
+        this.avatarPosition.y = trampoline.y - radius;
+        this.avatarVelocity.y = -Math.max(545, speed * 1.08) * this.bounceScale;
+        this.avatarVelocity.x += 172;
+        this.triggerImpact(Math.max(speed, 480), this.avatarPosition.x, trampoline.y, "trampoline");
+      }
     }
 
-    this.collideCircleWithRect(this.crateBounds, 0.66 * this.bounceScale, true, "crate");
-    this.collideCircleWithRect(this.wallBounds, 0.72 * this.bounceScale, false, "wall");
+    if (this.crateBounds?.enabled) {
+      this.collideCircleWithRect(this.crateBounds, 0.66 * this.bounceScale, true, "crate");
+    }
+    if (this.wallBounds?.enabled) {
+      this.collideCircleWithRect(this.wallBounds, 0.72 * this.bounceScale, false, "wall");
+    }
+  }
+
+  goalReached() {
+    const goal = this.level.goal;
+    const velocitySafe = Math.abs(this.avatarVelocity.x) < 900 && Math.abs(this.avatarVelocity.y) < 1000;
+    if (!velocitySafe) return false;
+
+    if (goal.shape === "rect" || goal.shape === "zone") {
+      const closestX = clamp(this.avatarPosition.x, goal.x, goal.x + goal.width);
+      const closestY = clamp(this.avatarPosition.y, goal.y, goal.y + goal.height);
+      return distanceSquared(this.avatarPosition, { x: closestX, y: closestY }) <= this.avatarRadius ** 2;
+    }
+
+    const goalDistance = this.avatarRadius + this.goalRadius;
+    return distanceSquared(this.avatarPosition, this.goalCentre) <= goalDistance * goalDistance;
   }
 
   collideCircleWithRect(obstacle, restitution, addForwardKick, surface) {
@@ -373,34 +407,61 @@ export class GameModel {
     this.emit("impact", { speed, x, y, surface });
   }
 
-  predictedTrajectory(numberOfDots = 20) {
-    if (this.phase !== GamePhase.AIMING || numberOfDots <= 0) return [];
-    const points = [];
-    const position = copyPoint(this.avatarPosition);
-    const velocity = {
-      x: (WORLD.anchor.x - this.avatarPosition.x) * LAUNCH_MULTIPLIER,
-      y: (WORLD.anchor.y - this.avatarPosition.y) * LAUNCH_MULTIPLIER,
-    };
-    const step = 0.09;
-
-    for (let index = 0; index < numberOfDots; index += 1) {
-      velocity.y += 725 * step;
-      position.x += velocity.x * step;
-      position.y += velocity.y * step;
-      points.push(copyPoint(position));
+  predictShot(numberOfDots = 20) {
+    if (this.phase !== GamePhase.AIMING || numberOfDots <= 0) {
+      return { points: [], reachesGoal: false };
     }
-    return points;
+
+    const signature = [
+      numberOfDots,
+      this.level.id,
+      this.avatarPosition.x.toFixed(2),
+      this.avatarPosition.y.toFixed(2),
+      this.trampolineX.toFixed(2),
+      this.goalCentre.x,
+      this.goalCentre.y,
+      this.goalRadius,
+    ].join(":");
+    if (this.trajectoryCache?.signature === signature) return this.trajectoryCache.result;
+
+    const velocity = {
+      x: (this.anchor.x - this.avatarPosition.x) * LAUNCH_MULTIPLIER,
+      y: (this.anchor.y - this.avatarPosition.y) * LAUNCH_MULTIPLIER,
+    };
+
+    const simulation = new GameModel(() => {}, this.level);
+    simulation.mode = this.mode;
+    simulation.trampolineX = this.trampolineX;
+    simulation.avatarPosition = copyPoint(this.avatarPosition);
+    simulation.startFlight(velocity, false, this.avatarPosition);
+
+    const points = [];
+    for (let frame = 0; frame < 360 && simulation.phase === GamePhase.FLYING; frame += 1) {
+      simulation.update(1 / 60);
+      if (frame % 6 === 5 && points.length < numberOfDots) points.push(copyPoint(simulation.avatarPosition));
+    }
+
+    const result = Object.freeze({
+      points: Object.freeze(points),
+      reachesGoal: simulation.phase === GamePhase.SUCCEEDED,
+    });
+    this.trajectoryCache = { signature, result };
+    return result;
+  }
+
+  predictedTrajectory(numberOfDots = 20) {
+    return this.predictShot(numberOfDots).points;
   }
 
   clampedSlingPoint(point) {
-    const offset = { x: point.x - WORLD.anchor.x, y: point.y - WORLD.anchor.y };
+    const offset = { x: point.x - this.anchor.x, y: point.y - this.anchor.y };
     const offsetLength = length(offset);
     if (offsetLength > MAX_PULL && offsetLength > Number.EPSILON) {
       offset.x *= MAX_PULL / offsetLength;
       offset.y *= MAX_PULL / offsetLength;
     }
     offset.x = Math.min(offset.x, 48);
-    return { x: WORLD.anchor.x + offset.x, y: WORLD.anchor.y + offset.y };
+    return { x: this.anchor.x + offset.x, y: this.anchor.y + offset.y };
   }
 
   rectContains(rect, point) {
@@ -416,28 +477,51 @@ export class GameModel {
     return BASE_RADIUS * (this.modifier === Modifier.GIANT_HEAD ? 1.42 : 1);
   }
 
+  get avatarGrabRadius() {
+    return Math.max(this.avatarRadius + 34, BASE_RADIUS * 2.65);
+  }
+
+  get anchor() {
+    return this.level.anchor;
+  }
+
+  get groundY() {
+    return this.level.groundY;
+  }
+
   get trampolineBounds() {
-    return { x: this.trampolineX, y: 515, width: 156, height: 25 };
+    const trampoline = this.level.trampoline;
+    return {
+      x: this.trampolineX,
+      y: trampoline.y,
+      width: trampoline.width,
+      height: trampoline.height,
+      enabled: trampoline.enabled,
+    };
   }
 
   get fanBounds() {
-    return { x: 720, y: 245, width: 165, height: 310 };
+    return this.level.fan;
   }
 
   get crateBounds() {
-    return { x: 452, y: 442, width: 94, height: 144 };
+    return this.level.crate;
   }
 
   get wallBounds() {
-    return { x: 952, y: 427, width: 34, height: 159 };
+    return this.level.wall;
   }
 
   get goalCentre() {
-    return { x: 1127, y: 486 };
+    const goal = this.level.goal;
+    if (goal.shape === "rect" || goal.shape === "zone") {
+      return { x: goal.x + goal.width * 0.5, y: goal.y + goal.height * 0.5 };
+    }
+    return { x: goal.x, y: goal.y };
   }
 
   get goalRadius() {
-    return 56;
+    return this.level.goal.radius ?? Math.max(this.level.goal.width, this.level.goal.height) * 0.5;
   }
 
   get gravityScale() {
@@ -473,6 +557,9 @@ export class GameModel {
   get statusText() {
     if (this.mode === GameMode.ONE_MOVE && this.phase === GamePhase.READY && !this.moveUsed) {
       return "ONE MOVE: przesuń trampolinę raz. Potem ucisz budzik.";
+    }
+    if (this.mode === GameMode.QUICK && this.phase === GamePhase.READY && this.attempts === 0) {
+      return this.level.tutorial?.status ?? "Pociągnij bohatera w dół i w lewo, a potem puść.";
     }
     return {
       [GamePhase.READY]: "Złap bohatera. Budzik sam się nie uciszy.",

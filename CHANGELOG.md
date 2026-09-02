@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.10.0 — Crop-Free Camera + Level Core
+
+- przebudowano pierwszy poziom jako właściwy onboarding: usunięto skrzynkę, wentylator i wysoką ścianę, pozostawiając procę, bezpieczną trampolinę oraz czytelny cel,
+- powiększono budzik wraz z uczciwie pokazanym obszarem trafienia i dodano animowaną podpowiedź pierwszego gestu,
+- predykcja toru używa teraz prawdziwej fizyki poziomu; prawidłowy tor zmienia kolor na miętowy i pokazuje komunikat `PUŚĆ!`,
+- uśpiony wentylator wraca wyłącznie w eksperymencie `What If: silniejszy wentylator`, więc modyfikator nadal realnie zmienia fizykę,
+- szerokość okna sukcesu w reprezentatywnej siatce naciągnięć wzrosła z około 7% do około 37% i jest chroniona testem regresji,
+- zastąpiono kadrowanie `cover` adaptacyjną kamerą, która zawsze pokazuje cały świat 1280×640,
+- szerszy ekran odsłania dodatkową przestrzeń po bokach, a wyższy — nad i pod sceną; grafika nie jest rozciągana,
+- współrzędne dotyku korzystają z odwrotnej transformacji kamery, więc proca i trampolina pozostają precyzyjne na każdym aspect ratio,
+- kamera reaguje na zmianę pełnego ekranu, obrót urządzenia, `visualViewport` Safari i faktyczny rozmiar planszy,
+- powiększono własną rysunkową głowę z 162% do 192% i zwiększono jej wizualny lift,
+- rozszerzono niezależny od fizyki obszar chwytu, aby całą dużą głowę można było wygodnie złapać palcem,
+- geometrię, copy, tło i cel Morning Mayhem przeniesiono do deklaratywnego modułu poziomów,
+- model obsługuje cele kołowe, prostokątne i strefowe oraz opcjonalne obiekty, co stanowi działający fundament kolejnych misji,
+- dodano testy kamery, mapowania dotyku, danych poziomu i dużego obszaru chwytu oraz podbito cache PWA.
+
 ## 0.9.6 — One-Tap Fullscreen + Expanded Room
 
 - ekran startowy na iPhonie ma teraz bezpośredni przycisk `Graj pełny ekran`, który wywołuje Fullscreen API w ramach wymaganego gestu użytkownika,

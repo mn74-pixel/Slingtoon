@@ -327,6 +327,7 @@ main {
   display: block;
   width: 100%;
   height: 100%;
+  object-fit: fill;
   touch-action: none;
   cursor: grab;
   user-select: none;
@@ -1315,8 +1316,8 @@ noscript {
 /*
  * Safari keeps a very shallow page viewport while its address and tab bars are
  * visible. On phone-shaped landscape screens the old height-derived shell
- * width turned the whole game into a postcard. Fill the safe width instead,
- * overlay the compact chrome and crop only the unused upper part of the room.
+ * width turned the whole game into a postcard. Fill the safe width instead
+ * and let the crop-free canvas camera reveal extra room at the sides.
  */
 @media (orientation: landscape) and (max-height: 560px) and (min-aspect-ratio: 2 / 1) {
   .app-shell {
@@ -1379,8 +1380,7 @@ noscript {
   #gameCanvas {
     width: 100%;
     height: 100%;
-    object-fit: cover;
-    object-position: center bottom;
+    object-fit: fill;
   }
 
   .loading-panel {
@@ -1404,9 +1404,9 @@ noscript {
 
 /*
  * In true fullscreen the browser chrome is gone, so the controls and mission
- * can share one translucent row. The canvas then receives the complete screen
- * height instead of losing a separate topbar row; this reduces the old upper
- * crop from roughly 150 world pixels to about 50 on an iPhone in landscape.
+ * can share one translucent row. The canvas receives the complete screen
+ * height while its logical camera expands to the phone aspect ratio, keeping
+ * all 640 world pixels visible without letterboxing or top-edge cropping.
  */
 @media (orientation: landscape) and (max-height: 560px) {
   body.is-fullscreen-active .app-shell {

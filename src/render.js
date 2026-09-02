@@ -1,4 +1,5 @@
-import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js";
+import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.10.0";
+import { clientPointToWorld, createCropFreeViewport } from "./viewport.js?v=0.10.0";
 
 const PALETTE = Object.freeze({
   ink: "#19142d",
@@ -21,8 +22,8 @@ const lerp = (a, b, amount) => a + (b - a) * amount;
 // Keep the face readable after the complete 1280×640 room is reduced to a
 // phone screen. This is deliberately visual-only: GameModel still uses the
 // original avatar radius for aiming and collisions.
-const CUSTOM_HEAD_SCALE = 1.62;
-const CUSTOM_HEAD_LIFT = -10;
+const CUSTOM_HEAD_SCALE = 1.92;
+const CUSTOM_HEAD_LIFT = -17;
 
 function roundedRect(ctx, x, y, width, height, radius) {
   const r = Math.min(radius, Math.abs(width) * 0.5, Math.abs(height) * 0.5);
@@ -57,7 +58,9 @@ export class GameRenderer {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d", { alpha: false, desynchronized: true });
     this.model = model;
+    this.viewport = createCropFreeViewport(canvas.width, canvas.height, WORLD.width, WORLD.height);
     this.background = null;
+    this.backgroundSource = null;
     this.faceImage = null;
     this.faceMetadata = null;
     this.particles = [];
@@ -72,7 +75,21 @@ export class GameRenderer {
   }
 
   async load() {
-    this.background = await loadImage("assets/stage_morning_mayhem.svg");
+    const source = this.model.level.background;
+    if (this.background && this.backgroundSource === source) return;
+    this.background = await loadImage(source);
+    this.backgroundSource = source;
+  }
+
+  resizeView(cssWidth, cssHeight) {
+    const viewport = createCropFreeViewport(cssWidth, cssHeight, WORLD.width, WORLD.height);
+    this.viewport = viewport;
+    if (this.canvas.width !== viewport.width) this.canvas.width = viewport.width;
+    if (this.canvas.height !== viewport.height) this.canvas.height = viewport.height;
+  }
+
+  clientPoint(clientX, clientY, rect = this.canvas.getBoundingClientRect()) {
+    return clientPointToWorld(clientX, clientY, rect, this.viewport);
   }
 
   setFaceImage(portrait) {
@@ -92,6 +109,12 @@ export class GameRenderer {
       this.trail.length = 0;
       this.lastTrailPoint = null;
       this.successPulse = 0;
+    }
+
+    if (event.type === "level") {
+      this.background = null;
+      this.backgroundSource = null;
+      this.load().catch(() => {});
     }
 
     if (event.type === "launch" || event.type === "what-if") {
@@ -162,8 +185,11 @@ export class GameRenderer {
 
   render() {
     const ctx = this.ctx;
-    ctx.clearRect(0, 0, WORLD.width, WORLD.height);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    this.drawViewportBackdrop(ctx);
     ctx.save();
+    ctx.translate(this.viewport.offsetX, this.viewport.offsetY);
 
     if (this.shake > 0) {
       const x = (Math.random() - 0.5) * this.shake;
@@ -183,9 +209,29 @@ export class GameRenderer {
     this.drawParticles(ctx);
     this.drawCallouts(ctx);
     this.drawWorldHints(ctx);
-    ctx.restore();
-
     this.drawVignette(ctx);
+    ctx.restore();
+  }
+
+  drawViewportBackdrop(ctx) {
+    const gradient = ctx.createLinearGradient(0, 0, this.canvas.width, this.canvas.height);
+    gradient.addColorStop(0, "#302451");
+    gradient.addColorStop(0.5, "#655185");
+    gradient.addColorStop(1, "#704565");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+    ctx.save();
+    ctx.globalAlpha = 0.12;
+    ctx.fillStyle = PALETTE.cream;
+    for (let index = 0; index < 18; index += 1) {
+      const x = (index * 173 + 41) % this.canvas.width;
+      const y = (index * 97 + 29) % this.canvas.height;
+      ctx.beginPath();
+      ctx.arc(x, y, 2 + index % 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
   }
 
   drawBackground(ctx) {
@@ -235,11 +281,13 @@ export class GameRenderer {
   }
 
   drawPhysicalObjects(ctx) {
-    this.drawCrate(ctx);
-    this.drawTrampoline(ctx);
-    this.drawFan(ctx);
-    this.drawWall(ctx);
-    this.drawAlarmClock(ctx);
+    if (this.model.crateBounds?.enabled) this.drawCrate(ctx);
+    if (this.model.trampolineBounds?.enabled) this.drawTrampoline(ctx);
+    if (this.model.fanBounds && (this.model.fanBounds.enabled || this.model.modifier === Modifier.STRONGER_FAN)) {
+      this.drawFan(ctx);
+    }
+    if (this.model.wallBounds?.enabled) this.drawWall(ctx);
+    if (this.model.level.goal.kind === "alarm") this.drawAlarmClock(ctx);
   }
 
   drawCrate(ctx) {
@@ -408,12 +456,13 @@ export class GameRenderer {
 
   drawAlarmClock(ctx) {
     const centre = this.model.goalCentre;
+    const displayScale = this.model.level.goal.displayScale ?? 1;
     const wobble = Math.sin(this.time * 26) * (0.025 + this.clockWobble * 0.11);
     const pulse = 1 + Math.sin(this.time * 5) * 0.015 + this.successPulse * 0.08;
     ctx.save();
     ctx.translate(centre.x, centre.y);
     ctx.rotate(wobble);
-    ctx.scale(pulse, pulse);
+    ctx.scale(pulse * displayScale, pulse * displayScale);
     ctx.shadowColor = "rgba(17, 10, 28, 0.52)";
     ctx.shadowBlur = 19;
     ctx.shadowOffsetY = 10;
@@ -520,7 +569,8 @@ export class GameRenderer {
   }
 
   drawTrajectory(ctx) {
-    const points = this.model.predictedTrajectory(22);
+    const prediction = this.model.predictShot(24);
+    const points = prediction.points;
     if (points.length === 0) return;
     ctx.save();
     for (let index = 0; index < points.length; index += 1) {
@@ -528,23 +578,47 @@ export class GameRenderer {
       if (point.x < 0 || point.x > WORLD.width || point.y < 0 || point.y > WORLD.height) continue;
       const t = index / points.length;
       ctx.globalAlpha = 0.88 - t * 0.63;
-      ctx.fillStyle = index % 4 === 0 ? PALETTE.gold : PALETTE.cream;
+      ctx.fillStyle = prediction.reachesGoal
+        ? index % 4 === 0 ? PALETTE.white : PALETTE.mint
+        : index % 4 === 0 ? PALETTE.gold : PALETTE.cream;
       ctx.beginPath();
       ctx.arc(point.x, point.y, Math.max(2.5, 6.5 - t * 3.6), 0, Math.PI * 2);
       ctx.fill();
+    }
+
+    if (prediction.reachesGoal) {
+      const goal = this.model.goalCentre;
+      const pulse = 1 + Math.sin(this.time * 8) * 0.08;
+      ctx.globalAlpha = 0.9;
+      ctx.strokeStyle = PALETTE.mint;
+      ctx.lineWidth = 9;
+      ctx.beginPath();
+      ctx.arc(goal.x, goal.y, (this.model.goalRadius + 13) * pulse, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = PALETTE.mint;
+      roundedRect(ctx, goal.x - 48, goal.y - this.model.goalRadius - 48, 96, 34, 15);
+      ctx.fill();
+      ctx.strokeStyle = PALETTE.ink;
+      ctx.lineWidth = 4;
+      ctx.stroke();
+      ctx.fillStyle = PALETTE.ink;
+      ctx.font = "900 16px system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("PUŚĆ!", goal.x, goal.y - this.model.goalRadius - 31);
     }
     ctx.restore();
   }
 
   drawAvatarShadow(ctx) {
     const avatar = this.model.avatarPosition;
-    const distance = Math.max(0, WORLD.groundY - avatar.y);
+    const distance = Math.max(0, this.model.groundY - avatar.y);
     const scale = clamp(1 - distance / 700, 0.28, 1);
     ctx.save();
     ctx.globalAlpha = 0.28 * scale;
     ctx.fillStyle = "#130d25";
     ctx.beginPath();
-    ctx.ellipse(avatar.x, WORLD.groundY + 4, 46 * scale, 11 * scale, 0, 0, Math.PI * 2);
+    ctx.ellipse(avatar.x, this.model.groundY + 4, 46 * scale, 11 * scale, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
@@ -575,7 +649,8 @@ export class GameRenderer {
     ctx.restore();
 
     if (model.speechText && (model.phase === GamePhase.AIMING || model.phase === GamePhase.FLYING)) {
-      this.drawSpeechBubble(ctx, position.x, position.y - model.avatarRadius - 39, model.speechText);
+      const headClearance = this.faceImage ? 102 : model.avatarRadius;
+      this.drawSpeechBubble(ctx, position.x, position.y - headClearance - 39, model.speechText);
     }
   }
 
@@ -1072,22 +1147,83 @@ export class GameRenderer {
     if (this.model.phase !== GamePhase.READY) return;
     ctx.save();
     const pulse = 0.72 + Math.sin(this.time * 4) * 0.18;
-    ctx.globalAlpha = pulse;
     ctx.strokeStyle = PALETTE.gold;
     ctx.lineWidth = 4;
     ctx.setLineDash([9, 8]);
+    ctx.globalAlpha = pulse;
     ctx.beginPath();
-    ctx.arc(WORLD.anchor.x, WORLD.anchor.y, this.model.avatarRadius + 15, 0, Math.PI * 2);
+    const hintRadius = this.faceImage ? this.model.avatarGrabRadius : this.model.avatarRadius + 15;
+    const hintLift = this.faceImage ? -9 : 0;
+    ctx.arc(this.model.anchor.x, this.model.anchor.y + hintLift, hintRadius, 0, Math.PI * 2);
     ctx.stroke();
+
+    const tutorial = this.model.level.tutorial;
+    const showPullGuide = this.model.mode === GameMode.QUICK && this.model.attempts === 0 && tutorial?.pull;
+    if (showPullGuide) {
+      const anchor = this.model.anchor;
+      const pull = tutorial.pull;
+      const goal = this.model.goalCentre;
+      const goalRadius = this.model.level.goal.shape === "circle" ? this.model.level.goal.radius + 10 : 62;
+      ctx.globalAlpha = 0.44 + Math.sin(this.time * 4) * 0.12;
+      ctx.strokeStyle = PALETTE.gold;
+      ctx.lineWidth = 6;
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.arc(goal.x, goal.y, goalRadius, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.globalAlpha = 0.86;
+      ctx.strokeStyle = PALETTE.coral;
+      ctx.lineWidth = 5;
+      ctx.setLineDash([11, 9]);
+      ctx.beginPath();
+      ctx.moveTo(anchor.x - 12, anchor.y + 10);
+      ctx.lineTo(pull.x, pull.y);
+      ctx.stroke();
+
+      const angle = Math.atan2(pull.y - anchor.y, pull.x - anchor.x);
+      ctx.setLineDash([]);
+      ctx.fillStyle = PALETTE.coral;
+      ctx.beginPath();
+      ctx.moveTo(pull.x, pull.y);
+      ctx.lineTo(pull.x - Math.cos(angle - 0.55) * 20, pull.y - Math.sin(angle - 0.55) * 20);
+      ctx.lineTo(pull.x - Math.cos(angle + 0.55) * 20, pull.y - Math.sin(angle + 0.55) * 20);
+      ctx.closePath();
+      ctx.fill();
+
+      const travel = 0.12 + ((this.time * 0.58) % 1) * 0.88;
+      const fingerX = lerp(anchor.x, pull.x, travel);
+      const fingerY = lerp(anchor.y, pull.y, travel);
+      ctx.globalAlpha = 0.94 - travel * 0.2;
+      ctx.fillStyle = PALETTE.white;
+      ctx.strokeStyle = PALETTE.ink;
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(fingerX, fingerY, 13, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    }
+
     ctx.setLineDash([]);
+    ctx.globalAlpha = showPullGuide ? 0.96 : pulse;
     ctx.fillStyle = PALETTE.cream;
-    roundedRect(ctx, 94, 349, 158, 32, 14);
+    const labelX = showPullGuide ? 276 : 270;
+    const labelWidth = showPullGuide ? 206 : 184;
+    roundedRect(ctx, labelX, 342, labelWidth, 40, 17);
     ctx.fill();
+    ctx.strokeStyle = PALETTE.ink;
+    ctx.lineWidth = 3;
+    ctx.stroke();
     ctx.fillStyle = PALETTE.ink;
-    ctx.font = "900 11px system-ui, sans-serif";
+    ctx.font = `900 ${showPullGuide ? 15 : 11}px system-ui, sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(this.model.canAim() ? "ZŁAP · NACIĄGNIJ · PUŚĆ" : "NAJPIERW ONE MOVE", 173, 365);
+    const hintText = showPullGuide
+      ? "CIĄGNIJ TUTAJ ↙"
+      : this.model.canAim()
+        ? "ZŁAP · NACIĄGNIJ · PUŚĆ"
+        : "NAJPIERW ONE MOVE";
+    ctx.fillText(hintText, labelX + labelWidth * 0.5, 362);
     ctx.restore();
   }
 
