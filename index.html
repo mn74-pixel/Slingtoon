@@ -10,10 +10,10 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="SlingToon">
   <title>SlingToon — Morning Mayhem</title>
-  <link rel="manifest" href="manifest.webmanifest?v=0.11.0">
+  <link rel="manifest" href="manifest.webmanifest?v=0.12.0">
   <link rel="icon" href="assets/icon-192.png" sizes="192x192">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="styles.css?v=0.11.0">
+  <link rel="stylesheet" href="styles.css?v=0.12.0">
 </head>
 <body>
   <div class="ambient ambient--one" aria-hidden="true"></div>
@@ -24,7 +24,7 @@
       <div class="brand-block">
         <img class="brand-logo" src="assets/logo_slingtoon.svg" alt="SlingToon">
         <div class="brand-copy">
-          <span id="chapterEyebrow" class="eyebrow">MORNING MAYHEM · 7:03</span>
+          <span id="chapterEyebrow" class="eyebrow">DOMOWY CHAOS · 7:03</span>
           <strong>Sling → Bang → Śmiech → Again</strong>
         </div>
       </div>
@@ -53,7 +53,7 @@
         <div class="mission-strip">
           <nav class="level-nav" aria-label="Nawigacja poziomów">
             <button id="previousLevel" class="level-nav__button" type="button" aria-label="Poprzedni poziom">‹</button>
-            <output id="levelIndicator" class="level-nav__indicator" aria-live="polite">1 / 5</output>
+            <output id="levelIndicator" class="level-nav__indicator" aria-live="polite">1 / 8</output>
             <button id="nextLevel" class="level-nav__button" type="button" aria-label="Następny poziom">›</button>
           </nav>
           <div class="mission-copy">
@@ -63,6 +63,7 @@
           <div class="mission-badges" aria-live="polite">
             <span id="modeBadge" class="mission-badge mission-badge--violet">⚡ QUICK SLING</span>
             <span id="shotBadge" class="mission-badge">SHOT 1</span>
+            <span id="scoreBadge" class="mission-badge mission-badge--gold" title="Punkty Sprytu">★ 0</span>
           </div>
         </div>
 
@@ -78,6 +79,7 @@
             <span id="resultTag" class="result-tag">SNOOZE!</span>
             <h2 id="resultTitle">Poranek oficjalnie przełożony.</h2>
             <p id="resultSpeech">NATURALNY TALENT DO SPANIA!</p>
+            <p id="resultReward" class="result-reward" hidden></p>
             <div class="result-actions">
               <button id="whatIfButton" class="cta cta--what-if" type="button" hidden>WHAT IF?</button>
               <button id="againButton" class="cta" type="button">↻ AGAIN</button>
@@ -103,13 +105,14 @@
             <span>◉</span>
             TWARZ: TYLKO LOKALNIE
           </div>
+          <button id="hintButton" class="hint-button" type="button">💡 PODPOWIEDŹ · 2</button>
           <button id="restartButton" class="restart-button" type="button">↻ Restart</button>
         </div>
       </section>
     </main>
 
     <footer>
-      <span>SLINGTOON WEB 0.11.0</span>
+      <span>SLINGTOON WEB 0.12.0</span>
       <span>Offline PWA · GitHub Pages Ready</span>
     </footer>
   </div>
@@ -192,6 +195,6 @@
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
   <noscript>Do uruchomienia SlingToon potrzebna jest obsługa JavaScript.</noscript>
-  <script type="module" src="src/main.js?v=0.11.0"></script>
+  <script type="module" src="src/main.js?v=0.12.0"></script>
 </body>
 </html>

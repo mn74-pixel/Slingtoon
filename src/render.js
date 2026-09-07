@@ -1,5 +1,5 @@
-import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.11.0";
-import { clientPointToWorld, createCropFreeViewport } from "./viewport.js?v=0.11.0";
+import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.12.0";
+import { clientPointToWorld, createCropFreeViewport } from "./viewport.js?v=0.12.0";
 
 const PALETTE = Object.freeze({
   ink: "#19142d",
@@ -76,6 +76,11 @@ export class GameRenderer {
 
   async load() {
     const source = this.model.level.background;
+    if (!source) {
+      this.background = null;
+      this.backgroundSource = null;
+      return;
+    }
     if (this.background && this.backgroundSource === source) return;
     this.background = await loadImage(source);
     this.backgroundSource = source;
@@ -131,7 +136,7 @@ export class GameRenderer {
       this.callouts.push({
         x: event.x,
         y: event.y - 24,
-        text: event.surface === "trampoline" ? "BOI-O-O-ING!" : event.surface === "crate" ? "KLOINK!" : "BAM!",
+        text: event.surface === "water" ? "PLASK!" : event.surface === "trampoline" ? "BOI-O-O-ING!" : event.surface === "crate" ? "KLOINK!" : "BAM!",
         age: 0,
         life: 0.72,
         angle: (Math.random() - 0.5) * 0.18,
@@ -247,12 +252,7 @@ export class GameRenderer {
     if (this.background) {
       ctx.drawImage(this.background, 0, 0, WORLD.width, WORLD.height);
     } else {
-      const gradient = ctx.createLinearGradient(0, 0, WORLD.width, WORLD.height);
-      gradient.addColorStop(0, "#41346c");
-      gradient.addColorStop(0.55, "#765e9f");
-      gradient.addColorStop(1, "#a96e91");
-      ctx.fillStyle = gradient;
-      ctx.fillRect(0, 0, WORLD.width, WORLD.height);
+      this.drawProceduralScene(ctx);
     }
 
     const visual = this.model.level.visual;
@@ -261,6 +261,144 @@ export class GameRenderer {
       ctx.fillRect(0, 0, WORLD.width, WORLD.height);
     }
     if (visual?.gag) this.drawSceneGag(ctx, visual.gag, visual.accent);
+  }
+
+  drawProceduralScene(ctx) {
+    const scenes = {
+      laundry: () => this.drawLaundryScene(ctx),
+      "living-room": () => this.drawLivingRoomScene(ctx),
+      kitchen: () => this.drawKitchenScene(ctx),
+      garden: () => this.drawGardenScene(ctx),
+      park: () => this.drawParkScene(ctx),
+      lake: () => this.drawLakeScene(ctx),
+    };
+    (scenes[this.model.level.scene] ?? scenes.laundry)();
+  }
+
+  drawRoomBase(ctx, wallTop, wallBottom, floorTop, floorBottom) {
+    const wall = ctx.createLinearGradient(0, 0, 0, 510);
+    wall.addColorStop(0, wallTop);
+    wall.addColorStop(1, wallBottom);
+    ctx.fillStyle = wall;
+    ctx.fillRect(0, 0, WORLD.width, 510);
+    ctx.fillStyle = floorTop;
+    ctx.fillRect(0, 510, WORLD.width, 76);
+    ctx.fillStyle = floorBottom;
+    ctx.fillRect(0, 586, WORLD.width, 54);
+    ctx.fillStyle = "rgba(25, 20, 45, 0.14)";
+    ctx.fillRect(0, 496, WORLD.width, 14);
+  }
+
+  drawLaundryScene(ctx) {
+    this.drawRoomBase(ctx, "#b9f0df", "#77cbbd", "#e7d9bb", "#7e6688");
+    ctx.save();
+    ctx.globalAlpha = 0.16;
+    ctx.strokeStyle = PALETTE.ink;
+    ctx.lineWidth = 3;
+    for (let x = 0; x < WORLD.width; x += 72) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 510); ctx.stroke();
+    }
+    for (let y = 0; y < 510; y += 72) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(WORLD.width, y); ctx.stroke();
+    }
+    ctx.restore();
+    for (const x of [350, 520]) {
+      roundedRect(ctx, x, 238, 145, 258, 20);
+      strokeFill(ctx, x === 350 ? "#fff4d8" : "#a28bff", PALETTE.ink, 7);
+      ctx.beginPath(); ctx.arc(x + 72, 363, 48, 0, Math.PI * 2); strokeFill(ctx, "#302a52", PALETTE.ink, 7);
+      ctx.beginPath(); ctx.arc(x + 72, 363, 34, 0, Math.PI * 2); strokeFill(ctx, "#75d8df", PALETTE.ink, 4);
+      ctx.fillStyle = PALETTE.coral; ctx.beginPath(); ctx.arc(x + 39, 274, 7, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.strokeStyle = PALETTE.ink;
+    ctx.lineWidth = 5;
+    ctx.beginPath(); ctx.moveTo(65, 120); ctx.quadraticCurveTo(360, 180, 650, 120); ctx.stroke();
+    for (const [x, colour] of [[132, PALETTE.gold], [245, PALETTE.coral], [575, PALETTE.violet]]) {
+      ctx.fillStyle = colour; ctx.fillRect(x, 128, 70, 68); ctx.strokeRect(x, 128, 70, 68);
+    }
+    ctx.fillStyle = "rgba(255,255,255,.72)";
+    ctx.font = "900 38px system-ui, sans-serif";
+    ctx.fillText("PRALNIA", 55, 75);
+  }
+
+  drawLivingRoomScene(ctx) {
+    this.drawRoomBase(ctx, "#d9c9f7", "#9b82c3", "#d5a56c", "#604a6f");
+    ctx.fillStyle = "rgba(255,245,217,.14)";
+    for (let x = 0; x < WORLD.width; x += 105) ctx.fillRect(x, 510, 5, 76);
+    roundedRect(ctx, 368, 278, 405, 232, 38);
+    strokeFill(ctx, "#6250a1", PALETTE.ink, 8);
+    roundedRect(ctx, 400, 315, 160, 133, 28); strokeFill(ctx, "#8b72d9", PALETTE.ink, 5);
+    roundedRect(ctx, 580, 315, 160, 133, 28); strokeFill(ctx, "#8b72d9", PALETTE.ink, 5);
+    ctx.fillStyle = PALETTE.gold; ctx.beginPath(); ctx.arc(548, 458, 11, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    roundedRect(ctx, 73, 98, 228, 142, 17); strokeFill(ctx, PALETTE.cream, PALETTE.ink, 7);
+    ctx.fillStyle = PALETTE.coral; ctx.font = "900 35px system-ui, sans-serif"; ctx.textAlign = "center";
+    ctx.fillText("SZTUKA", 187, 158); ctx.fillStyle = PALETTE.ink; ctx.font = "900 16px system-ui, sans-serif"; ctx.fillText("(podobno)", 187, 191);
+    ctx.textAlign = "start";
+    ctx.fillStyle = "rgba(25,20,45,.55)"; ctx.font = "900 27px system-ui, sans-serif"; ctx.fillText("SALON · STREFA ZAGINIĘĆ", 55, 65);
+  }
+
+  drawKitchenScene(ctx) {
+    this.drawRoomBase(ctx, "#ffe4b5", "#eea780", "#d8c7a8", "#62485f");
+    ctx.fillStyle = "rgba(255,255,255,.23)";
+    for (let y = 48; y < 430; y += 70) for (let x = (y / 70) % 2 * 35; x < WORLD.width; x += 70) ctx.fillRect(x, y, 66, 66);
+    ctx.fillStyle = "#49385f"; ctx.fillRect(300, 295, 600, 28);
+    for (const x of [315, 510, 705]) {
+      roundedRect(ctx, x, 323, 178, 176, 10); strokeFill(ctx, x === 510 ? "#ff8b79" : "#7c63e7", PALETTE.ink, 6);
+      ctx.fillStyle = PALETTE.gold; ctx.beginPath(); ctx.arc(x + 89, 350, 7, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 8;
+    ctx.beginPath(); ctx.moveTo(100, 120); ctx.lineTo(100, 205); ctx.moveTo(170, 120); ctx.lineTo(170, 205); ctx.stroke();
+    ctx.fillStyle = PALETTE.coral; ctx.beginPath(); ctx.arc(100, 218, 25, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = "rgba(25,20,45,.58)"; ctx.font = "900 28px system-ui, sans-serif"; ctx.fillText("KUCHNIA · BHP WYSZŁO", 55, 65);
+  }
+
+  drawOutdoorBase(ctx, skyTop, skyBottom, grass) {
+    const sky = ctx.createLinearGradient(0, 0, 0, 520);
+    sky.addColorStop(0, skyTop); sky.addColorStop(1, skyBottom);
+    ctx.fillStyle = sky; ctx.fillRect(0, 0, WORLD.width, 586);
+    ctx.fillStyle = "#fff4d8";
+    for (const [x, y, s] of [[180, 120, 1], [540, 75, .8], [935, 140, 1.2]]) {
+      ctx.beginPath(); ctx.arc(x, y, 32 * s, 0, Math.PI * 2); ctx.arc(x + 40 * s, y - 10, 42 * s, 0, Math.PI * 2); ctx.arc(x + 80 * s, y + 3, 30 * s, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.fillStyle = grass; ctx.beginPath(); ctx.moveTo(0, 430); ctx.quadraticCurveTo(310, 350, 610, 440); ctx.quadraticCurveTo(960, 330, 1280, 420); ctx.lineTo(1280, 640); ctx.lineTo(0, 640); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = "#2f7d67"; ctx.fillRect(0, 574, WORLD.width, 66);
+  }
+
+  drawGardenScene(ctx) {
+    this.drawOutdoorBase(ctx, "#7dd7e8", "#d5f4dd", "#67bd76");
+    ctx.fillStyle = "#a86552"; ctx.fillRect(330, 335, 520, 250);
+    ctx.fillStyle = "#fff2cf"; for (let x = 345; x < 845; x += 85) ctx.fillRect(x, 352, 70, 48);
+    ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 6; ctx.strokeRect(330, 335, 520, 250);
+    for (const [x, colour] of [[65, PALETTE.gold], [250, PALETTE.coral], [900, PALETTE.violet]]) {
+      ctx.fillStyle = "#74513f"; ctx.fillRect(x + 36, 300, 20, 150);
+      ctx.fillStyle = colour; ctx.beginPath(); ctx.arc(x + 45, 275, 70, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    }
+    ctx.fillStyle = "rgba(25,20,45,.58)"; ctx.font = "900 28px system-ui, sans-serif"; ctx.fillText("OGRÓD · STREFA GNOMA", 55, 65);
+  }
+
+  drawParkScene(ctx) {
+    this.drawOutdoorBase(ctx, "#79c8ea", "#f3d6bd", "#67ad68");
+    for (const x of [70, 315, 790, 1035]) {
+      ctx.fillStyle = "#6f4a3f"; ctx.fillRect(x + 38, 245, 27, 240);
+      ctx.fillStyle = x % 2 ? "#5ce1bd" : "#438d67"; ctx.beginPath(); ctx.arc(x + 50, 205, 92, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    }
+    ctx.fillStyle = "#d8bd8b"; ctx.beginPath(); ctx.moveTo(350, 586); ctx.quadraticCurveTo(610, 440, 990, 586); ctx.closePath(); ctx.fill();
+    roundedRect(ctx, 860, 426, 210, 65, 9); strokeFill(ctx, "#9b684d", PALETTE.ink, 6);
+    ctx.fillStyle = "rgba(25,20,45,.6)"; ctx.font = "900 28px system-ui, sans-serif"; ctx.fillText("PARK · GOŁĘBIE URZĘDUJĄ", 55, 65);
+  }
+
+  drawLakeScene(ctx) {
+    this.drawOutdoorBase(ctx, "#5bc6e8", "#d6f4e1", "#73ba78");
+    ctx.fillStyle = "#ae865b"; ctx.fillRect(0, 510, 515, 76);
+    ctx.strokeStyle = "#6d4d44"; ctx.lineWidth = 7;
+    for (let x = 20; x < 500; x += 65) { ctx.beginPath(); ctx.moveTo(x, 510); ctx.lineTo(x, 586); ctx.stroke(); }
+    ctx.fillStyle = "#4bbbd0"; ctx.fillRect(515, 515, 765, 71);
+    ctx.fillStyle = "#327a91"; ctx.fillRect(0, 586, WORLD.width, 54);
+    for (let i = 0; i < 9; i += 1) {
+      const y = 530 + i % 3 * 17;
+      ctx.strokeStyle = i % 2 ? "rgba(255,245,217,.6)" : "rgba(25,20,45,.2)";
+      ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(535 + i * 73, y); ctx.quadraticCurveTo(560 + i * 73, y - 8, 590 + i * 73, y); ctx.stroke();
+    }
+    ctx.fillStyle = "rgba(25,20,45,.6)"; ctx.font = "900 28px system-ui, sans-serif"; ctx.fillText("JEZIORO · RATOWNIK: KACZKA", 55, 65);
   }
 
   drawSceneGag(ctx, text, accent = PALETTE.gold) {
@@ -315,6 +453,7 @@ export class GameRenderer {
   }
 
   drawPhysicalObjects(ctx) {
+    if (this.model.waterBounds?.enabled) this.drawWater(ctx);
     if (this.model.crateBounds?.enabled) this.drawCrate(ctx);
     if (this.model.trampolineBounds?.enabled) this.drawTrampoline(ctx);
     if (this.model.fanBounds && (this.model.fanBounds.enabled || this.model.modifier === Modifier.STRONGER_FAN)) {
@@ -331,8 +470,35 @@ export class GameRenderer {
       sock: () => this.drawSock(ctx),
       remote: () => this.drawRemote(ctx),
       toaster: () => this.drawToaster(ctx),
+      gnome: () => this.drawGnome(ctx),
+      "ice-cream": () => this.drawIceCream(ctx),
+      duck: () => this.drawDuck(ctx),
     };
     (drawers[this.model.level.goal.kind] ?? drawers.alarm)();
+  }
+
+  drawWater(ctx) {
+    const box = this.model.waterBounds;
+    const wave = Math.sin(this.time * 4) * 5;
+    ctx.save();
+    const gradient = ctx.createLinearGradient(0, box.y, 0, box.y + box.height);
+    gradient.addColorStop(0, "rgba(92, 225, 221, 0.88)");
+    gradient.addColorStop(1, "rgba(40, 118, 164, 0.96)");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(box.x, box.y, box.width, box.height);
+    ctx.strokeStyle = PALETTE.cream;
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(box.x, box.y);
+    for (let x = box.x; x <= box.x + box.width; x += 24) {
+      ctx.quadraticCurveTo(x + 12, box.y - 8 - wave, x + 24, box.y);
+    }
+    ctx.stroke();
+    ctx.fillStyle = "rgba(25,20,45,.72)";
+    ctx.font = "900 12px system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("TAFLA ODBIJA · PRĄD →", box.x + box.width * 0.5, box.y + 34);
+    ctx.restore();
   }
 
   drawCrate(ctx) {
@@ -364,14 +530,24 @@ export class GameRenderer {
     ctx.font = "900 12px system-ui, sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText("FRAGILE", 0, -4);
+    ctx.fillText((box.label || "FRAGILE").split("\n")[0], 0, -4);
     ctx.font = "900 9px system-ui, sans-serif";
-    ctx.fillText("EGO", 0, 8);
+    ctx.fillText((box.label || "EGO").split("\n")[1] || "EGO", 0, 8);
     ctx.restore();
   }
 
   drawTrampoline(ctx) {
     const box = this.model.trampolineBounds;
+    const style = this.model.level.trampoline.style;
+    const styleColours = {
+      "laundry-basket": ["#fff4d8", PALETTE.mint],
+      "sofa-cushion": [PALETTE.violet, PALETTE.gold],
+      "baking-tray": ["#8d7898", PALETTE.coral],
+      "soil-bag": ["#9b684d", PALETTE.mint],
+      "park-spring": [PALETTE.gold, PALETTE.mint],
+      buoy: [PALETTE.cream, PALETTE.coral],
+    };
+    const [rimColour, centreColour] = styleColours[style] ?? [PALETTE.coral, PALETTE.mint];
     const pulse = this.model.movingTrampoline ? 1 + Math.sin(this.time * 10) * 0.06 : 1;
     ctx.save();
     ctx.translate(box.x + box.width * 0.5, box.y + 12);
@@ -381,11 +557,11 @@ export class GameRenderer {
     ctx.shadowOffsetY = 8;
     ctx.beginPath();
     ctx.ellipse(0, 7, 78, 20, 0, 0, Math.PI * 2);
-    strokeFill(ctx, PALETTE.coral, PALETTE.ink, 6);
+    strokeFill(ctx, rimColour, PALETTE.ink, 6);
     ctx.shadowColor = "transparent";
     ctx.beginPath();
     ctx.ellipse(0, 4, 61, 12, 0, 0, Math.PI * 2);
-    strokeFill(ctx, PALETTE.mint, PALETTE.ink, 4);
+    strokeFill(ctx, centreColour, PALETTE.ink, 4);
     ctx.strokeStyle = PALETTE.ink;
     ctx.lineWidth = 7;
     ctx.beginPath();
@@ -495,7 +671,7 @@ export class GameRenderer {
     ctx.font = "900 10px system-ui, sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText("NOT A WALL", 0, 0);
+    ctx.fillText(wall.label || "NOT A WALL", 0, 0);
     ctx.restore();
   }
 
@@ -730,6 +906,85 @@ export class GameRenderer {
     ctx.font = "900 11px system-ui, sans-serif";
     ctx.textAlign = "center";
     ctx.fillText(angry ? "BURN MODE" : "CRUNCH OK", 0, 43);
+    ctx.restore();
+  }
+
+  drawGnome(ctx) {
+    const centre = this.model.goalCentre;
+    const scale = this.model.level.goal.displayScale ?? 1;
+    const bob = Math.sin(this.time * 3.4) * 3;
+    ctx.save();
+    ctx.translate(centre.x, centre.y + bob);
+    ctx.scale(scale, scale);
+    ctx.shadowColor = "rgba(17,10,28,.45)";
+    ctx.shadowBlur = 18;
+    ctx.shadowOffsetY = 9;
+    ctx.beginPath();
+    ctx.moveTo(0, -108); ctx.lineTo(-54, -24); ctx.lineTo(55, -24); ctx.closePath();
+    strokeFill(ctx, PALETTE.coral, PALETTE.ink, 8);
+    ctx.beginPath(); ctx.ellipse(0, -6, 48, 42, 0, 0, Math.PI * 2);
+    strokeFill(ctx, PALETTE.skin, PALETTE.ink, 7);
+    ctx.shadowColor = "transparent";
+    ctx.fillStyle = PALETTE.ink;
+    ctx.beginPath(); ctx.arc(-17, -14, 5, 0, Math.PI * 2); ctx.arc(17, -14, 5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-42, 10); ctx.quadraticCurveTo(0, 82, 42, 10); ctx.quadraticCurveTo(0, 43, -42, 10); ctx.fillStyle = PALETTE.cream; ctx.fill(); ctx.stroke();
+    roundedRect(ctx, -51, 45, 102, 80, 24); strokeFill(ctx, PALETTE.violet, PALETTE.ink, 7);
+    ctx.fillStyle = PALETTE.gold; ctx.font = "900 11px system-ui, sans-serif"; ctx.textAlign = "center";
+    ctx.fillText(this.model.phase === GamePhase.SUCCEEDED ? "SZEF OGRODU" : "DO URATOWANIA", 0, 91);
+    ctx.restore();
+  }
+
+  drawIceCream(ctx) {
+    const centre = this.model.goalCentre;
+    const scale = this.model.level.goal.displayScale ?? 1;
+    ctx.save();
+    ctx.translate(centre.x, centre.y + Math.sin(this.time * 4) * 5);
+    ctx.rotate(-0.08 + Math.sin(this.time * 2.7) * 0.04);
+    ctx.scale(scale, scale);
+    ctx.shadowColor = "rgba(17,10,28,.45)"; ctx.shadowBlur = 18; ctx.shadowOffsetY = 9;
+    ctx.beginPath(); ctx.moveTo(-39, 4); ctx.lineTo(39, 4); ctx.lineTo(0, 112); ctx.closePath();
+    strokeFill(ctx, "#d99b58", PALETTE.ink, 7);
+    ctx.beginPath(); ctx.arc(-23, -20, 35, 0, Math.PI * 2); strokeFill(ctx, PALETTE.coral, PALETTE.ink, 6);
+    ctx.beginPath(); ctx.arc(18, -25, 39, 0, Math.PI * 2); strokeFill(ctx, PALETTE.mint, PALETTE.ink, 6);
+    ctx.beginPath(); ctx.arc(0, -59, 38, 0, Math.PI * 2); strokeFill(ctx, PALETTE.gold, PALETTE.ink, 6);
+    ctx.shadowColor = "transparent";
+    ctx.fillStyle = PALETTE.ink; ctx.beginPath(); ctx.arc(-12, -58, 4, 0, Math.PI * 2); ctx.arc(14, -58, 4, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(1, -48, 14, 0.15, Math.PI - 0.15); ctx.stroke();
+    ctx.fillStyle = PALETTE.cream; ctx.font = "900 11px system-ui, sans-serif"; ctx.textAlign = "center"; ctx.fillText("NIE DLA PTAKA", 0, 89);
+    ctx.restore();
+    this.drawPigeon(ctx, centre.x + 68, centre.y - 95);
+  }
+
+  drawPigeon(ctx, x, y) {
+    ctx.save();
+    ctx.translate(x, y + Math.sin(this.time * 7) * 3);
+    ctx.fillStyle = "#6d6482"; ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 5;
+    ctx.beginPath(); ctx.ellipse(0, 0, 38, 27, -.2, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.arc(27, -19, 21, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = PALETTE.coral; ctx.beginPath(); ctx.moveTo(47, -21); ctx.lineTo(70, -14); ctx.lineTo(47, -8); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = PALETTE.white; ctx.beginPath(); ctx.arc(33, -25, 7, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = PALETTE.ink; ctx.beginPath(); ctx.arc(36, -25, 3, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(-8, 25); ctx.lineTo(-10, 42); ctx.moveTo(10, 25); ctx.lineTo(12, 42); ctx.stroke();
+    ctx.restore();
+  }
+
+  drawDuck(ctx) {
+    const centre = this.model.goalCentre;
+    const scale = this.model.level.goal.displayScale ?? 1;
+    ctx.save();
+    ctx.translate(centre.x, centre.y + Math.sin(this.time * 2.8) * 7);
+    ctx.scale(scale, scale);
+    ctx.shadowColor = "rgba(17,10,28,.42)"; ctx.shadowBlur = 17; ctx.shadowOffsetY = 10;
+    ctx.beginPath(); ctx.ellipse(0, 28, 75, 43, -.08, 0, Math.PI * 2); strokeFill(ctx, PALETTE.gold, PALETTE.ink, 8);
+    ctx.beginPath(); ctx.arc(44, -24, 45, 0, Math.PI * 2); strokeFill(ctx, PALETTE.gold, PALETTE.ink, 7);
+    ctx.shadowColor = "transparent";
+    ctx.fillStyle = PALETTE.coral; ctx.beginPath(); ctx.moveTo(79, -28); ctx.lineTo(118, -14); ctx.lineTo(78, -1); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = PALETTE.white; ctx.beginPath(); ctx.arc(52, -33, 11, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = PALETTE.ink; ctx.beginPath(); ctx.arc(56, -33, 4, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(10, -65); ctx.lineTo(65, -64); ctx.lineTo(45, -104); ctx.closePath(); strokeFill(ctx, PALETTE.ink, PALETTE.ink, 4);
+    ctx.fillStyle = PALETTE.coral; ctx.beginPath(); ctx.moveTo(43, -98); ctx.quadraticCurveTo(77, -111, 82, -79); ctx.quadraticCurveTo(62, -87, 43, -77); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = PALETTE.cream; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(0, 78, 64, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke();
+    ctx.fillStyle = PALETTE.cream; ctx.font = "900 11px system-ui, sans-serif"; ctx.textAlign = "center"; ctx.fillText("KAPITAN KWAK", 0, 34);
     ctx.restore();
   }
 
@@ -1371,9 +1626,10 @@ export class GameRenderer {
     ctx.stroke();
 
     const tutorial = this.model.level.tutorial;
+    const activeHint = this.model.activeHint;
     const showFirstGuide = this.model.mode === GameMode.QUICK && this.model.attempts === 0 && tutorial?.pull;
-    const showRetryGuide = this.model.mode === GameMode.QUICK && this.model.attempts >= 2 && this.model.level.assistPull;
-    const pullGuide = showFirstGuide ? tutorial.pull : showRetryGuide ? this.model.level.assistPull : null;
+    const showHintGuide = this.model.mode === GameMode.QUICK && this.model.hintStage >= 2 && activeHint?.pull;
+    const pullGuide = showFirstGuide ? tutorial.pull : showHintGuide ? activeHint.pull : null;
     const showPullGuide = Boolean(pullGuide);
     if (showPullGuide) {
       const anchor = this.model.anchor;
@@ -1407,6 +1663,18 @@ export class GameRenderer {
       ctx.closePath();
       ctx.fill();
 
+      if (this.model.hintStage >= 3 && activeHint?.pull) {
+        const path = this.model.trajectoryForPull(activeHint.pull, 28);
+        ctx.globalAlpha = 0.8;
+        ctx.fillStyle = PALETTE.mint;
+        for (let index = 0; index < path.length; index += 1) {
+          const dot = path[index];
+          ctx.beginPath();
+          ctx.arc(dot.x, dot.y, Math.max(3, 7 - index * 0.11), 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
       const travel = 0.12 + ((this.time * 0.58) % 1) * 0.88;
       const fingerX = lerp(anchor.x, pull.x, travel);
       const fingerY = lerp(anchor.y, pull.y, travel);
@@ -1435,8 +1703,8 @@ export class GameRenderer {
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     const hintText = showPullGuide
-      ? showRetryGuide
-        ? "MAŁA PODPOWIEDŹ ↙"
+      ? showHintGuide
+        ? this.model.hintStage >= 3 ? "PEŁNY TOR ODKRYTY" : "KIERUNEK ODKRYTY ↙"
         : "CIĄGNIJ TUTAJ ↙"
       : this.model.canAim()
         ? "ZŁAP · NACIĄGNIJ · PUŚĆ"

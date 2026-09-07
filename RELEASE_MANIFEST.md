@@ -1,8 +1,8 @@
-# SlingToon Web 0.11.0 — Release Manifest
+# SlingToon Web 0.12.0 — Release Manifest
 
 **Format:** statyczna gra HTML5 Canvas / PWA  
 **Publikacja:** GitHub Pages  
-**Data:** 2 września 2026 r.
+**Data:** 7 września 2026 r.
 
 ## Zawartość
 
@@ -17,9 +17,10 @@
 - powiększona do 192% rysunkowa głowa z czytelną mimiką i większym polem chwytu, bez zmiany pola kolizji,
 - deklaratywny rdzeń poziomów oddzielający geometrię, cele i teksty misji od modelu fizyki,
 - przyjazny onboarding pierwszego poziomu z jednym uczonym czasownikiem, szerszym oknem sukcesu i predykcją opartą na prawdziwej fizyce,
-- pięciopoziomowy rozdział śniadaniowy z odblokowywanym postępem, nawigacją i rosnącą trudnością,
-- pięć humorystycznych, proceduralnie rysowanych celów oraz osobne reakcje czterech osobowości,
-- adaptacyjna podpowiedź po dwóch porażkach i dźwiękowe puenty zależne od celu,
+- osiem poziomów w siedmiu sceneriach: sypialni, pralni, salonie, kuchni, ogrodzie, parku i nad jeziorem,
+- osiem humorystycznych, proceduralnie rysowanych celów oraz osobne reakcje czterech osobowości,
+- prawdziwa mechanika odbicia od wody i bocznego prądu w finale jeziornym,
+- trzystopniowe podpowiedzi, Punkty Sprytu i żetony pomocy z trwałym zapisem,
 - grafika SVG i ikony PNG,
 - service worker i manifest instalacyjny,
 - workflow walidacji i publikacji GitHub Pages,
@@ -31,7 +32,7 @@
 - składnia wszystkich modułów JavaScript,
 - Quick Sling i One Move,
 - grywalna droga do zwycięstwa w obu trybach,
-- grywalna droga do zwycięstwa dla każdego z pięciu poziomów,
+- grywalna droga do zwycięstwa dla każdego z ośmiu poziomów,
 - malejące okno sukcesu na kolejnych etapach oraz uczciwa dolna granica finału,
 - co najmniej 34% zwycięskich strzałów w kontrolnej siatce wejść pierwszego poziomu,
 - dokładny replay zapisanego strzału,

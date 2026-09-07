@@ -1,6 +1,6 @@
-import { DEFAULT_LEVEL, WORLD } from "./levels.js?v=0.11.0";
+import { DEFAULT_LEVEL, WORLD } from "./levels.js?v=0.12.0";
 
-export { DEFAULT_LEVEL, LEVELS, WORLD, getLevel } from "./levels.js?v=0.11.0";
+export { DEFAULT_LEVEL, LEVELS, WORLD, getLevel } from "./levels.js?v=0.12.0";
 
 export const GameMode = Object.freeze({
   QUICK: "quickSling",
@@ -104,6 +104,7 @@ export class GameModel {
     if (resetAttempts) {
       this.attempts = 0;
       this.previousShot = null;
+      this.hintStage = 0;
     }
 
     this.emit("reset", { resetAttempts });
@@ -298,6 +299,10 @@ export class GameModel {
   }
 
   finishAttempt(success) {
+    const autoAfter = this.level.hints?.policy?.autoAfterAttempts ?? 0;
+    if (!success && autoAfter > 0 && this.attempts >= autoAfter && this.hintStage === 0) {
+      this.revealHint(1, true);
+    }
     this.phase = success ? GamePhase.SUCCEEDED : GamePhase.FAILED;
     this.avatarVelocity = { x: 0, y: 0 };
     this.movingTrampoline = false;
@@ -311,6 +316,25 @@ export class GameModel {
 
   resolveWorldCollisions() {
     const radius = this.avatarRadius;
+
+    const water = this.waterBounds;
+    if (water?.enabled) {
+      const withinWater =
+        this.avatarPosition.x + radius >= water.x &&
+        this.avatarPosition.x - radius <= water.x + water.width;
+      const hittingSurface =
+        this.avatarPosition.y + radius >= water.y &&
+        this.avatarPosition.y - radius < water.y &&
+        this.avatarVelocity.y > 0;
+
+      if (withinWater && hittingSurface) {
+        const speed = Math.abs(this.avatarVelocity.y);
+        this.avatarPosition.y = water.y - radius;
+        this.avatarVelocity.y = -Math.max(355, speed * water.bounce) * this.bounceScale;
+        this.avatarVelocity.x += water.current;
+        this.triggerImpact(Math.max(speed, 360), this.avatarPosition.x, water.y, "water");
+      }
+    }
 
     if (this.avatarPosition.y + radius > this.groundY) {
       this.avatarPosition.y = this.groundY - radius;
@@ -451,8 +475,40 @@ export class GameModel {
     return result;
   }
 
+  revealHint(stage = this.hintStage + 1, automatic = false) {
+    const total = this.level.hints?.stages?.length ?? 0;
+    const nextStage = clamp(Math.round(stage), 0, total);
+    if (nextStage <= this.hintStage) return false;
+    this.hintStage = nextStage;
+    this.emit("hint", { stage: nextStage, automatic });
+    return true;
+  }
+
+  get activeHint() {
+    return this.hintStage > 0 ? this.level.hints?.stages?.[this.hintStage - 1] ?? null : null;
+  }
+
   predictedTrajectory(numberOfDots = 20) {
     return this.predictShot(numberOfDots).points;
+  }
+
+  trajectoryForPull(pull, numberOfDots = 24) {
+    if (!pull || numberOfDots <= 0) return [];
+    const launchPoint = this.clampedSlingPoint(pull);
+    const velocity = {
+      x: (this.anchor.x - launchPoint.x) * LAUNCH_MULTIPLIER,
+      y: (this.anchor.y - launchPoint.y) * LAUNCH_MULTIPLIER,
+    };
+    const simulation = new GameModel(() => {}, this.level);
+    simulation.mode = this.mode;
+    simulation.trampolineX = this.trampolineX;
+    simulation.startFlight(velocity, false, launchPoint);
+    const points = [];
+    for (let frame = 0; frame < 420 && simulation.phase === GamePhase.FLYING; frame += 1) {
+      simulation.update(1 / 60);
+      if (frame % 5 === 4 && points.length < numberOfDots) points.push(copyPoint(simulation.avatarPosition));
+    }
+    return points;
   }
 
   clampedSlingPoint(point) {
@@ -514,6 +570,10 @@ export class GameModel {
     return this.level.wall;
   }
 
+  get waterBounds() {
+    return this.level.water;
+  }
+
   get goalCentre() {
     const goal = this.level.goal;
     if (goal.shape === "rect" || goal.shape === "zone") {
@@ -563,8 +623,8 @@ export class GameModel {
     if (this.mode === GameMode.QUICK && this.phase === GamePhase.READY && this.attempts === 0) {
       return this.level.tutorial?.status ?? this.level.status?.ready ?? "Pociągnij bohatera i znajdź właściwy tor.";
     }
-    if (this.mode === GameMode.QUICK && this.phase === GamePhase.READY && this.attempts >= 2 && this.level.assistPull) {
-      return "Mała podpowiedź: pociągnij w stronę strzałki i puść, gdy tor zrobi się miętowy.";
+    if (this.mode === GameMode.QUICK && this.phase === GamePhase.READY && this.activeHint) {
+      return this.activeHint.text;
     }
     return this.level.status?.[this.phase] ?? {
       [GamePhase.READY]: "Złap bohatera. Budzik sam się nie uciszy.",

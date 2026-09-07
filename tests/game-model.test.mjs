@@ -109,8 +109,8 @@ test("Morning Mayhem has a verified winning shot in both modes", () => {
   assert.equal(oneMove.phase, GamePhase.SUCCEEDED);
 });
 
-test("all five missions have unique goals and a verified fair route", () => {
-  assert.equal(LEVELS.length, 5);
+test("all eight missions have unique goals and a verified fair route", () => {
+  assert.equal(LEVELS.length, 8);
   assert.equal(new Set(LEVELS.map((level) => level.id)).size, LEVELS.length);
   assert.equal(new Set(LEVELS.map((level) => level.goal.kind)).size, LEVELS.length);
 
@@ -141,6 +141,31 @@ test("all five missions have unique goals and a verified fair route", () => {
   }
 });
 
+test("hints reveal progressively and reset only with a fresh run", () => {
+  const model = new GameModel(() => {}, LEVELS[3]);
+  assert.equal(model.hintStage, 0);
+  assert.equal(model.activeHint, null);
+  assert.equal(model.revealHint(), true);
+  assert.equal(model.hintStage, 1);
+  assert.ok(model.activeHint.text.length > 12);
+  model.resetLevel(false);
+  assert.equal(model.hintStage, 1);
+  model.resetLevel(true);
+  assert.equal(model.hintStage, 0);
+});
+
+test("lake route uses the water surface as a real physics mechanic", () => {
+  const lake = LEVELS.find((level) => level.scene === "lake");
+  const impacts = [];
+  const model = new GameModel((event) => {
+    if (event.type === "impact") impacts.push(event.surface);
+  }, lake);
+  startShot(model, lake.assistPull);
+  finish(model);
+  assert.equal(model.phase, GamePhase.SUCCEEDED);
+  assert.ok(impacts.includes("water"));
+});
+
 test("later missions form a deliberate difficulty curve", () => {
   const rates = LEVELS.map((level) => {
     let playable = 0;
@@ -164,6 +189,9 @@ test("later missions form a deliberate difficulty curve", () => {
   assert.ok(rates[2] > rates[3]);
   assert.ok(rates[3] > rates[4]);
   assert.ok(rates[4] >= 0.04, `final mission became unfair at ${(rates[4] * 100).toFixed(1)}%`);
+  assert.ok(rates[5] > rates[4], "the outdoor chapter should open with a recovery level");
+  assert.ok(rates[6] < rates[5], "the park should combine learned mechanics");
+  assert.ok(rates[7] >= 0.06 && rates[7] <= 0.15, `lake finale should be fair but focused at ${(rates[7] * 100).toFixed(1)}%`);
 });
 
 test("Morning Mayhem keeps a forgiving beginner success window", () => {

@@ -1,7 +1,7 @@
-import { GameModel, GameMode, GamePhase, LEVELS, modifierName } from "./game.js?v=0.11.0";
-import { GameRenderer } from "./render.js?v=0.11.0";
-import { GameAudio } from "./audio.js?v=0.11.0";
-import { FaceStudio } from "./face-studio.js?v=0.11.0";
+import { GameModel, GameMode, GamePhase, LEVELS, modifierName } from "./game.js?v=0.12.0";
+import { GameRenderer } from "./render.js?v=0.12.0";
+import { GameAudio } from "./audio.js?v=0.12.0";
+import { FaceStudio } from "./face-studio.js?v=0.12.0";
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -24,13 +24,16 @@ const elements = {
   fullscreenButton: $("#fullscreenButton"),
   modeBadge: $("#modeBadge"),
   shotBadge: $("#shotBadge"),
+  scoreBadge: $("#scoreBadge"),
   resultPanel: $("#resultPanel"),
   resultTag: $("#resultTag"),
   resultTitle: $("#resultTitle"),
   resultSpeech: $("#resultSpeech"),
+  resultReward: $("#resultReward"),
   whatIfButton: $("#whatIfButton"),
   againButton: $("#againButton"),
   restartButton: $("#restartButton"),
+  hintButton: $("#hintButton"),
   instructionIcon: $("#instructionIcon"),
   instructionTitle: $("#instructionTitle"),
   statusText: $("#statusText"),
@@ -56,7 +59,9 @@ const elements = {
 const audio = new GameAudio();
 const model = new GameModel();
 const renderer = new GameRenderer(elements.canvas, model);
-const PROGRESS_KEY = "slingtoon-progress-v1";
+const PROGRESS_KEY = "slingtoon-progress-v2";
+const LEGACY_PROGRESS_KEY = "slingtoon-progress-v1";
+const TOKEN_SCORE_STEP = 250;
 
 let activePointer = null;
 let interaction = null;
@@ -65,25 +70,82 @@ let resultTimer = null;
 let toastTimer = null;
 let installPrompt = null;
 let currentLevelIndex = 0;
-let highestUnlockedLevel = 0;
-const FULLSCREEN_TIP_KEY = "slingtoon-fullscreen-tip-0.11.0";
-
-try {
-  highestUnlockedLevel = clampProgress(Number.parseInt(window.localStorage.getItem(PROGRESS_KEY) ?? "0", 10));
-} catch {
-  highestUnlockedLevel = 0;
-}
+let progress = loadProgress();
+let highestUnlockedLevel = progress.highestUnlockedLevel;
+let paidHintsThisRun = 0;
+let lastReward = null;
+const FULLSCREEN_TIP_KEY = "slingtoon-fullscreen-tip-0.12.0";
 
 function clampProgress(value) {
   return Number.isFinite(value) ? Math.max(0, Math.min(LEVELS.length - 1, value)) : 0;
 }
 
-function saveProgress() {
+function loadProgress() {
+  const fallback = { version: 2, highestUnlockedLevel: 0, score: 0, hintTokens: 2, bestScores: {} };
   try {
-    window.localStorage.setItem(PROGRESS_KEY, String(highestUnlockedLevel));
+    const stored = window.localStorage.getItem(PROGRESS_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      return {
+        ...fallback,
+        ...parsed,
+        highestUnlockedLevel: clampProgress(parsed.highestUnlockedLevel),
+        score: Math.max(0, Number(parsed.score) || 0),
+        hintTokens: Math.max(0, Number(parsed.hintTokens) || 0),
+        bestScores: parsed.bestScores && typeof parsed.bestScores === "object" ? parsed.bestScores : {},
+      };
+    }
+    const legacy = Number.parseInt(window.localStorage.getItem(LEGACY_PROGRESS_KEY) ?? "0", 10);
+    fallback.highestUnlockedLevel = clampProgress(legacy);
+  } catch {
+    // A fresh, useful state is safer than blocking the game on storage.
+  }
+  return fallback;
+}
+
+function saveProgress() {
+  progress.highestUnlockedLevel = highestUnlockedLevel;
+  try {
+    window.localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress));
   } catch {
     // Progress persistence is optional in private browsing modes.
   }
+}
+
+function scoreSuccess() {
+  const attemptBonus = Math.max(0, 80 - Math.max(0, model.attempts - 1) * 18);
+  const noPaidHintBonus = paidHintsThisRun === 0 ? 45 : 0;
+  const oneMoveBonus = model.mode === GameMode.ONE_MOVE ? 30 : 0;
+  const score = 100 + attemptBonus + noPaidHintBonus + oneMoveBonus;
+  const previousBest = Number(progress.bestScores[model.level.id]) || 0;
+  const gained = Math.max(0, score - previousBest);
+  const previousTokenMilestone = Math.floor(progress.score / TOKEN_SCORE_STEP);
+  progress.bestScores[model.level.id] = Math.max(previousBest, score);
+  progress.score += gained;
+  const tokenGain = Math.max(0, Math.floor(progress.score / TOKEN_SCORE_STEP) - previousTokenMilestone);
+  progress.hintTokens += tokenGain;
+  lastReward = { score, gained, tokenGain, newBest: score > previousBest };
+}
+
+function requestHint() {
+  const stages = model.level.hints?.stages ?? [];
+  const nextStageNumber = model.hintStage + 1;
+  const stage = stages[nextStageNumber - 1];
+  if (!stage) {
+    showToast("Wszystkie sekrety tej misji są już odkryte.");
+    return;
+  }
+  const freeStages = model.level.hints?.policy?.freeStages ?? 0;
+  const cost = nextStageNumber <= freeStages ? 0 : stage.cost ?? 1;
+  if (progress.hintTokens < cost) {
+    showToast(`Brakuje ${cost - progress.hintTokens} żetonu. Zdobywaj Punkty Sprytu za przejścia bez pomocy.`, true);
+    return;
+  }
+  progress.hintTokens -= cost;
+  if (cost > 0) paidHintsThisRun += 1;
+  model.revealHint(nextStageNumber);
+  saveProgress();
+  showToast(`${stage.title}${cost ? ` · -${cost} żeton${cost > 1 ? "y" : ""}` : " · gratis"}`);
 }
 
 function isStandaloneMode() {
@@ -256,16 +318,27 @@ model.onEvent = (event) => {
   audio.handleGameEvent(event);
 
   if (["reset", "mode", "launch", "what-if"].includes(event.type)) hideResult();
+  if ((event.type === "reset" && event.resetAttempts) || event.type === "mode") {
+    paidHintsThisRun = 0;
+    lastReward = null;
+  }
   if (event.type === "level") {
+    paidHintsThisRun = 0;
+    lastReward = null;
     updateMissionUi();
     updateLevelNavigation();
   }
+  if (event.type === "hint" && event.automatic) {
+    const hint = model.activeHint;
+    if (hint) showToast(`Darmowa wskazówka po dwóch próbach: ${hint.title}`);
+  }
   if (event.type === "success" || event.type === "failure") {
+    if (event.type === "success") scoreSuccess();
     if (event.type === "success" && currentLevelIndex < LEVELS.length - 1) {
       highestUnlockedLevel = Math.max(highestUnlockedLevel, currentLevelIndex + 1);
-      saveProgress();
       updateLevelNavigation();
     }
+    saveProgress();
     clearTimeout(resultTimer);
     resultTimer = window.setTimeout(() => {
       if (model.phase === GamePhase.SUCCEEDED || model.phase === GamePhase.FAILED) showResult();
@@ -285,7 +358,7 @@ function syncGameViewport() {
 
 function updateMissionUi() {
   const mission = model.level.mission;
-  elements.chapterEyebrow.textContent = `MORNING MAYHEM · ${model.level.name}`;
+  elements.chapterEyebrow.textContent = `${model.level.chapter} · ${model.level.name}`;
   elements.missionKicker.textContent = mission.kicker;
   elements.missionTitle.textContent = mission.title;
   elements.canvas.setAttribute("aria-label", mission.canvasLabel);
@@ -377,6 +450,13 @@ function showResult() {
   elements.resultTag.textContent = success ? result.successTag : result.failureTag;
   elements.resultTitle.textContent = success ? result.successTitle : result.failureTitle;
   elements.resultSpeech.textContent = model.speechText;
+  elements.resultReward.hidden = !success;
+  if (success && lastReward) {
+    const tokenText = lastReward.tokenGain > 0 ? ` · +${lastReward.tokenGain} żeton` : "";
+    elements.resultReward.textContent = lastReward.gained > 0
+      ? `★ +${lastReward.gained} Punktów Sprytu${tokenText}`
+      : `★ ${lastReward.score} · rekord tego poziomu już zapisany`;
+  }
   elements.whatIfButton.hidden = success || !model.previousShot;
   elements.whatIfButton.textContent = `WHAT IF? · ${modifierName(model.suggestedModifier)}`;
   elements.againButton.textContent = success && currentLevelIndex < LEVELS.length - 1
@@ -398,8 +478,8 @@ function instructionForState() {
   if (model.mode === GameMode.QUICK && model.phase === GamePhase.READY && model.attempts === 0 && model.level.tutorial) {
     return { icon: "↙", title: model.level.tutorial.title };
   }
-  if (model.mode === GameMode.QUICK && model.phase === GamePhase.READY && model.attempts >= 2 && model.level.assistPull) {
-    return { icon: "✦", title: "Podpowiedź: znajdź miętowy tor" };
+  if (model.mode === GameMode.QUICK && model.phase === GamePhase.READY && model.activeHint) {
+    return { icon: "✦", title: model.activeHint.title };
   }
   if (model.phase === GamePhase.AIMING) return { icon: "◎", title: "Wybierz kierunek i puść" };
   if (model.phase === GamePhase.FLYING) return { icon: "⚡", title: "Teraz fizyka robi swoje" };
@@ -420,6 +500,7 @@ function updateUi() {
   elements.modeBadge.classList.toggle("mission-badge--coral", !quick);
   const preparing = model.phase === GamePhase.READY || model.phase === GamePhase.AIMING;
   elements.shotBadge.textContent = `SHOT ${Math.max(1, model.attempts + (preparing ? 1 : 0))}`;
+  elements.scoreBadge.textContent = `★ ${progress.score}`;
 
   const instruction = instructionForState();
   elements.instructionIcon.textContent = instruction.icon;
@@ -427,6 +508,18 @@ function updateUi() {
   elements.statusText.textContent = model.statusText;
 
   const controlsEnabled = model.phase !== GamePhase.FLYING && model.phase !== GamePhase.AIMING;
+  const stages = model.level.hints?.stages ?? [];
+  const nextHintNumber = model.hintStage + 1;
+  const nextHint = stages[nextHintNumber - 1];
+  const freeStages = model.level.hints?.policy?.freeStages ?? 0;
+  const hintCost = nextHintNumber <= freeStages ? 0 : nextHint?.cost ?? 0;
+  elements.hintButton.disabled = !controlsEnabled || !nextHint;
+  elements.hintButton.textContent = nextHint
+    ? hintCost > 0
+      ? `💡 PODPOWIEDŹ · ${hintCost} / ${progress.hintTokens}`
+      : "💡 PODPOWIEDŹ · GRATIS"
+    : "💡 WSZYSTKO ODKRYTE";
+  elements.hintButton.title = nextHint?.text ?? "Wszystkie podpowiedzi wykorzystane";
   elements.quickMode.disabled = !controlsEnabled;
   elements.oneMoveMode.disabled = !controlsEnabled;
   elements.personality.disabled = !controlsEnabled;
@@ -495,6 +588,7 @@ window.addEventListener("beforeinstallprompt", (event) => {
   installPrompt = event;
 });
 elements.restartButton.addEventListener("click", () => model.resetLevel(true));
+elements.hintButton.addEventListener("click", requestHint);
 elements.againButton.addEventListener("click", () => {
   if (model.phase === GamePhase.SUCCEEDED && currentLevelIndex < LEVELS.length - 1) {
     setLevelIndex(currentLevelIndex + 1);
@@ -510,7 +604,7 @@ elements.whatIfButton.addEventListener("click", () => {
 
 window.addEventListener("load", () => {
   if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
-    navigator.serviceWorker.register("./sw.js?v=0.11.0").catch(() => {});
+    navigator.serviceWorker.register("./sw.js?v=0.12.0").catch(() => {});
   }
   scheduleFullscreenSuggestion();
   syncGameViewport();

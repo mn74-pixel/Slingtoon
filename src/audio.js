@@ -30,6 +30,10 @@ export class GameAudio {
     if (event.type === "success") this.success(event.goalKind);
     if (event.type === "failure") this.failure();
     if (event.type === "move-complete") this.pop(240, 0.07);
+    if (event.type === "hint") {
+      this.pop(540, 0.08);
+      this.pop(760, 0.09);
+    }
   }
 
   tone({ frequency, endFrequency = frequency, duration, type = "sine", volume = 0.12, delay = 0 }) {
@@ -73,9 +77,10 @@ export class GameAudio {
 
   impact(speed = 300, surface = "ground") {
     const amount = Math.min(1, Math.max(0.25, speed / 800));
-    const base = surface === "trampoline" ? 220 : surface === "wall" ? 82 : 115;
+    const base = surface === "water" ? 175 : surface === "trampoline" ? 220 : surface === "wall" ? 82 : 115;
     this.tone({ frequency: base, endFrequency: base * 0.48, duration: 0.11 + amount * 0.08, type: "square", volume: 0.035 + amount * 0.07 });
     this.noise(0.045 + amount * 0.055, 0.03 + amount * 0.07);
+    if (surface === "water") this.tone({ frequency: 620, endFrequency: 180, duration: 0.22, type: "sine", volume: 0.07 });
   }
 
   pop(frequency, duration) {
@@ -102,6 +107,18 @@ export class GameAudio {
       toaster: () => {
         this.noise(0.07, 0.075, 0.35);
         this.tone({ frequency: 190, endFrequency: 420, duration: 0.16, type: "triangle", volume: 0.07, delay: 0.39 });
+      },
+      gnome: () => {
+        this.tone({ frequency: 330, endFrequency: 510, duration: 0.12, type: "triangle", volume: 0.06, delay: 0.35 });
+        this.tone({ frequency: 260, endFrequency: 690, duration: 0.19, type: "sine", volume: 0.05, delay: 0.45 });
+      },
+      "ice-cream": () => {
+        this.tone({ frequency: 740, endFrequency: 980, duration: 0.12, type: "triangle", volume: 0.055, delay: 0.34 });
+        this.tone({ frequency: 210, endFrequency: 160, duration: 0.16, type: "square", volume: 0.025, delay: 0.48 });
+      },
+      duck: () => {
+        this.tone({ frequency: 310, endFrequency: 190, duration: 0.11, type: "square", volume: 0.045, delay: 0.35 });
+        this.tone({ frequency: 350, endFrequency: 205, duration: 0.12, type: "square", volume: 0.04, delay: 0.49 });
       },
     };
     punchlines[goalKind]?.();

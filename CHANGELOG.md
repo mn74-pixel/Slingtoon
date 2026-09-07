@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.12.0 — Rooms, Outdoors & Rescue Tokens
+
+- przebudowano poziomy 3–5 jako osobne pomieszczenia: pralnię, salon i kuchnię,
+- dodano poziomy 6–8: ogród z krasnalem, park z gołębiem złodziejem i jezioro z kaczką piratem,
+- nowe tła są proceduralne, spójne z paletą SlingToon i zachowują czytelny kontrast gameplayu,
+- jezioro wprowadza własną fizykę: odbicie od tafli, boczny prąd i wodny feedback audio-wizualny,
+- dodano trzy stopnie podpowiedzi: tekst, kierunek i pełną trajektorię,
+- pierwsze poziomy uczą za darmo, a późniejsze podpowiedzi zużywają żetony zdobywane co 250 Punktów Sprytu,
+- zapis postępu przechowuje odblokowane poziomy, punkty, żetony i najlepszy wynik każdej misji bez możliwości farmienia,
+- każdy nowy cel dostał osobną animację, żarty, reakcje osobowości i krótką puentę dźwiękową,
+- zweryfikowano zwycięski strzał w Quick Sling i One Move dla wszystkich ośmiu misji.
+
 ## 0.11.0 — Breakfast Chapter
 
 - rozbudowano `Morning Mayhem` z jednej planszy do pięciu kolejno odblokowywanych misji,
