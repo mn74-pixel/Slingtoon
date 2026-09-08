@@ -2,6 +2,7 @@ export class GameAudio {
   constructor() {
     this.context = null;
     this.muted = false;
+    this.lastImpactAt = -1;
   }
 
   async unlock() {
@@ -25,11 +26,25 @@ export class GameAudio {
 
   handleGameEvent(event) {
     if (this.muted || !this.context) return;
-    if (event.type === "launch" || event.type === "what-if") this.boing(event.type === "what-if" ? 1.14 : 1);
+    if (event.type === "launch") this.boing(.95 + Math.random() * .1);
     if (event.type === "impact") this.impact(event.speed, event.surface);
     if (event.type === "success") this.success(event.goalKind);
     if (event.type === "failure") this.failure();
     if (event.type === "move-complete") this.pop(240, 0.07);
+    if (event.type === "air-move") {
+      this.tone({ frequency: 180, endFrequency: 850, duration: .16, type: "triangle", volume: .09 });
+      this.noise(.06, .05);
+    }
+    if (event.type === "collect") {
+      this.pop(740, .09);
+      this.tone({ frequency: 1100, duration: .12, volume: .05, delay: .08 });
+    }
+    if (event.type === "interaction") {
+      if (event.kind === "portal") this.tone({ frequency: 820, endFrequency: 140, duration: .28, volume: .1 });
+      if (event.kind === "break") { this.noise(.16, .1); this.pop(120, .06); }
+      if (event.kind === "steam") { this.noise(.22, .04); this.pop(420, .1); }
+      if (event.kind === "switch") { this.pop(560, .1); this.tone({ frequency: 880, duration: .13, volume: .06, delay: .1 }); }
+    }
     if (event.type === "hint") {
       this.pop(540, 0.08);
       this.pop(760, 0.09);
@@ -51,6 +66,7 @@ export class GameAudio {
     gain.connect(this.context.destination);
     oscillator.start(now);
     oscillator.stop(now + duration + 0.02);
+    oscillator.onended = () => { oscillator.disconnect(); gain.disconnect(); };
   }
 
   noise(duration = 0.08, volume = 0.08, delay = 0) {
@@ -68,6 +84,7 @@ export class GameAudio {
     source.connect(gain);
     gain.connect(this.context.destination);
     source.start(this.context.currentTime + delay);
+    source.onended = () => { source.disconnect(); gain.disconnect(); };
   }
 
   boing(pitchScale = 1) {
@@ -76,8 +93,10 @@ export class GameAudio {
   }
 
   impact(speed = 300, surface = "ground") {
+    if (this.context.currentTime - this.lastImpactAt < .075) return;
+    this.lastImpactAt = this.context.currentTime;
     const amount = Math.min(1, Math.max(0.25, speed / 800));
-    const base = surface === "water" ? 175 : surface === "trampoline" ? 220 : surface === "wall" ? 82 : 115;
+    const base = (surface === "water" ? 175 : surface === "cushion" ? 220 : surface === "gate" ? 82 : 115) * (.94 + Math.random() * .12);
     this.tone({ frequency: base, endFrequency: base * 0.48, duration: 0.11 + amount * 0.08, type: "square", volume: 0.035 + amount * 0.07 });
     this.noise(0.045 + amount * 0.055, 0.03 + amount * 0.07);
     if (surface === "water") this.tone({ frequency: 620, endFrequency: 180, duration: 0.22, type: "sine", volume: 0.07 });

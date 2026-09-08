@@ -1,5 +1,6 @@
-import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.12.0";
-import { clientPointToWorld, createCropFreeViewport } from "./viewport.js?v=0.12.0";
+import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.13.0";
+import { clientPointToWorld, createCropFreeViewport } from "./viewport.js?v=0.13.0";
+import { drawInteractions, drawObjective } from "./interactions-renderer.js?v=0.13.0";
 
 const PALETTE = Object.freeze({
   ink: "#19142d",
@@ -82,8 +83,11 @@ export class GameRenderer {
       return;
     }
     if (this.background && this.backgroundSource === source) return;
-    this.background = await loadImage(source);
-    this.backgroundSource = source;
+    const loaded = await loadImage(source);
+    if (this.model.level.background === source) {
+      this.background = loaded;
+      this.backgroundSource = source;
+    }
   }
 
   resizeView(cssWidth, cssHeight) {
@@ -130,13 +134,13 @@ export class GameRenderer {
 
     if (event.type === "impact") {
       const intensity = clamp(event.speed / 620, 0.25, 1);
-      this.shake = Math.max(this.shake, 4 + intensity * 11);
+      this.shake = Math.max(this.shake, 1 + intensity * 5);
       this.clockWobble = event.x > 1010 ? 1 : this.clockWobble;
       this.spawnImpact(event.x, event.y, 12 + Math.round(intensity * 16));
       this.callouts.push({
         x: event.x,
         y: event.y - 24,
-        text: event.surface === "water" ? "PLASK!" : event.surface === "trampoline" ? "BOI-O-O-ING!" : event.surface === "crate" ? "KLOINK!" : "BAM!",
+        text: event.surface === "water" ? "KACZKA!" : event.surface === "cushion" ? "PLOF!" : "BĘC!",
         age: 0,
         life: 0.72,
         angle: (Math.random() - 0.5) * 0.18,
@@ -144,7 +148,7 @@ export class GameRenderer {
     }
 
     if (event.type === "success") {
-      this.shake = 15;
+      this.shake = 7;
       this.clockWobble = 1.6;
       this.successPulse = 1;
       this.spawnConfetti(event.position.x, event.position.y, 64);
@@ -163,10 +167,18 @@ export class GameRenderer {
         angle: 0.07,
       });
     }
+    if (["interaction", "air-move", "collect"].includes(event.type)) {
+      const words = { break: "NIE RZUCAĆ… UPS!", portal: "WIROWANIE!", steam: "AL DENTE!", switch: "SEZAM!", cushion: "PEŁNA KULTURA.", water: "KWAK?" };
+      this.spawnImpact(event.x, event.y, event.type === "collect" ? 14 : 9);
+      this.callouts.push({ x: event.x, y: event.y - 50, text: event.type === "air-move" ? "FIK!" : event.type === "collect" ? "STYL +1!" : words[event.kind], age: 0, life: .85, angle: -.05 });
+      if (event.kind === "portal") { this.trail.length = 0; this.lastTrailPoint = null; }
+    }
+    if (this.particles.length > 140) this.particles.splice(0, this.particles.length - 140);
+    if (this.callouts.length > 4) this.callouts.splice(0, this.callouts.length - 4);
   }
 
   update(deltaSeconds) {
-    const dt = Math.min(deltaSeconds, 1 / 30);
+    const dt = Math.min(deltaSeconds, .1);
     this.time += dt;
     this.fanAngle += dt * (this.model.modifier === Modifier.STRONGER_FAN ? 15 : 7.5);
     this.shake = Math.max(0, this.shake - dt * 42);
@@ -212,6 +224,7 @@ export class GameRenderer {
     }
 
     this.drawBackground(ctx);
+    drawObjective(ctx, this.model, this.time);
     this.drawModifierAtmosphere(ctx);
     this.drawSpeedTrail(ctx);
     this.drawSlingBack(ctx);
@@ -256,6 +269,8 @@ export class GameRenderer {
     }
 
     const visual = this.model.level.visual;
+    ctx.fillStyle = "rgba(49,34,75,.23)";
+    ctx.fillRect(0, 0, WORLD.width, WORLD.height);
     if (visual?.wash) {
       ctx.fillStyle = visual.wash;
       ctx.fillRect(0, 0, WORLD.width, WORLD.height);
@@ -403,7 +418,7 @@ export class GameRenderer {
 
   drawSceneGag(ctx, text, accent = PALETTE.gold) {
     ctx.save();
-    ctx.translate(914, 158);
+    ctx.translate(914, 90);
     ctx.rotate(-0.035);
     roundedRect(ctx, -126, -18, 252, 36, 15);
     ctx.fillStyle = "rgba(27, 20, 45, 0.78)";
@@ -454,12 +469,7 @@ export class GameRenderer {
 
   drawPhysicalObjects(ctx) {
     if (this.model.waterBounds?.enabled) this.drawWater(ctx);
-    if (this.model.crateBounds?.enabled) this.drawCrate(ctx);
-    if (this.model.trampolineBounds?.enabled) this.drawTrampoline(ctx);
-    if (this.model.fanBounds && (this.model.fanBounds.enabled || this.model.modifier === Modifier.STRONGER_FAN)) {
-      this.drawFan(ctx);
-    }
-    if (this.model.wallBounds?.enabled) this.drawWall(ctx);
+    drawInteractions(ctx, this.model, this.time);
     this.drawGoalTarget(ctx);
   }
 
@@ -497,181 +507,7 @@ export class GameRenderer {
     ctx.fillStyle = "rgba(25,20,45,.72)";
     ctx.font = "900 12px system-ui, sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText("TAFLA ODBIJA · PRĄD →", box.x + box.width * 0.5, box.y + 34);
-    ctx.restore();
-  }
-
-  drawCrate(ctx) {
-    const box = this.model.crateBounds;
-    ctx.save();
-    ctx.shadowColor = "rgba(18, 11, 29, 0.35)";
-    ctx.shadowBlur = 14;
-    ctx.shadowOffsetY = 7;
-    roundedRect(ctx, box.x, box.y, box.width, box.height, 11);
-    const wood = ctx.createLinearGradient(box.x, box.y, box.x + box.width, box.y + box.height);
-    wood.addColorStop(0, "#f0a35c");
-    wood.addColorStop(1, "#a65050");
-    strokeFill(ctx, wood, PALETTE.ink, 6);
-    ctx.shadowColor = "transparent";
-    ctx.strokeStyle = "rgba(87, 40, 49, 0.60)";
-    ctx.lineWidth = 5;
-    ctx.beginPath();
-    ctx.moveTo(box.x + 14, box.y + 16);
-    ctx.lineTo(box.x + box.width - 14, box.y + box.height - 16);
-    ctx.moveTo(box.x + box.width - 14, box.y + 16);
-    ctx.lineTo(box.x + 14, box.y + box.height - 16);
-    ctx.stroke();
-    ctx.translate(box.x + box.width * 0.5, box.y + box.height * 0.5);
-    ctx.rotate(-0.07);
-    roundedRect(ctx, -38, -15, 76, 30, 7);
-    ctx.fillStyle = PALETTE.cream;
-    ctx.fill();
-    ctx.fillStyle = PALETTE.ink;
-    ctx.font = "900 12px system-ui, sans-serif";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText((box.label || "FRAGILE").split("\n")[0], 0, -4);
-    ctx.font = "900 9px system-ui, sans-serif";
-    ctx.fillText((box.label || "EGO").split("\n")[1] || "EGO", 0, 8);
-    ctx.restore();
-  }
-
-  drawTrampoline(ctx) {
-    const box = this.model.trampolineBounds;
-    const style = this.model.level.trampoline.style;
-    const styleColours = {
-      "laundry-basket": ["#fff4d8", PALETTE.mint],
-      "sofa-cushion": [PALETTE.violet, PALETTE.gold],
-      "baking-tray": ["#8d7898", PALETTE.coral],
-      "soil-bag": ["#9b684d", PALETTE.mint],
-      "park-spring": [PALETTE.gold, PALETTE.mint],
-      buoy: [PALETTE.cream, PALETTE.coral],
-    };
-    const [rimColour, centreColour] = styleColours[style] ?? [PALETTE.coral, PALETTE.mint];
-    const pulse = this.model.movingTrampoline ? 1 + Math.sin(this.time * 10) * 0.06 : 1;
-    ctx.save();
-    ctx.translate(box.x + box.width * 0.5, box.y + 12);
-    ctx.scale(pulse, pulse);
-    ctx.shadowColor = "rgba(17, 10, 28, 0.46)";
-    ctx.shadowBlur = 15;
-    ctx.shadowOffsetY = 8;
-    ctx.beginPath();
-    ctx.ellipse(0, 7, 78, 20, 0, 0, Math.PI * 2);
-    strokeFill(ctx, rimColour, PALETTE.ink, 6);
-    ctx.shadowColor = "transparent";
-    ctx.beginPath();
-    ctx.ellipse(0, 4, 61, 12, 0, 0, Math.PI * 2);
-    strokeFill(ctx, centreColour, PALETTE.ink, 4);
-    ctx.strokeStyle = PALETTE.ink;
-    ctx.lineWidth = 7;
-    ctx.beginPath();
-    ctx.moveTo(-54, 20);
-    ctx.lineTo(-65, 55);
-    ctx.moveTo(54, 20);
-    ctx.lineTo(65, 55);
-    ctx.stroke();
-    if (this.model.mode === GameMode.ONE_MOVE && !this.model.moveUsed) {
-      ctx.globalAlpha = 0.85;
-      ctx.fillStyle = PALETTE.gold;
-      roundedRect(ctx, -59, -53, 118, 26, 13);
-      ctx.fill();
-      ctx.fillStyle = PALETTE.ink;
-      ctx.font = "900 11px system-ui, sans-serif";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText("← PRZESUŃ RAZ →", 0, -40);
-    }
-    ctx.restore();
-  }
-
-  drawFan(ctx) {
-    const fan = this.model.fanBounds;
-    const cx = fan.x + fan.width * 0.5;
-    const cy = fan.y + 111;
-    const turbo = this.model.modifier === Modifier.STRONGER_FAN;
-
-    ctx.save();
-    ctx.lineCap = "round";
-    const airAlpha = turbo ? 0.60 : 0.28;
-    for (let index = 0; index < 6; index += 1) {
-      const phase = (this.time * (turbo ? 250 : 115) + index * 71) % 370;
-      const y = cy - 56 - phase;
-      ctx.strokeStyle = `rgba(92, 225, 189, ${airAlpha * (1 - phase / 430)})`;
-      ctx.lineWidth = turbo ? 8 : 5;
-      ctx.beginPath();
-      ctx.moveTo(cx - 69 + (index % 2) * 24, y + 58);
-      ctx.bezierCurveTo(cx - 93, y + 30, cx + 77, y + 15, cx + 50, y - 5);
-      ctx.stroke();
-    }
-
-    ctx.shadowColor = "rgba(17, 10, 28, 0.45)";
-    ctx.shadowBlur = 18;
-    ctx.shadowOffsetY = 8;
-    ctx.beginPath();
-    ctx.arc(cx, cy, 75, 0, Math.PI * 2);
-    strokeFill(ctx, "#5f5387", PALETTE.ink, 7);
-    ctx.shadowColor = "transparent";
-    ctx.beginPath();
-    ctx.arc(cx, cy, 59, 0, Math.PI * 2);
-    ctx.fillStyle = "#282043";
-    ctx.fill();
-
-    ctx.translate(cx, cy);
-    ctx.rotate(this.fanAngle);
-    for (let blade = 0; blade < 4; blade += 1) {
-      ctx.rotate(Math.PI * 0.5);
-      ctx.beginPath();
-      ctx.moveTo(0, -7);
-      ctx.bezierCurveTo(18, -51, 52, -58, 52, -28);
-      ctx.bezierCurveTo(51, -4, 21, 9, 0, 8);
-      strokeFill(ctx, turbo ? PALETTE.gold : PALETTE.mint, PALETTE.ink, 4);
-    }
-    ctx.beginPath();
-    ctx.arc(0, 0, 15, 0, Math.PI * 2);
-    strokeFill(ctx, PALETTE.coral, PALETTE.ink, 4);
-    ctx.rotate(-this.fanAngle);
-    ctx.translate(-cx, -cy);
-
-    ctx.strokeStyle = PALETTE.ink;
-    ctx.lineWidth = 11;
-    ctx.beginPath();
-    ctx.moveTo(cx, cy + 77);
-    ctx.lineTo(cx, fan.y + fan.height - 25);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.ellipse(cx, fan.y + fan.height - 18, 65, 16, 0, 0, Math.PI * 2);
-    strokeFill(ctx, "#493b70", PALETTE.ink, 6);
-
-    roundedRect(ctx, cx - 67, fan.y + fan.height - 4, 134, 29, 14);
-    ctx.fillStyle = turbo ? PALETTE.gold : "#2d2449";
-    ctx.fill();
-    ctx.fillStyle = turbo ? PALETTE.ink : PALETTE.cream;
-    ctx.font = "900 11px system-ui, sans-serif";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(turbo ? "TURBO 2×" : "FAN OF BAD IDEAS", cx, fan.y + fan.height + 10);
-    ctx.restore();
-  }
-
-  drawWall(ctx) {
-    const wall = this.model.wallBounds;
-    ctx.save();
-    ctx.shadowColor = "rgba(17, 10, 28, 0.38)";
-    ctx.shadowBlur = 13;
-    ctx.shadowOffsetX = 5;
-    roundedRect(ctx, wall.x, wall.y, wall.width, wall.height, 8);
-    strokeFill(ctx, "#43345f", PALETTE.ink, 5);
-    ctx.shadowColor = "transparent";
-    ctx.translate(wall.x + wall.width * 0.5, wall.y + wall.height * 0.5);
-    ctx.rotate(-Math.PI * 0.5);
-    roundedRect(ctx, -64, -14, 128, 28, 10);
-    ctx.fillStyle = PALETTE.cream;
-    ctx.fill();
-    ctx.fillStyle = PALETTE.ink;
-    ctx.font = "900 10px system-ui, sans-serif";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(wall.label || "NOT A WALL", 0, 0);
+    ctx.fillText("PŁASKO = ŚLIZG · STROMO = PLUMS", box.x + box.width * 0.5, box.y + 34);
     ctx.restore();
   }
 
@@ -1613,6 +1449,7 @@ export class GameRenderer {
 
   drawWorldHints(ctx) {
     if (this.model.phase !== GamePhase.READY) return;
+    if (this.model.level.number > 1 && this.model.hintStage < 3) return;
     ctx.save();
     const pulse = 0.72 + Math.sin(this.time * 4) * 0.18;
     ctx.strokeStyle = PALETTE.gold;
@@ -1628,7 +1465,7 @@ export class GameRenderer {
     const tutorial = this.model.level.tutorial;
     const activeHint = this.model.activeHint;
     const showFirstGuide = this.model.mode === GameMode.QUICK && this.model.attempts === 0 && tutorial?.pull;
-    const showHintGuide = this.model.mode === GameMode.QUICK && this.model.hintStage >= 2 && activeHint?.pull;
+    const showHintGuide = this.model.hintStage === 3 && activeHint?.pull;
     const pullGuide = showFirstGuide ? tutorial.pull : showHintGuide ? activeHint.pull : null;
     const showPullGuide = Boolean(pullGuide);
     if (showPullGuide) {

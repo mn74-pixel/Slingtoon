@@ -1,7 +1,8 @@
 # SlingToon — twarde ustalenia audytu
 
-**Wersja:** 0.9  
-**Data zamrożenia:** 29 sierpnia 2026 r. — zasady produktu bez zmian; Face Studio używa lokalnej segmentacji i rysowania wektorowego zamiast filtra fotografii
+**Wersja:** 0.13
+
+**Aktualizacja:** 7 września 2026 r. — gruntowna przebudowa rozgrywki na prośbę użytkownika; zachowano lokalne Face Studio i kierunek wizualny.
 
 Ten dokument jest filtrem dla każdej kolejnej zmiany. Jeśli propozycja łamie poniższe zasady, nie trafia do głównej gałęzi bez jawnej decyzji produktowej.
 
@@ -12,13 +13,16 @@ Zmiana technologii z JUCE na HTML5 Canvas/PWA nie zmienia żadnej z poniższych 
 1. Podstawowa pętla to `SLING → BANG → ŚMIECH → AGAIN`.
 2. `QUICK SLING` jest trybem domyślnym i zaczyna się od razu od naciągania.
 3. `ONE MOVE` jest specjalnym challenge’em, a nie obowiązkiem na każdym poziomie.
-4. Typowa próba ma trwać 10–20 sekund i umożliwiać natychmiastowy retry.
+4. Sam lot trwa najwyżej 6 sekund; długość całej próby zależy od planowania gracza. Retry nie wymaga czekania na koniec animacji porażki.
 5. Sterowanie siłą i kątem musi mieć rzeczywisty wpływ na wynik.
+6. Każda misja uczy lub łączy odmienne interakcje. Żadnego obowiązkowego odbicia od tego samego rodzaju sprężyny w całej kampanii.
+7. Opcjonalny FIK dodaje jedną decyzję podczas lotu; żadna misja nie może wymagać tego manewru do zwykłego przejścia.
 
 ## What If?
 
 1. System zapisuje wektor strzału oraz położenie zmienianego obiektu.
 2. Replay używa dokładnie tego samego zapisu wejścia.
+   Obejmuje to również czas wykonania manewru FIK.
 3. Jedna powtórka zmienia tylko jedną zasadę fizyki.
 4. Zatwierdzone modyfikatory: `Stronger Fan`, `Low Gravity`, `Super Bouncy`, `Giant Head`.
 5. What If nie może udawać zmiany samym tekstem; trajektoria lub kolizja muszą realnie się zmienić.

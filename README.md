@@ -1,10 +1,12 @@
-# SlingToon Web 0.12.0
+# SlingToon Web 0.13.0 — Controlled Catastrophe
 
 An offline-capable HTML5 Canvas PWA prepared for GitHub Pages. No JUCE, Projucer or native build is required for browser testing.
 
-Version 0.12 expands the campaign to eight missions across a bedroom, laundry, living room, kitchen, garden, park and lake. It adds water-bounce physics, three-stage hints, spendable rescue tokens and non-farmable smart-score rewards while keeping the crop-free mobile camera and local Face Studio intact.
+Version 0.13 replaces the repeated trampoline puzzle with eight distinct missions: direct shot, breakable delivery, washing-machine portals, angled cushion, steam lift, switch-and-gate chain, moving target and limited water skips. Physics, predictions and replay share a deterministic 120 Hz solver. From mission five, a single optional FIK air maneuver adds an active choice. Stars, medals and a mission map create replay goals; permanent hint unlocks can be hidden. Existing scores, tokens and campaign unlocks migrate without resetting earned progress.
 
-![SlingToon Morning Mayhem](docs/game-canvas-preview.png)
+The game still has no server/runtime dependencies. Portraits remain local, and the crop-free mobile camera is preserved. See [the Polish rebuild brief](docs/PROMPT_PRZEBUDOWY_PL.md) and [QA status](docs/QA_0_13_PL.md), including the outstanding real-device/browser playtest.
+
+![Eight different mechanics](docs/campaign-0.13.png)
 
 ## Run
 
@@ -13,6 +15,8 @@ npm run serve
 ```
 
 Open `http://localhost:4173`.
+
+Touch: pull the hero and release. Keyboard: Space starts aiming, arrows adjust the pull, Space launches. From mission five, tap the FIK button, the playfield or Space once in flight for an upward/forward impulse. R retries. Click the level counter for the mission map.
 
 ## Validate
 

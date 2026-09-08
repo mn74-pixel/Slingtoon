@@ -10,10 +10,10 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="SlingToon">
   <title>SlingToon — Morning Mayhem</title>
-  <link rel="manifest" href="manifest.webmanifest?v=0.12.0">
+  <link rel="manifest" href="manifest.webmanifest?v=0.13.0">
   <link rel="icon" href="assets/icon-192.png" sizes="192x192">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="styles.css?v=0.12.0">
+  <link rel="stylesheet" href="styles.css?v=0.13.0">
 </head>
 <body>
   <div class="ambient ambient--one" aria-hidden="true"></div>
@@ -53,7 +53,7 @@
         <div class="mission-strip">
           <nav class="level-nav" aria-label="Nawigacja poziomów">
             <button id="previousLevel" class="level-nav__button" type="button" aria-label="Poprzedni poziom">‹</button>
-            <output id="levelIndicator" class="level-nav__indicator" aria-live="polite">1 / 8</output>
+            <button id="levelIndicator" class="level-nav__indicator" type="button" aria-label="Otwórz mapę misji" aria-haspopup="dialog">1 / 8</button>
             <button id="nextLevel" class="level-nav__button" type="button" aria-label="Następny poziom">›</button>
           </nav>
           <div class="mission-copy">
@@ -68,7 +68,9 @@
         </div>
 
         <div id="stage" class="stage">
-          <canvas id="gameCanvas" width="1280" height="640" aria-label="Złap bohatera, naciągnij procę i traf w budzik"></canvas>
+          <canvas id="gameCanvas" width="1280" height="640" tabindex="0" aria-describedby="keyboardHelp" aria-label="Złap bohatera, naciągnij procę i traf w budzik"></canvas>
+          <p id="objectiveStatus" class="objective-status">☆ Gwiazdka jest opcjonalna</p>
+          <button id="airMoveButton" class="air-move-button" type="button" title="Jedno podbicie w górę i do przodu. Możesz też nacisnąć spację." hidden>↗ FIK! · 1</button>
 
           <div id="loadingPanel" class="loading-panel" aria-live="polite">
             <span class="loader-face">😴</span>
@@ -112,10 +114,17 @@
     </main>
 
     <footer>
-      <span>SLINGTOON WEB 0.12.0</span>
+      <span>SLINGTOON WEB 0.13.0</span>
       <span>Offline PWA · GitHub Pages Ready</span>
     </footer>
+    <p id="keyboardHelp" class="keyboard-help">Dotyk: pociągnij bohatera i puść. Klawiatura: spacja rozpoczyna celowanie, strzałki zmieniają naciąg, spacja wystrzeliwuje. W locie: spacja = jeden FIK od misji 5. R = ponów.</p>
   </div>
+
+  <dialog id="missionMap" class="mission-map" aria-labelledby="missionMapTitle">
+    <header><div><span class="eyebrow">KONTROLOWANA KATASTROFA</span><h2 id="missionMapTitle">Dokąd dziś polecimy?</h2></div><button id="closeMissions" type="button" class="icon-button" aria-label="Zamknij mapę misji">×</button></header>
+    <p>Przejście odblokowuje następny etap. Wróć po gwiazdkę lub medal za pierwszy strzał. Co 200 punktów wpada żeton podpowiedzi.</p>
+    <div id="missionList" class="mission-list"></div>
+  </dialog>
 
   <section id="faceStudio" class="face-studio" role="dialog" aria-modal="true" aria-labelledby="faceStudioTitle" hidden>
     <button id="faceBackdrop" class="face-studio__backdrop" type="button" aria-label="Zamknij ustawianie twarzy"></button>
@@ -195,6 +204,6 @@
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
   <noscript>Do uruchomienia SlingToon potrzebna jest obsługa JavaScript.</noscript>
-  <script type="module" src="src/main.js?v=0.12.0"></script>
+  <script type="module" src="src/main.js?v=0.13.0"></script>
 </body>
 </html>

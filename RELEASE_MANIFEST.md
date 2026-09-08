@@ -1,60 +1,25 @@
-# SlingToon Web 0.12.0 — Release Manifest
+# SlingToon Web 0.13.0 — Release Manifest
 
-**Format:** statyczna gra HTML5 Canvas / PWA  
-**Publikacja:** GitHub Pages  
-**Data:** 7 września 2026 r.
+Data: 7 września 2026. Format: HTML5 Canvas / PWA, statyczny hosting GitHub Pages.
+Pakiet wydania 0.13.0. Publikacja pod istniejącym adresem zatwierdzona przez właściciela 8 września 2026.
 
 ## Zawartość
 
-- modułowy kod JavaScript bez serwera aplikacyjnego,
-- Face Studio 2 z lokalnym wykrywaniem 478 punktów twarzy,
-- segmentacja głowy rozróżniająca włosy, skórę, tło, ubranie i akcesoria,
-- portret wektorowy 512×512 z automatycznym kadrem twarzy niezależnym od odległości aparatu,
-- lokalny runtime MediaPipe Tasks Vision 1.0.1 oraz dwa modele ML,
-- responsywny interfejs edge-to-edge z kamerą pokazującą cały świat bez przycięcia i deformacji,
-- jednorazowy ekran startowy z bezpośrednim przyciskiem pełnego ekranu oraz instrukcją zapasową dla starszego Safari,
-- rozszerzony kadr pokoju w trybie pełnoekranowym dzięki połączeniu górnych pasków w jeden rząd,
-- powiększona do 192% rysunkowa głowa z czytelną mimiką i większym polem chwytu, bez zmiany pola kolizji,
-- deklaratywny rdzeń poziomów oddzielający geometrię, cele i teksty misji od modelu fizyki,
-- przyjazny onboarding pierwszego poziomu z jednym uczonym czasownikiem, szerszym oknem sukcesu i predykcją opartą na prawdziwej fizyce,
-- osiem poziomów w siedmiu sceneriach: sypialni, pralni, salonie, kuchni, ogrodzie, parku i nad jeziorem,
-- osiem humorystycznych, proceduralnie rysowanych celów oraz osobne reakcje czterech osobowości,
-- prawdziwa mechanika odbicia od wody i bocznego prądu w finale jeziornym,
-- trzystopniowe podpowiedzi, Punkty Sprytu i żetony pomocy z trwałym zapisem,
-- grafika SVG i ikony PNG,
-- service worker i manifest instalacyjny,
-- workflow walidacji i publikacji GitHub Pages,
-- testy mechaniki oraz dokumentacja migracji.
+Osiem przebudowanych misji w siedmiu sceneriach. Osiem odmiennych zasad rozgrywki, wspólny solver 120 Hz, opcjonalny FIK, dokładny What If, mapa, gwiazdki, medale i trzystopniowa pomoc. Migracja zachowuje wcześniejsze punkty, żetony i odblokowania. Brak nowych zależności runtime, kont i usług.
 
-## Zaliczone kontrole
+Zachowano duży lokalny portret, lokalne modele MediaPipe z weryfikacją sum kontrolnych, prywatność zdjęć, CSP, PWA i crop-free viewport. Nowe moduły fizyki, zapisu i renderowania interakcji są ujęte w cache aplikacji.
 
-- poprawność struktury PWA i kompletność cache offline,
-- składnia wszystkich modułów JavaScript,
-- Quick Sling i One Move,
-- grywalna droga do zwycięstwa w obu trybach,
-- grywalna droga do zwycięstwa dla każdego z ośmiu poziomów,
-- malejące okno sukcesu na kolejnych etapach oraz uczciwa dolna granica finału,
-- co najmniej 34% zwycięskich strzałów w kontrolnej siatce wejść pierwszego poziomu,
-- dokładny replay zapisanego strzału,
-- rzeczywista zmiana fizyki dla wszystkich czterech What If,
-- różne ekspresje i komentarze osobowości,
-- obsługa zdjęć z aparatu i obrót o 90 stopni,
-- mobilny przepływ Face Studio: otwarcie edytora, wybór i ponowny wybór zdjęcia,
-- widoczny podgląd wyszparowanej głowy oraz portretu przed zatwierdzeniem,
-- zachowanie wąskiej geometrii twarzy bez wymuszania koła,
-- wykluczenie ubrania z maski głowy i wykorzystanie faktycznego konturu włosów,
-- brak stałej czaszki i brak okrągłego clippingu w rendererze avatara,
-- zgodność sum kontrolnych obu lokalnych modeli,
-- wersjonowanie zasobów i cache zapobiegające uruchamianiu starej wersji po publikacji,
-- mapowanie dotyku przez odwrotną transformację adaptacyjnej kamery na szerokich i wysokich ekranach,
-- render sceny bazowej i zwycięstwa do obrazu kontrolnego,
-- czysty artefakt statyczny `dist/` oraz test jego serwowania po HTTP.
+## Sprawdzenie
 
-## Świadomie poza zakresem
+`npm run check`, `npm run build`, `npm run smoke`.
 
-- podpisana aplikacja App Store/Google Play,
-- płatności i reklamy,
-- Game Center/Play Games,
-- konta, chmura i multiplayer,
-- generatywne AI oraz przesyłanie zdjęcia poza urządzenie,
-- końcowy sound design oraz haptics natywne.
+Szczegółowe wyniki i granice weryfikacji: [QA 0.13](docs/QA_0_13_PL.md).
+Rendery plansz nie zastępują testu przeglądarki ani urządzenia. Pełny test dotykowy, dźwięku, instalacji i aktualizacji PWA pozostaje do wykonania przed uznaniem wersji za produkcyjnie sprawdzoną.
+
+## Publikacja
+
+Publikować po zgodzie właściciela do istniejącego repozytorium i GitHub Pages. Nie tworzyć nowej strony ani nowych kont. Sprawdzić po wdrożeniu wersję `0.13.0` oraz aktualizację cache poprzedniej instalacji.
+
+## Dalszy rozwój
+
+Najpierw playtest różnorodności, zrozumiałości portali, poduszki i rytmu ruchomego celu. Dopiero następnie rozdziały: rakieta/kosmos/zanurzenie. Płatności, reklamy, chmura i multiplayer pozostają poza zakresem.

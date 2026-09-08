@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { access, readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { LEVELS } from "../src/levels.js";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const requiredFiles = [
@@ -14,6 +15,9 @@ const requiredFiles = [
   "src/main.js",
   "src/game.js",
   "src/levels.js",
+  "src/physics.js",
+  "src/progress.js",
+  "src/interactions-renderer.js",
   "src/render.js",
   "src/viewport.js",
   "src/audio.js",
@@ -59,6 +63,14 @@ const [html, css, manifestText, worker, main, game, levels, render, viewport, fa
 ]);
 
 const manifest = JSON.parse(manifestText);
+const { version } = JSON.parse(await readFile(resolve(root, "package.json"), "utf8"));
+assert.ok(main.includes(`serviceWorker.register("./sw.js?v=${version}")`));
+assert.ok(main.includes(`slingtoon-fullscreen-tip-${version}`));
+for (const level of LEVELS) {
+  assert.ok(Object.isFrozen(level));
+  assert.ok(level.interactions.every((item) => ["breakable", "portal", "cushion", "steam", "switch", "gate", "solid", "water"].includes(item.type)));
+  assert.ok(level.required.every((id) => level.interactions.some((item) => item.id === id)));
+}
 assert.equal(manifest.start_url, "./");
 assert.equal(manifest.scope, "./");
 assert.equal(manifest.display, "fullscreen");
@@ -82,7 +94,6 @@ assert.match(html, /src\/main\.js/);
 assert.match(html, /connect-src 'self'/);
 assert.doesNotMatch(html, /script-src[^;]*\s'unsafe-eval'/);
 assert.doesNotMatch(html, /style-src[^;]*'unsafe-inline'/);
-assert.match(main, /serviceWorker\.register\("\.\/sw\.js\?v=0\.12\.0"\)/);
 assert.match(game, /replayWith\(modifier\)/);
 assert.match(game, /shot\.launchVelocity/);
 assert.match(game, /this\.level\.goal/);
@@ -100,7 +111,7 @@ assert.match(levels, /scene:\s*"lake"/);
 assert.match(levels, /freeStages/);
 assert.match(html, /id="previousLevel"/);
 assert.match(html, /id="nextLevel"/);
-assert.match(main, /slingtoon-progress-v2/);
+assert.match(main, /readProgress/);
 assert.match(main, /highestUnlockedLevel/);
 assert.match(main, /TOKEN_SCORE_STEP/);
 assert.match(html, /id="hintButton"/);
@@ -139,7 +150,6 @@ assert.match(html, /id="fullscreenGuide"/);
 assert.match(main, /window\.navigator\.standalone/);
 assert.match(main, /requestFullscreen/);
 assert.match(main, /beforeinstallprompt/);
-assert.match(main, /slingtoon-fullscreen-tip-0\.12\.0/);
 assert.match(main, /shouldSuggestFullscreen/);
 assert.match(main, /requestGameFullscreen/);
 assert.match(html, /id="fullscreenStart"/);
@@ -167,4 +177,5 @@ for (const file of requiredFiles.filter((file) => !file.startsWith(".github") &&
   }
 }
 
-console.log("SlingToon Web 0.12.0: eight-level two-world campaign, hint economy and water physics are valid.");
+for (const file of ["physics", "progress", "interactions-renderer"]) assert.ok(worker.includes(`./src/${file}.js?v=${version}`));
+console.log(`SlingToon ${version}: campaign schema, privacy, mobile viewport and offline assets validated.`);

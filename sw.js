@@ -1,18 +1,21 @@
-const CACHE_NAME = "slingtoon-web-0.12.0";
+const CACHE_NAME = "slingtoon-web-0.13.0";
 const APP_SHELL = [
   "./",
   "./index.html",
-  "./styles.css?v=0.12.0",
-  "./manifest.webmanifest?v=0.12.0",
-  "./src/main.js?v=0.12.0",
-  "./src/game.js?v=0.12.0",
-  "./src/levels.js?v=0.12.0",
-  "./src/render.js?v=0.12.0",
-  "./src/viewport.js?v=0.12.0",
-  "./src/audio.js?v=0.12.0",
-  "./src/face-studio.js?v=0.12.0",
-  "./src/face-vision.js?v=0.12.0",
-  "./src/portrait.js?v=0.12.0",
+  "./styles.css?v=0.13.0",
+  "./manifest.webmanifest?v=0.13.0",
+  "./src/main.js?v=0.13.0",
+  "./src/game.js?v=0.13.0",
+  "./src/levels.js?v=0.13.0",
+  "./src/physics.js?v=0.13.0",
+  "./src/progress.js?v=0.13.0",
+  "./src/interactions-renderer.js?v=0.13.0",
+  "./src/render.js?v=0.13.0",
+  "./src/viewport.js?v=0.13.0",
+  "./src/audio.js?v=0.13.0",
+  "./src/face-studio.js?v=0.13.0",
+  "./src/face-vision.js?v=0.13.0",
+  "./src/portrait.js?v=0.13.0",
   "./assets/logo_slingtoon.svg",
   "./assets/stage_morning_mayhem.svg",
   "./assets/icon-192.png",
@@ -29,7 +32,7 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches
       .keys()
-      .then((keys) => Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))))
+      .then((keys) => Promise.all(keys.filter((key) => key.startsWith("slingtoon-web-") && key !== CACHE_NAME).map((key) => caches.delete(key))))
       .then(() => self.clients.claim())
   );
 });
@@ -41,6 +44,7 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       fetch(event.request)
         .then((response) => {
+          if (!response.ok) return response;
           const copy = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
           return response;
@@ -60,6 +64,7 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       fetch(event.request)
         .then((response) => {
+          if (!response.ok) return response;
           const copy = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
           return response;

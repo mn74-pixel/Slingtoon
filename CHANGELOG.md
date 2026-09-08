@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.13.0 — Kontrolowana katastrofa
+
+- przebudowano osiem misji wokół ośmiu różnych zasad; usunięto trampoliny i ich stary kod,
+- dodano niszczalną paczkę, parę portali, ukośną poduszkę, strumień pary, przycisk połączony z bramką, ruchomy cel i ograniczone ślizgi po wodzie,
+- zastąpiono fizykę zależną od liczby klatek wspólnym solverem o stałym kroku 1/120 s; poprawiono kolizje wewnątrz prostokątów, kontakty oddalające się i szybkie trafienia w cel,
+- każda misja ma zweryfikowaną trasę z tolerancją naciągnięcia oraz opcjonalną gwiazdkę osiągalną w zwycięskim strzale,
+- od piątej misji dostępny jest jeden opcjonalny manewr FIK w locie; What If zapisuje i odtwarza jego czas,
+- pełna zielona predykcja pojawia się tylko w rozgrzewce albo po włączeniu pełnej podpowiedzi; później widoczny jest krótki, neutralny łuk,
+- odkryte podpowiedzi są trwałe i można je ukrywać; pomoc ratunkowa po pięciu próbach nie wymaga waluty,
+- dodano mapę misji, trzy medale, ścieżkę powrotu po gwiazdkę i rekordy bez farmienia; stare punkty, żetony oraz odblokowania są migrowane,
+- ONE MOVE dotyczy tylko rzeczywiście edytowalnej poduszki; kliknięcie bez przesunięcia i anulowanie gestu nie zużywają ruchu,
+- zlikwidowano przeskok bohatera przy złapaniu krawędzi głowy; dodano klawiaturę, szybszy retry i odporność na powrót z uśpionej karty,
+- dodano oddzielne dźwięki interakcji, limity cząsteczek/calloutów, throttling kontaktów i bezpieczne zwalnianie węzłów audio,
+- rozdzielono fizykę, nagrody i renderer interakcji; zachowano lokalne portrety, paletę i crop-free viewport,
+- dodano prompt projektowy oraz testy regresji i integrację całej kampanii przez handlery UI; status playtestu przeglądarkowego jest jawny w raporcie QA.
+
 ## 0.12.0 — Rooms, Outdoors & Rescue Tokens
 
 - przebudowano poziomy 3–5 jako osobne pomieszczenia: pralnię, salon i kuchnię,

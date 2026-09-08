@@ -1,679 +1,306 @@
-import { DEFAULT_LEVEL, WORLD } from "./levels.js?v=0.12.0";
+import { DEFAULT_LEVEL, WORLD } from "./levels.js?v=0.13.0";
+import { FIXED_STEP, clamp, contains, magnitude, stepPhysics } from "./physics.js?v=0.13.0";
+export { DEFAULT_LEVEL, LEVELS, WORLD, getLevel } from "./levels.js?v=0.13.0";
 
-export { DEFAULT_LEVEL, LEVELS, WORLD, getLevel } from "./levels.js?v=0.12.0";
-
-export const GameMode = Object.freeze({
-  QUICK: "quickSling",
-  ONE_MOVE: "oneMoveChallenge",
-});
-
-export const GamePhase = Object.freeze({
-  READY: "ready",
-  AIMING: "aiming",
-  FLYING: "flying",
-  SUCCEEDED: "succeeded",
-  FAILED: "failed",
-});
-
-export const Modifier = Object.freeze({
-  NONE: "none",
-  STRONGER_FAN: "strongerFan",
-  LOW_GRAVITY: "lowGravity",
-  SUPER_BOUNCY: "superBouncy",
-  GIANT_HEAD: "giantHead",
-});
-
-export const Personality = Object.freeze({
-  DRAMA_QUEEN: "dramaQueen",
-  TOUGH_GUY: "toughGuy",
-  PANIC: "panic",
-  ZEN: "zen",
-});
-
-const BASE_RADIUS = 35;
+export const GameMode = Object.freeze({ QUICK: "quickSling", ONE_MOVE: "oneMoveChallenge" });
+export const GamePhase = Object.freeze({ READY: "ready", AIMING: "aiming", FLYING: "flying", SUCCEEDED: "succeeded", FAILED: "failed" });
+export const Modifier = Object.freeze({ NONE: "none", STRONGER_FAN: "strongerFan", LOW_GRAVITY: "lowGravity", SUPER_BOUNCY: "superBouncy", GIANT_HEAD: "giantHead" });
+export const Personality = Object.freeze({ DRAMA_QUEEN: "dramaQueen", TOUGH_GUY: "toughGuy", PANIC: "panic", ZEN: "zen" });
 const MAX_PULL = 132;
-const MIN_LAUNCH_SPEED = 85;
-const LAUNCH_MULTIPLIER = 6.15;
-const MODIFIERS = [
-  Modifier.STRONGER_FAN,
-  Modifier.LOW_GRAVITY,
-  Modifier.SUPER_BOUNCY,
-  Modifier.GIANT_HEAD,
-];
-
-const clamp = (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value));
-const copyPoint = (point) => ({ x: point.x, y: point.y });
-const length = (vector) => Math.hypot(vector.x, vector.y);
-const distanceSquared = (a, b) => {
-  const x = a.x - b.x;
-  const y = a.y - b.y;
-  return x * x + y * y;
-};
+const LAUNCH_MULTIPLIER = 7;
+const copy = (p) => ({ x: p.x, y: p.y });
 
 export class GameModel {
   constructor(onEvent = () => {}, level = DEFAULT_LEVEL) {
     this.onEvent = onEvent;
-    this.level = level ?? DEFAULT_LEVEL;
+    this.level = level;
     this.mode = GameMode.QUICK;
-    this.phase = GamePhase.READY;
-    this.modifier = Modifier.NONE;
     this.personality = Personality.DRAMA_QUEEN;
-    this.previousShot = null;
-    this.attempts = 0;
     this.resetLevel(true);
   }
-
-  emit(type, detail = {}) {
-    this.onEvent({ type, ...detail });
-  }
-
+  emit(type, detail = {}) { this.onEvent({ type, ...detail }); }
   setMode(mode) {
-    if (!Object.values(GameMode).includes(mode)) return;
+    if (!Object.values(GameMode).includes(mode) || (mode === GameMode.ONE_MOVE && !this.level.editable)) return false;
     this.mode = mode;
-    this.resetLevel(true);
+    this.resetLevel(false);
     this.emit("mode", { mode });
+    return true;
   }
-
   setPersonality(personality) {
     if (!Object.values(Personality).includes(personality)) return;
     this.personality = personality;
     this.emit("personality", { personality });
   }
-
   setLevel(level) {
-    if (!level?.id || !level?.anchor || !level?.goal) return false;
+    if (!level?.id || !level.anchor || !level.goal) return false;
     this.level = level;
+    if (!level.editable) this.mode = GameMode.QUICK;
     this.resetLevel(true);
     this.emit("level", { levelId: level.id });
     return true;
   }
-
   resetLevel(resetAttempts = false) {
     this.phase = GamePhase.READY;
     this.modifier = Modifier.NONE;
-    this.avatarPosition = copyPoint(this.anchor);
+    this.avatarPosition = copy(this.anchor);
     this.avatarVelocity = { x: 0, y: 0 };
     this.rotation = 0;
-    this.trampolineX = this.level.trampoline.x;
-    this.trampolineGrabOffset = 0;
-    this.movingTrampoline = false;
-    this.moveUsed = false;
     this.impactFlash = 0;
     this.flightTime = 0;
-
+    this.accumulator = 0;
+    this.layoutOffset = 0;
+    this.movingObject = false;
+    this.moveUsed = false;
+    this.resetFlightObjects();
+    this.trajectoryCache = null;
+    this.hintCache = null;
     if (resetAttempts) {
       this.attempts = 0;
       this.previousShot = null;
       this.hintStage = 0;
     }
-
     this.emit("reset", { resetAttempts });
   }
-
-  canAim() {
-    const correctPhase = this.phase === GamePhase.READY || this.phase === GamePhase.AIMING;
-    return correctPhase && (this.mode === GameMode.QUICK || this.moveUsed);
+  resetFlightObjects() {
+    this.objectState = Object.create(null);
+    this.visited = new Set();
+    this.collectedStar = false;
+    this.airMoveUsed = false;
+    this.replaying = false;
+    this.portalCooldown = 0;
+    this.waterSkips = 0;
+    this.closestGoal = Infinity;
+    this.settledTime = 0;
+    this.failureReason = "";
+    this.lastImpactTime = -1;
   }
-
+  canAim() {
+    return [GamePhase.READY, GamePhase.AIMING].includes(this.phase) && (this.mode === GameMode.QUICK || this.moveUsed);
+  }
   beginSling(point) {
-    if (!this.canAim()) return false;
-    const grabRadius = this.avatarGrabRadius;
-    if (distanceSquared(point, this.avatarPosition) > grabRadius * grabRadius) return false;
-
+    if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y)) return false;
+    if (!this.canAim() || Math.hypot(point.x - this.avatarPosition.x, point.y - this.avatarPosition.y) > this.avatarGrabRadius) return false;
+    this.slingGrabOffset = { x: point.x - this.avatarPosition.x, y: point.y - this.avatarPosition.y };
     this.phase = GamePhase.AIMING;
-    this.dragSling(point);
     this.emit("aim-start");
     return true;
   }
-
   dragSling(point) {
-    if (this.phase !== GamePhase.AIMING) return;
-    this.avatarPosition = this.clampedSlingPoint(point);
-    const direction = {
-      x: this.anchor.x - this.avatarPosition.x,
-      y: this.anchor.y - this.avatarPosition.y,
-    };
-    this.rotation = Math.atan2(direction.y, direction.x);
+    if (this.phase !== GamePhase.AIMING || !Number.isFinite(point.x) || !Number.isFinite(point.y)) return;
+    this.avatarPosition = this.clampedSlingPoint({ x: point.x - this.slingGrabOffset.x, y: point.y - this.slingGrabOffset.y });
+    this.rotation = Math.atan2(this.anchor.y - this.avatarPosition.y, this.anchor.x - this.avatarPosition.x);
   }
-
   releaseSling() {
     if (this.phase !== GamePhase.AIMING) return false;
-
-    const pull = {
-      x: this.anchor.x - this.avatarPosition.x,
-      y: this.anchor.y - this.avatarPosition.y,
-    };
-    const launchVelocity = {
-      x: pull.x * LAUNCH_MULTIPLIER,
-      y: pull.y * LAUNCH_MULTIPLIER,
-    };
-
-    if (length(launchVelocity) < MIN_LAUNCH_SPEED) {
+    const velocity = this.velocityForPull(this.avatarPosition);
+    if (magnitude(velocity) < 85) {
       this.phase = GamePhase.READY;
-      this.avatarPosition = copyPoint(this.anchor);
+      this.avatarPosition = copy(this.anchor);
       this.rotation = 0;
       this.emit("cancel-shot");
       return false;
     }
-
-    this.previousShot = {
-      launchVelocity: copyPoint(launchVelocity),
-      launchPosition: copyPoint(this.avatarPosition),
-      trampolineX: this.trampolineX,
-      levelId: this.level.id,
-    };
-    this.startFlight(launchVelocity, true, this.avatarPosition);
+    this.previousShot = { launchVelocity: copy(velocity), launchPosition: copy(this.avatarPosition), layoutOffset: this.layoutOffset, levelId: this.level.id, airMoveAt: null };
+    this.startFlight(velocity, true, this.avatarPosition);
     return true;
   }
-
-  beginTrampolineMove(point) {
-    if (!this.level.trampoline.enabled || this.mode !== GameMode.ONE_MOVE || this.phase !== GamePhase.READY || this.moveUsed) return false;
-    const bounds = this.trampolineBounds;
-    const hitArea = {
-      x: bounds.x - 24,
-      y: bounds.y - 28,
-      width: bounds.width + 48,
-      height: bounds.height + 56,
-    };
-    if (!this.rectContains(hitArea, point)) return false;
-
-    this.movingTrampoline = true;
-    this.trampolineGrabOffset = point.x - this.trampolineX;
+  // One Move is offered only in missions with a genuinely editable interaction.
+  beginObjectMove(point) {
+    if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y)) return false;
+    if (!this.level.editable || this.mode !== GameMode.ONE_MOVE || this.phase !== GamePhase.READY || this.moveUsed) return false;
+    const item = this.interactions.find((entry) => entry.id === this.level.editable.id);
+    const bounds = { x: Math.min(item.a.x, item.b.x) - 30, y: Math.min(item.a.y, item.b.y) - 30, width: Math.abs(item.a.x - item.b.x) + 60, height: Math.abs(item.a.y - item.b.y) + 60 };
+    if (!contains(bounds, point)) return false;
+    this.movingObject = true;
+    this.moveStart = { pointerX: point.x, offset: this.layoutOffset };
     this.emit("move-start");
     return true;
   }
-
-  dragTrampoline(point) {
-    if (!this.movingTrampoline) return;
-    this.trampolineX = clamp(
-      point.x - this.trampolineGrabOffset,
-      this.level.trampoline.minX,
-      this.level.trampoline.maxX,
-    );
+  dragObject(point) {
+    if (!this.movingObject || !Number.isFinite(point.x)) return;
+    this.layoutOffset = clamp(this.moveStart.offset + point.x - this.moveStart.pointerX, this.level.editable.minOffset, this.level.editable.maxOffset);
   }
-
-  endTrampolineMove() {
-    if (!this.movingTrampoline) return false;
-    this.movingTrampoline = false;
+  endObjectMove(cancelled = false) {
+    if (!this.movingObject) return false;
+    this.movingObject = false;
+    if (cancelled || Math.abs(this.layoutOffset - this.moveStart.offset) < 8) {
+      this.layoutOffset = this.moveStart.offset;
+      return false;
+    }
     this.moveUsed = true;
-    this.emit("move-complete", { trampolineX: this.trampolineX });
+    this.emit("move-complete");
     return true;
   }
-
-  startFlight(velocity, countsAsNewAttempt, startPosition = this.avatarPosition) {
+  startFlight(velocity, countsAsNewAttempt = true, startPosition = this.avatarPosition) {
+    this.resetFlightObjects();
     this.phase = GamePhase.FLYING;
     this.modifier = Modifier.NONE;
-    this.avatarPosition = copyPoint(startPosition);
-    this.avatarVelocity = copyPoint(velocity);
-    this.rotation = Math.atan2(velocity.y, velocity.x);
+    this.avatarPosition = copy(startPosition);
+    this.avatarVelocity = copy(velocity);
     this.flightTime = 0;
+    this.accumulator = 0;
     this.impactFlash = 0;
-    this.movingTrampoline = false;
-
+    this.movingObject = false;
     if (countsAsNewAttempt) this.attempts += 1;
-    this.emit("launch", {
-      position: copyPoint(this.avatarPosition),
-      velocity: copyPoint(this.avatarVelocity),
-      replay: !countsAsNewAttempt,
-    });
+    this.emit("launch", { position: copy(this.avatarPosition), velocity: copy(velocity) });
   }
-
   replayWith(modifier) {
-    if (
-      this.phase !== GamePhase.FAILED
-      || !this.previousShot
-      || this.previousShot.levelId !== this.level.id
-      || modifier === Modifier.NONE
-    ) return false;
-
+    if (this.phase !== GamePhase.FAILED || !this.previousShot || this.previousShot.levelId !== this.level.id || !Object.values(Modifier).includes(modifier) || modifier === Modifier.NONE) return false;
     const shot = this.previousShot;
+    this.layoutOffset = shot.layoutOffset;
+    this.startFlight(shot.launchVelocity, true, shot.launchPosition);
     this.modifier = modifier;
-    this.phase = GamePhase.FLYING;
-    this.avatarPosition = copyPoint(shot.launchPosition);
-    this.avatarVelocity = copyPoint(shot.launchVelocity);
-    this.trampolineX = shot.trampolineX;
-    this.rotation = Math.atan2(this.avatarVelocity.y, this.avatarVelocity.x);
-    this.flightTime = 0;
-    this.impactFlash = 0;
-    this.movingTrampoline = false;
-    this.moveUsed = this.mode === GameMode.ONE_MOVE;
-    this.attempts += 1;
-    this.emit("what-if", { modifier, velocity: copyPoint(this.avatarVelocity) });
+    this.replaying = true;
+    this.emit("what-if", { modifier, position: copy(this.avatarPosition) });
     return true;
   }
-
+  useAirMove(automatic = false) {
+    if (this.phase !== GamePhase.FLYING || !this.level.airMove || this.airMoveUsed || (this.replaying && !automatic)) return false;
+    this.airMoveUsed = true;
+    this.avatarVelocity.y -= 260;
+    this.avatarVelocity.x += 65;
+    if (!automatic && this.previousShot) this.previousShot.airMoveAt = this.flightTime;
+    this.emit("air-move", { x: this.avatarPosition.x, y: this.avatarPosition.y });
+    return true;
+  }
   update(deltaSeconds) {
-    const dt = clamp(deltaSeconds, 0, 1 / 30);
+    if (!Number.isFinite(deltaSeconds) || deltaSeconds <= 0) return;
+    const dt = Math.min(deltaSeconds, 0.1); // A resumed background tab must not fast-forward a shot.
     this.impactFlash = Math.max(0, this.impactFlash - dt);
-    if (this.phase !== GamePhase.FLYING) return;
-
-    this.flightTime += dt;
-    this.avatarVelocity.y += 725 * this.gravityScale * dt;
-
-    const fan = this.fanBounds;
-    if (fan && (fan.enabled || this.modifier === Modifier.STRONGER_FAN)) {
-      const fanInfluence = {
-        x: fan.x - 125,
-        y: fan.y - 70,
-        width: fan.width + 250,
-        height: fan.height + 95,
-      };
-      if (this.rectContains(fanInfluence, this.avatarPosition)) {
-        const closeness = 1 - clamp(Math.abs(this.avatarPosition.x - (fan.x + fan.width * 0.5)) / 215, 0, 1);
-        this.avatarVelocity.y -= (530 + 250 * closeness) * this.fanScale * dt;
-        this.avatarVelocity.x += 92 * this.fanScale * dt;
-      }
-    }
-
-    const drag = Math.pow(0.9982, dt * 60);
-    this.avatarVelocity.x *= drag;
-    this.avatarVelocity.y *= drag;
-    this.avatarPosition.x += this.avatarVelocity.x * dt;
-    this.avatarPosition.y += this.avatarVelocity.y * dt;
-    this.rotation = Math.atan2(this.avatarVelocity.y, this.avatarVelocity.x) + Math.PI * 0.04;
-
-    this.resolveWorldCollisions();
-
-    if (this.goalReached()) {
-      this.finishAttempt(true);
-      return;
-    }
-
-    const outOfWorld =
-      this.avatarPosition.x < -145 ||
-      this.avatarPosition.x > WORLD.width + 145 ||
-      this.avatarPosition.y > WORLD.height + 145;
-
-    if (outOfWorld || this.flightTime > 8.5) {
-      this.finishAttempt(false);
-      return;
-    }
-
-    if (
-      this.flightTime > 2 &&
-      this.avatarPosition.y + this.avatarRadius >= this.groundY - 1 &&
-      length(this.avatarVelocity) < 42
-    ) {
-      this.finishAttempt(false);
+    if (this.phase !== GamePhase.FLYING) { this.accumulator = 0; return; }
+    this.accumulator += dt;
+    while (this.accumulator + 1e-10 >= FIXED_STEP && this.phase === GamePhase.FLYING) {
+      if (this.replaying && this.previousShot?.airMoveAt !== null && this.flightTime + 1e-8 >= this.previousShot?.airMoveAt) this.useAirMove(true);
+      stepPhysics(this, FIXED_STEP);
+      this.accumulator -= FIXED_STEP;
     }
   }
-
-  finishAttempt(success) {
-    const autoAfter = this.level.hints?.policy?.autoAfterAttempts ?? 0;
-    if (!success && autoAfter > 0 && this.attempts >= autoAfter && this.hintStage === 0) {
-      this.revealHint(1, true);
-    }
-    this.phase = success ? GamePhase.SUCCEEDED : GamePhase.FAILED;
-    this.avatarVelocity = { x: 0, y: 0 };
-    this.movingTrampoline = false;
-    this.emit(success ? "success" : "failure", {
-      position: copyPoint(this.avatarPosition),
-      attempt: this.attempts,
-      levelId: this.level.id,
-      goalKind: this.level.goal.kind,
-    });
+  markInteraction(item, kind) {
+    if (this.visited.has(item.id)) return;
+    this.visited.add(item.id);
+    this.emit("interaction", { kind, id: item.id, x: this.avatarPosition.x, y: this.avatarPosition.y });
   }
-
-  resolveWorldCollisions() {
-    const radius = this.avatarRadius;
-
-    const water = this.waterBounds;
-    if (water?.enabled) {
-      const withinWater =
-        this.avatarPosition.x + radius >= water.x &&
-        this.avatarPosition.x - radius <= water.x + water.width;
-      const hittingSurface =
-        this.avatarPosition.y + radius >= water.y &&
-        this.avatarPosition.y - radius < water.y &&
-        this.avatarVelocity.y > 0;
-
-      if (withinWater && hittingSurface) {
-        const speed = Math.abs(this.avatarVelocity.y);
-        this.avatarPosition.y = water.y - radius;
-        this.avatarVelocity.y = -Math.max(355, speed * water.bounce) * this.bounceScale;
-        this.avatarVelocity.x += water.current;
-        this.triggerImpact(Math.max(speed, 360), this.avatarPosition.x, water.y, "water");
-      }
-    }
-
-    if (this.avatarPosition.y + radius > this.groundY) {
-      this.avatarPosition.y = this.groundY - radius;
-      if (this.avatarVelocity.y > 0) {
-        const speed = Math.abs(this.avatarVelocity.y);
-        this.avatarVelocity.y = -speed * 0.52 * this.bounceScale;
-        this.avatarVelocity.x *= 0.83;
-        if (Math.abs(this.avatarVelocity.y) < 31) this.avatarVelocity.y = 0;
-        this.triggerImpact(speed, this.avatarPosition.x, this.groundY);
-      }
-    }
-
-    const trampoline = this.trampolineBounds;
-    if (trampoline?.enabled) {
-      const withinTrampoline =
-        this.avatarPosition.x + radius >= trampoline.x &&
-        this.avatarPosition.x - radius <= trampoline.x + trampoline.width;
-      const hittingFromAbove =
-        this.avatarPosition.y + radius >= trampoline.y &&
-        this.avatarPosition.y - radius < trampoline.y &&
-        this.avatarVelocity.y > 0;
-
-      if (withinTrampoline && hittingFromAbove) {
-        const speed = Math.abs(this.avatarVelocity.y);
-        this.avatarPosition.y = trampoline.y - radius;
-        this.avatarVelocity.y = -Math.max(545, speed * 1.08) * this.bounceScale;
-        this.avatarVelocity.x += 172;
-        this.triggerImpact(Math.max(speed, 480), this.avatarPosition.x, trampoline.y, "trampoline");
-      }
-    }
-
-    if (this.crateBounds?.enabled) {
-      this.collideCircleWithRect(this.crateBounds, 0.66 * this.bounceScale, true, "crate");
-    }
-    if (this.wallBounds?.enabled) {
-      this.collideCircleWithRect(this.wallBounds, 0.72 * this.bounceScale, false, "wall");
-    }
-  }
-
-  goalReached() {
-    const goal = this.level.goal;
-    const velocitySafe = Math.abs(this.avatarVelocity.x) < 900 && Math.abs(this.avatarVelocity.y) < 1000;
-    if (!velocitySafe) return false;
-
-    if (goal.shape === "rect" || goal.shape === "zone") {
-      const closestX = clamp(this.avatarPosition.x, goal.x, goal.x + goal.width);
-      const closestY = clamp(this.avatarPosition.y, goal.y, goal.y + goal.height);
-      return distanceSquared(this.avatarPosition, { x: closestX, y: closestY }) <= this.avatarRadius ** 2;
-    }
-
-    const goalDistance = this.avatarRadius + this.goalRadius;
-    return distanceSquared(this.avatarPosition, this.goalCentre) <= goalDistance * goalDistance;
-  }
-
-  collideCircleWithRect(obstacle, restitution, addForwardKick, surface) {
-    const radius = this.avatarRadius;
-    const closestX = clamp(this.avatarPosition.x, obstacle.x, obstacle.x + obstacle.width);
-    const closestY = clamp(this.avatarPosition.y, obstacle.y, obstacle.y + obstacle.height);
-    let difference = {
-      x: this.avatarPosition.x - closestX,
-      y: this.avatarPosition.y - closestY,
-    };
-    let distanceSq = difference.x * difference.x + difference.y * difference.y;
-    if (distanceSq >= radius * radius) return false;
-
-    if (distanceSq < 0.0001) {
-      const penetrations = [
-        { value: Math.abs(this.avatarPosition.x - obstacle.x), normal: { x: -1, y: 0 } },
-        { value: Math.abs(obstacle.x + obstacle.width - this.avatarPosition.x), normal: { x: 1, y: 0 } },
-        { value: Math.abs(this.avatarPosition.y - obstacle.y), normal: { x: 0, y: -1 } },
-        { value: Math.abs(obstacle.y + obstacle.height - this.avatarPosition.y), normal: { x: 0, y: 1 } },
-      ].sort((a, b) => a.value - b.value);
-      difference = penetrations[0].normal;
-      distanceSq = 1;
-    }
-
-    const distance = Math.sqrt(distanceSq);
-    const normal = { x: difference.x / distance, y: difference.y / distance };
-    const penetration = radius - distance;
-    this.avatarPosition.x += normal.x * (penetration + 0.5);
-    this.avatarPosition.y += normal.y * (penetration + 0.5);
-
-    const dot = this.avatarVelocity.x * normal.x + this.avatarVelocity.y * normal.y;
-    const impactSpeed = Math.abs(dot);
-    if (dot < 0) {
-      this.avatarVelocity.x -= (1 + restitution) * dot * normal.x;
-      this.avatarVelocity.y -= (1 + restitution) * dot * normal.y;
-    }
-    if (addForwardKick) this.avatarVelocity.x += 118;
-    this.triggerImpact(Math.max(impactSpeed, 180), this.avatarPosition.x, this.avatarPosition.y, surface);
-    return true;
-  }
-
   triggerImpact(speed, x, y, surface = "ground") {
+    if (this.flightTime - this.lastImpactTime < 0.075) return;
+    this.lastImpactTime = this.flightTime;
     this.impactFlash = 0.2;
     this.emit("impact", { speed, x, y, surface });
   }
-
-  predictShot(numberOfDots = 20) {
-    if (this.phase !== GamePhase.AIMING || numberOfDots <= 0) {
-      return { points: [], reachesGoal: false };
-    }
-
-    const signature = [
-      numberOfDots,
-      this.level.id,
-      this.avatarPosition.x.toFixed(2),
-      this.avatarPosition.y.toFixed(2),
-      this.trampolineX.toFixed(2),
-      this.goalCentre.x,
-      this.goalCentre.y,
-      this.goalRadius,
-    ].join(":");
-    if (this.trajectoryCache?.signature === signature) return this.trajectoryCache.result;
-
-    const velocity = {
-      x: (this.anchor.x - this.avatarPosition.x) * LAUNCH_MULTIPLIER,
-      y: (this.anchor.y - this.avatarPosition.y) * LAUNCH_MULTIPLIER,
-    };
-
+  finishAttempt(success) {
+    if (this.phase !== GamePhase.FLYING) return;
+    this.phase = success ? GamePhase.SUCCEEDED : GamePhase.FAILED;
+    this.avatarVelocity = { x: 0, y: 0 };
+    if (!success && this.attempts >= 3 && this.hintStage === 0) this.revealHint(1, true);
+    this.emit(success ? "success" : "failure", { position: copy(this.avatarPosition), attempt: this.attempts, levelId: this.level.id, goalKind: this.level.goal.kind, star: this.collectedStar });
+  }
+  simulate(pull, numberOfDots = 32, duration = 6) {
+    const launch = this.clampedSlingPoint(pull);
     const simulation = new GameModel(() => {}, this.level);
-    simulation.mode = this.mode;
-    simulation.trampolineX = this.trampolineX;
-    simulation.avatarPosition = copyPoint(this.avatarPosition);
-    simulation.startFlight(velocity, false, this.avatarPosition);
-
-    const points = [];
-    for (let frame = 0; frame < 360 && simulation.phase === GamePhase.FLYING; frame += 1) {
-      simulation.update(1 / 60);
-      if (frame % 6 === 5 && points.length < numberOfDots) points.push(copyPoint(simulation.avatarPosition));
+    simulation.layoutOffset = this.layoutOffset;
+    simulation.startFlight(this.velocityForPull(launch), false, launch);
+    const allPoints = [];
+    for (let frame = 0; frame < duration * 120 && simulation.phase === GamePhase.FLYING; frame += 1) {
+      simulation.update(FIXED_STEP);
+      if (frame % 6 === 0) allPoints.push(copy(simulation.avatarPosition));
     }
-
-    const result = Object.freeze({
-      points: Object.freeze(points),
-      reachesGoal: simulation.phase === GamePhase.SUCCEEDED,
-    });
+    const stride = Math.max(1, Math.ceil(allPoints.length / numberOfDots));
+    const points = allPoints.filter((_, i) => i % stride === 0);
+    if (points.length >= numberOfDots) points.pop();
+    points.push(copy(simulation.avatarPosition));
+    return { points, reachesGoal: simulation.phase === GamePhase.SUCCEEDED, star: simulation.collectedStar };
+  }
+  predictShot(numberOfDots = 24) {
+    if (this.phase !== GamePhase.AIMING || numberOfDots <= 0) return { points: [], reachesGoal: false };
+    const full = this.level.number === 1 || this.hintStage === 3;
+    const signature = `${this.avatarPosition.x.toFixed(2)}:${this.avatarPosition.y.toFixed(2)}:${this.layoutOffset}:${numberOfDots}:${full}`;
+    if (this.trajectoryCache?.signature === signature) return this.trajectoryCache.result;
+    const result = this.simulate(this.avatarPosition, full ? numberOfDots : 9, full ? 6 : 0.65);
+    if (!full) result.reachesGoal = false;
     this.trajectoryCache = { signature, result };
     return result;
   }
-
-  revealHint(stage = this.hintStage + 1, automatic = false) {
-    const total = this.level.hints?.stages?.length ?? 0;
-    const nextStage = clamp(Math.round(stage), 0, total);
-    if (nextStage <= this.hintStage) return false;
-    this.hintStage = nextStage;
-    this.emit("hint", { stage: nextStage, automatic });
-    return true;
-  }
-
-  get activeHint() {
-    return this.hintStage > 0 ? this.level.hints?.stages?.[this.hintStage - 1] ?? null : null;
-  }
-
-  predictedTrajectory(numberOfDots = 20) {
-    return this.predictShot(numberOfDots).points;
-  }
-
-  trajectoryForPull(pull, numberOfDots = 24) {
+  predictedTrajectory(numberOfDots = 24) { return this.predictShot(numberOfDots).points; }
+  trajectoryForPull(pull, numberOfDots = 32) {
     if (!pull || numberOfDots <= 0) return [];
-    const launchPoint = this.clampedSlingPoint(pull);
-    const velocity = {
-      x: (this.anchor.x - launchPoint.x) * LAUNCH_MULTIPLIER,
-      y: (this.anchor.y - launchPoint.y) * LAUNCH_MULTIPLIER,
-    };
-    const simulation = new GameModel(() => {}, this.level);
-    simulation.mode = this.mode;
-    simulation.trampolineX = this.trampolineX;
-    simulation.startFlight(velocity, false, launchPoint);
-    const points = [];
-    for (let frame = 0; frame < 420 && simulation.phase === GamePhase.FLYING; frame += 1) {
-      simulation.update(1 / 60);
-      if (frame % 5 === 4 && points.length < numberOfDots) points.push(copyPoint(simulation.avatarPosition));
-    }
+    const signature = `${pull.x}:${pull.y}:${this.layoutOffset}:${numberOfDots}`;
+    if (this.hintCache?.signature === signature) return this.hintCache.points;
+    const points = this.simulate(pull, numberOfDots).points;
+    this.hintCache = { signature, points };
     return points;
   }
-
+  revealHint(stage = this.hintStage + 1, automatic = false) {
+    if (!Number.isFinite(stage)) return false;
+    const next = clamp(Math.round(stage), 0, this.level.hints.stages.length);
+    if (next <= this.hintStage) return false;
+    this.hintStage = next;
+    if (next === 3 && this.mode === GameMode.ONE_MOVE) {
+      this.layoutOffset = 0;
+      this.moveUsed = true;
+      this.emit("hint-layout-reset");
+    }
+    this.emit("hint", { stage: next, automatic });
+    return true;
+  }
   clampedSlingPoint(point) {
     const offset = { x: point.x - this.anchor.x, y: point.y - this.anchor.y };
-    const offsetLength = length(offset);
-    if (offsetLength > MAX_PULL && offsetLength > Number.EPSILON) {
-      offset.x *= MAX_PULL / offsetLength;
-      offset.y *= MAX_PULL / offsetLength;
-    }
+    const distance = magnitude(offset);
+    if (distance > MAX_PULL) { offset.x *= MAX_PULL / distance; offset.y *= MAX_PULL / distance; }
     offset.x = Math.min(offset.x, 48);
     return { x: this.anchor.x + offset.x, y: this.anchor.y + offset.y };
   }
-
-  rectContains(rect, point) {
-    return (
-      point.x >= rect.x &&
-      point.x <= rect.x + rect.width &&
-      point.y >= rect.y &&
-      point.y <= rect.y + rect.height
-    );
+  velocityForPull(point) { return { x: (this.anchor.x - point.x) * LAUNCH_MULTIPLIER, y: (this.anchor.y - point.y) * LAUNCH_MULTIPLIER }; }
+  rectContains(rect, point) { return contains(rect, point); }
+  get interactions() {
+    if (this.interactionCache?.level === this.level && this.interactionCache.offset === this.layoutOffset) return this.interactionCache.items;
+    const items = this.level.interactions.map((item) => item.id === this.level.editable?.id
+      ? { ...item, a: { x: item.a.x + this.layoutOffset, y: item.a.y }, b: { x: item.b.x + this.layoutOffset, y: item.b.y } } : item);
+    this.interactionCache = { level: this.level, offset: this.layoutOffset, items };
+    return items;
   }
-
-  get avatarRadius() {
-    return BASE_RADIUS * (this.modifier === Modifier.GIANT_HEAD ? 1.42 : 1);
-  }
-
-  get avatarGrabRadius() {
-    return Math.max(this.avatarRadius + 34, BASE_RADIUS * 2.65);
-  }
-
-  get anchor() {
-    return this.level.anchor;
-  }
-
-  get groundY() {
-    return this.level.groundY;
-  }
-
-  get trampolineBounds() {
-    const trampoline = this.level.trampoline;
-    return {
-      x: this.trampolineX,
-      y: trampoline.y,
-      width: trampoline.width,
-      height: trampoline.height,
-      enabled: trampoline.enabled,
-    };
-  }
-
-  get fanBounds() {
-    return this.level.fan;
-  }
-
-  get crateBounds() {
-    return this.level.crate;
-  }
-
-  get wallBounds() {
-    return this.level.wall;
-  }
-
-  get waterBounds() {
-    return this.level.water;
-  }
-
+  get objectiveMet() { return this.level.required.every((id) => this.visited.has(id)); }
+  get activeHint() { return this.level.hints.stages[this.hintStage - 1] ?? null; }
+  get anchor() { return this.level.anchor; }
+  get groundY() { return this.level.groundY; }
+  get avatarRadius() { return 35 * (this.modifier === Modifier.GIANT_HEAD ? 1.42 : 1); }
+  get avatarGrabRadius() { return Math.max(this.avatarRadius + 34, 35 * 2.65); }
+  get waterBounds() { return this.level.water; }
   get goalCentre() {
-    const goal = this.level.goal;
-    if (goal.shape === "rect" || goal.shape === "zone") {
-      return { x: goal.x + goal.width * 0.5, y: goal.y + goal.height * 0.5 };
-    }
-    return { x: goal.x, y: goal.y };
+    const { x, y, motion } = this.level.goal;
+    const centre = { x, y };
+    if (motion) centre[motion.axis] += Math.sin(this.flightTime * motion.speed) * motion.amplitude;
+    return centre;
   }
-
-  get goalRadius() {
-    return this.level.goal.radius ?? Math.max(this.level.goal.width, this.level.goal.height) * 0.5;
-  }
-
-  get gravityScale() {
-    return this.modifier === Modifier.LOW_GRAVITY ? 0.43 : 1;
-  }
-
-  get bounceScale() {
-    return this.modifier === Modifier.SUPER_BOUNCY ? 1.43 : 1;
-  }
-
-  get fanScale() {
-    return this.modifier === Modifier.STRONGER_FAN ? 2 : 1;
-  }
-
+  get goalRadius() { return this.level.goal.radius; }
+  get gravityScale() { return this.modifier === Modifier.LOW_GRAVITY ? 0.65 : 1; }
+  get bounceScale() { return this.modifier === Modifier.SUPER_BOUNCY ? 1.3 : 1; }
+  get fanScale() { return this.modifier === Modifier.STRONGER_FAN ? 1.65 : 1; }
   get suggestedModifier() {
-    return MODIFIERS[Math.max(0, this.attempts - 1) % MODIFIERS.length];
+    const variants = [Modifier.LOW_GRAVITY, Modifier.GIANT_HEAD];
+    if (this.interactions.some((item) => item.type === "steam")) variants.unshift(Modifier.STRONGER_FAN);
+    if (this.interactions.some((item) => item.type === "cushion")) variants.unshift(Modifier.SUPER_BOUNCY);
+    return variants[Math.max(0, this.attempts - 1) % variants.length];
   }
-
   get expression() {
     if (this.impactFlash > 0) return "impact";
     if (this.phase === GamePhase.SUCCEEDED) return "victory";
-    if (this.phase === GamePhase.FAILED) return this.personality === Personality.TOUGH_GUY ? "suspicious" : "defeat";
-    if (this.phase === GamePhase.AIMING) return this.personality === Personality.ZEN ? "neutral" : "nervous";
-    if (this.phase === GamePhase.FLYING) {
-      if (this.personality === Personality.DRAMA_QUEEN) return this.flightTime > 0.75 ? "panic" : "airborne";
-      if (this.personality === Personality.TOUGH_GUY) return "suspicious";
-      if (this.personality === Personality.PANIC) return "panic";
-      return "neutral";
-    }
-    return this.personality === Personality.PANIC ? "nervous" : "neutral";
+    if (this.phase === GamePhase.FAILED) return "defeat";
+    if (this.personality === Personality.ZEN) return "neutral";
+    if (this.personality === Personality.TOUGH_GUY) return "suspicious";
+    if (this.phase === GamePhase.AIMING) return "nervous";
+    if (this.phase === GamePhase.FLYING) return this.flightTime > 0.7 ? "panic" : "airborne";
+    return "neutral";
   }
-
   get statusText() {
-    if (this.mode === GameMode.ONE_MOVE && this.phase === GamePhase.READY && !this.moveUsed) {
-      return `ONE MOVE: przesuń trampolinę raz. Potem: ${this.level.mission.title.toLocaleLowerCase("pl-PL")}.`;
-    }
-    if (this.mode === GameMode.QUICK && this.phase === GamePhase.READY && this.attempts === 0) {
-      return this.level.tutorial?.status ?? this.level.status?.ready ?? "Pociągnij bohatera i znajdź właściwy tor.";
-    }
-    if (this.mode === GameMode.QUICK && this.phase === GamePhase.READY && this.activeHint) {
-      return this.activeHint.text;
-    }
-    return this.level.status?.[this.phase] ?? {
-      [GamePhase.READY]: "Złap bohatera. Budzik sam się nie uciszy.",
-      [GamePhase.AIMING]: "Naciągnij. Godność odzyskamy później.",
-      [GamePhase.FLYING]: "SLING → BANG → SNOOZE → AGAIN",
-      [GamePhase.SUCCEEDED]: "SNOOZE! Poranek oficjalnie przełożony.",
-      [GamePhase.FAILED]: "Budzik 1 : Ty 0. Fizyka prosi o rewanż.",
-    }[this.phase];
+    if (this.phase === GamePhase.READY && this.mode === GameMode.ONE_MOVE && !this.moveUsed) return "Przesuń ukośną poduszkę raz, potem wystrzel. Dotknięcie bez ruchu się nie liczy.";
+    if (this.phase === GamePhase.READY && this.activeHint) return this.activeHint.text;
+    if (this.phase === GamePhase.FAILED) return this.failureReason;
+    return this.level.status[this.phase] ?? this.level.result.successTitle;
   }
-
   get speechText() {
-    const levelLine = this.level.speech?.[this.phase]?.[this.personality];
-    if (levelLine) return levelLine;
-    const lines = {
-      [GamePhase.SUCCEEDED]: {
-        [Personality.DRAMA_QUEEN]: "NATURALNY TALENT DO SPANIA!",
-        [Personality.TOUGH_GUY]: "SNOOZE ZNEUTRALIZOWANY.",
-        [Personality.PANIC]: "ŻYJĘ! I MOGĘ SPAĆ?!",
-        [Personality.ZEN]: "PORANEK MOŻE POCZEKAĆ.",
-      },
-      [GamePhase.FAILED]: {
-        [Personality.DRAMA_QUEEN]: "BUDZIK ZNISZCZYŁ MI KARIERĘ!",
-        [Personality.TOUGH_GUY]: "SPRAWDZAŁEM PODŁOGĘ.",
-        [Personality.PANIC]: "WIEDZIAŁEM, ŻE RANO JEST ŹLE!",
-        [Personality.ZEN]: "BUDZIK TEŻ POTRZEBUJE CZASU.",
-      },
-      [GamePhase.FLYING]: {
-        [Personality.DRAMA_QUEEN]: "TO NIE BYŁO W UMOWIE!",
-        [Personality.TOUGH_GUY]: "PEŁNA KONTROLA.",
-        [Personality.PANIC]: "JA JUŻ ŻAŁUJĘ!",
-        [Personality.ZEN]: "GRAWITACJA MA UCZUCIA.",
-      },
-      [GamePhase.AIMING]: {
-        [Personality.DRAMA_QUEEN]: "TYLKO NIE W TWARZ!",
-        [Personality.TOUGH_GUY]: "MOCNIEJ.",
-        [Personality.PANIC]: "MOŻEMY TO OMÓWIĆ?",
-        [Personality.ZEN]: "JESTEM PROCĄ.",
-      },
-    };
-    return lines[this.phase]?.[this.personality] ?? "";
+    return this.level.speech?.[this.phase]?.[this.personality] ?? ({ aiming: "MAM PLAN. MNIEJ WIĘCEJ.", flying: this.airMoveUsed ? "TO BYŁ MANEWR TAKTYCZNY!" : "TO NIE BYŁO W UMOWIE!", failed: "GODNOŚĆ ODRADZA SIĘ PIERWSZA." }[this.phase] ?? "");
   }
 }
 
 export function modifierName(modifier) {
-  return {
-    [Modifier.STRONGER_FAN]: "WENTYLATOR 2×?",
-    [Modifier.LOW_GRAVITY]: "LOW GRAVITY?",
-    [Modifier.SUPER_BOUNCY]: "SUPER BOUNCY?",
-    [Modifier.GIANT_HEAD]: "GIANT HEAD?",
-    [Modifier.NONE]: "BEZ ZMIAN",
-  }[modifier];
+  return { none: "BEZ ZMIAN", strongerFan: "MOCNIEJSZA PARA?", lowGravity: "LŻEJSZY ŚWIAT?", superBouncy: "SPRĘŻYSTA PODUSZKA?", giantHead: "WIĘKSZA GŁOWA?" }[modifier];
 }

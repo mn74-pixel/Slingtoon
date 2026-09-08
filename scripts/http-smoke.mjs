@@ -36,7 +36,7 @@ assert.ok(address && typeof address === "object");
 const origin = `http://127.0.0.1:${address.port}`;
 
 try {
-  for (const path of ["/", "/src/main.js", "/src/game.js", "/src/face-studio.js", "/styles.css", "/manifest.webmanifest", "/assets/stage_morning_mayhem.svg"]) {
+  for (const path of ["/", "/src/main.js", "/src/game.js", "/src/levels.js", "/src/physics.js", "/src/progress.js", "/src/interactions-renderer.js", "/src/face-studio.js", "/styles.css", "/manifest.webmanifest", "/assets/stage_morning_mayhem.svg"]) {
     const response = await fetch(`${origin}${path}`);
     assert.equal(response.status, 200, `${path} should be served`);
     assert.ok(Number(response.headers.get("content-length") ?? 1) >= 0);
