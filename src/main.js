@@ -1,8 +1,9 @@
-import { GameModel, GameMode, GamePhase, LEVELS, modifierName } from "./game.js?v=0.13.0";
-import { GameRenderer } from "./render.js?v=0.13.0";
-import { GameAudio } from "./audio.js?v=0.13.0";
-import { FaceStudio } from "./face-studio.js?v=0.13.0";
-import { PROGRESS_KEY, TOKEN_SCORE_STEP, readProgress, hintOffer, purchaseHint, rewardSuccess, medalText } from "./progress.js?v=0.13.0";
+import { GameModel, GameMode, GamePhase, LEVELS, modifierName } from "./game.js?v=0.14.0";
+import { GameRenderer } from "./render.js?v=0.14.0";
+import { GameAudio } from "./audio.js?v=0.14.0";
+import { FaceStudio } from "./face-studio.js?v=0.14.0";
+import { PROGRESS_KEY, TOKEN_SCORE_STEP, readProgress, hintOffer, purchaseHint, rewardSuccess, medalText } from "./progress.js?v=0.14.0";
+import { CHAPTERS } from "./levels.js?v=0.14.0";
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -60,6 +61,10 @@ const elements = {
   missions: $("#missionMap"),
   missionList: $("#missionList"),
   closeMissions: $("#closeMissions"),
+  chapterSelect: $("#chapterSelect"),
+  chapterSummary: $("#chapterSummary"),
+  campaignSummary: $("#campaignSummary"),
+  resumeMission: $("#resumeMission"),
 };
 
 const audio = new GameAudio();
@@ -75,8 +80,9 @@ let installPrompt = null;
 let currentLevelIndex = 0;
 let progress = loadProgress();
 let highestUnlockedLevel = progress.highestUnlockedLevel;
+let mapChapterIndex = 0;
 let lastReward = null;
-const FULLSCREEN_TIP_KEY = "slingtoon-fullscreen-tip-0.13.0";
+const FULLSCREEN_TIP_KEY = "slingtoon-fullscreen-tip-0.14.0";
 
 function loadProgress() {
   try {
@@ -311,6 +317,7 @@ model.onEvent = (event) => {
     if (event.type === "success") scoreSuccess();
     if (event.type === "success" && currentLevelIndex < LEVELS.length - 1) {
       highestUnlockedLevel = Math.max(highestUnlockedLevel, currentLevelIndex + 1);
+      progress.resumeLevelId = LEVELS[currentLevelIndex + 1].id;
       updateLevelNavigation();
     }
     saveProgress();
@@ -348,7 +355,7 @@ function updateLevelNavigation() {
   elements.previousLevel.disabled = !controlsEnabled || currentLevelIndex === 0;
   elements.nextLevel.disabled = !controlsEnabled || nextLevelLocked || isLastLevel;
   elements.nextLevel.title = isLastLevel
-    ? "Finał rozdziału"
+    ? "Finał całej przygody"
     : nextLevelLocked
       ? "Ukończ tę misję, aby odblokować następną"
       : "Następny poziom";
@@ -361,13 +368,39 @@ function setLevelIndex(index) {
   currentLevelIndex = nextIndex;
   hideResult();
   model.setLevel(LEVELS[currentLevelIndex]);
+  progress.resumeLevelId = model.level.id;
+  saveProgress();
   return true;
 }
 
 function openMissionMap() {
   if ([GamePhase.AIMING, GamePhase.FLYING].includes(model.phase)) return;
+  mapChapterIndex = Math.floor(currentLevelIndex / 8);
+  elements.chapterSelect.replaceChildren();
+  for (const chapter of CHAPTERS) {
+    const option = document.createElement("option");
+    option.value = String(chapter.number - 1);
+    option.textContent = `${String(chapter.number).padStart(2, "0")} · ${chapter.name} · ${chapter.first}–${chapter.last}${chapter.first - 1 > highestUnlockedLevel ? " · 🔒" : ""}`;
+    elements.chapterSelect.append(option);
+  }
+  elements.chapterSelect.value = String(mapChapterIndex);
+  const finished = LEVELS.filter((level) => progress.medals[level.id] & 1).length;
+  const stars = LEVELS.filter((level) => progress.medals[level.id] & 2).length;
+  elements.campaignSummary.textContent = `Przygoda: ${finished} / ${LEVELS.length} misji · ★ ${stars} / ${LEVELS.length} gwiazdek`;
+  const resume = LEVELS.find((level) => level.id === progress.resumeLevelId) ?? LEVELS[highestUnlockedLevel];
+  elements.resumeMission.textContent = `KONTYNUUJ · MISJA ${resume.number} →`;
+  renderMissionChapter();
+  elements.missions.showModal();
+}
+
+function renderMissionChapter() {
+  const chapterData = CHAPTERS[mapChapterIndex];
+  const chapterLevels = LEVELS.slice(chapterData.first - 1, chapterData.last);
+  const finished = chapterLevels.filter((level) => progress.medals[level.id] & 1).length;
+  elements.chapterSummary.textContent = `${chapterData.subtitle} · ${finished} / 8 ukończonych`;
   elements.missionList.replaceChildren();
-  for (const [index, level] of LEVELS.entries()) {
+  for (const level of chapterLevels) {
+    const index = level.number - 1;
     const button = document.createElement("button");
     button.type = "button";
     button.className = "mission-tile";
@@ -377,7 +410,7 @@ function openMissionMap() {
     const title = document.createElement("strong");
     const mechanic = document.createElement("span");
     const medals = document.createElement("small");
-    chapter.textContent = `${String(index + 1).padStart(2, "0")} · ${level.chapter}`;
+    chapter.textContent = `MISJA ${String(index + 1).padStart(2, "0")}${level.pacing === "breather" ? " · CHWILA ODDECHU" : ""}`;
     title.textContent = level.name;
     mechanic.textContent = level.mechanic;
     medals.textContent = button.disabled ? "Ukończ poprzednią misję, by odblokować" : medalText(progress.medals[level.id]);
@@ -390,7 +423,6 @@ function openMissionMap() {
     });
     elements.missionList.append(button);
   }
-  elements.missions.showModal();
 }
 
 function beginPointer(event) {
@@ -458,6 +490,11 @@ function showResult() {
   elements.resultTag.textContent = success ? result.successTag : result.failureTag;
   elements.resultTitle.textContent = success ? result.successTitle : result.failureTitle;
   elements.resultSpeech.textContent = success ? model.speechText : model.failureReason;
+  const chapterEnd = success && model.level.number % 8 === 0;
+  const nextChapter = CHAPTERS[Math.floor(currentLevelIndex / 8) + 1];
+  if (chapterEnd) elements.resultSpeech.textContent = nextChapter
+    ? `Rozdział ukończony! Dalej: ${nextChapter.name}. ${nextChapter.subtitle}`
+    : "Całe 80 misji za Tobą! Budzik ocalał, godność w regeneracji. Wróć po gwiazdki, kiedy zechcesz.";
   elements.resultReward.hidden = !success;
   if (success && lastReward) {
     const tokenText = lastReward.tokenGain > 0 ? ` · +${lastReward.tokenGain} żeton` : "";
@@ -468,9 +505,9 @@ function showResult() {
   elements.whatIfButton.hidden = !success && !model.previousShot;
   elements.whatIfButton.textContent = success ? model.collectedStar ? "↻ POPRAW STYL" : "☆ ZDOBĄD GWIAZDKĘ" : `WHAT IF? · ${modifierName(model.suggestedModifier)}`;
   elements.againButton.textContent = success && currentLevelIndex < LEVELS.length - 1
-    ? "NASTĘPNA MISJA →"
+    ? chapterEnd ? "NASTĘPNY ROZDZIAŁ →" : "NASTĘPNA MISJA →"
     : success
-      ? "↻ JESZCZE RAZ"
+      ? "MAPA PRZYGODY →"
       : "↻ JESZCZE RAZ";
 }
 
@@ -558,6 +595,17 @@ elements.previousLevel.addEventListener("click", () => setLevelIndex(currentLeve
 elements.nextLevel.addEventListener("click", () => setLevelIndex(currentLevelIndex + 1));
 elements.levelIndicator.addEventListener("click", openMissionMap);
 elements.closeMissions.addEventListener("click", () => elements.missions.close());
+elements.chapterSelect.addEventListener("change", () => {
+  mapChapterIndex = Math.max(0, Math.min(CHAPTERS.length - 1, Number(elements.chapterSelect.value) || 0));
+  renderMissionChapter();
+});
+elements.resumeMission.addEventListener("click", () => {
+  const index = LEVELS.findIndex((level) => level.id === progress.resumeLevelId);
+  if (index === currentLevelIndex) model.resetLevel(true);
+  else setLevelIndex(index < 0 ? highestUnlockedLevel : index);
+  elements.missions.close();
+  elements.canvas.focus({ preventScroll: true });
+});
 elements.airMove.addEventListener("click", () => { audio.unlock().catch(() => {}); model.useAirMove(); });
 elements.personality.addEventListener("change", (event) => {
   model.setPersonality(event.target.value);
@@ -603,6 +651,7 @@ window.addEventListener("beforeinstallprompt", (event) => {
 elements.restartButton.addEventListener("click", () => model.resetLevel(false));
 elements.hintButton.addEventListener("click", requestHint);
 elements.againButton.addEventListener("click", () => {
+  if (model.phase === GamePhase.SUCCEEDED && currentLevelIndex === LEVELS.length - 1) { openMissionMap(); return; }
   if (model.phase === GamePhase.SUCCEEDED && currentLevelIndex < LEVELS.length - 1) {
     setLevelIndex(currentLevelIndex + 1);
     return;
@@ -643,12 +692,14 @@ window.addEventListener("keydown", (event) => {
 
 window.addEventListener("load", () => {
   if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
-    navigator.serviceWorker.register("./sw.js?v=0.13.0").catch(() => {});
+    navigator.serviceWorker.register("./sw.js?v=0.14.0").catch(() => {});
   }
   scheduleFullscreenSuggestion();
   syncGameViewport();
 });
 
+currentLevelIndex = Math.max(0, LEVELS.findIndex((level) => level.id === progress.resumeLevelId));
+if (currentLevelIndex > 0) model.setLevel(LEVELS[currentLevelIndex]);
 model.hintStage = Math.min(1, progress.hints[model.level.id] ?? 0);
 updateMissionUi();
 syncGameViewport();

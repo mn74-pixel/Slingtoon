@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.14.0 — Dookoła absurdu w 80 misji
+
+- rozszerzono kampanię z 8 do 80 ręcznie opisanych misji w 10 rozdziałach po 8 etapów,
+- dodano plażę, rafę, zatopiony hotel, port, lunapark, kosmodrom, Księżyc, stację orbitalną i drogę powrotną do sypialni,
+- wprowadzono prądy wodne i wentylacyjne, bąble wypornościowe, pola przyciągania, bramki wymagające dwóch przycisków oraz lokalną zmianę grawitacji i oporu,
+- każda nowa misja ma zmierzoną zwycięską trasę bez obowiązkowego FIK-a, pole tolerancji dotyku i oddzielny osiągalny strzał po gwiazdkę,
+- co piąta misja rozdziału jest lżejszą chwilą oddechu, a finały łączą wcześniej poznane reguły bez gwałtownego skoku trudności,
+- mapa pokazuje po 8 misji, pozwala zmieniać rozdziały, podsumowuje ukończenia i gwiazdki oraz ma przycisk kontynuacji,
+- zapis pamięta bieżącą misję; gracze, którzy ukończyli dawny poziom 8, automatycznie otrzymują dostęp do poziomu 9,
+- nowe cele i tła są rysowane lokalnie jako lekka grafika wektorowa, a małe postacie w tle reagują na sukces i porażkę,
+- zachowano wszystkie pierwsze 8 misji, lokalne Face Studio, deterministyczną fizykę 120 Hz, prywatność zdjęć i działanie offline.
+
 ## 0.13.0 — Kontrolowana katastrofa
 
 - przebudowano osiem misji wokół ośmiu różnych zasad; usunięto trampoliny i ich stary kod,

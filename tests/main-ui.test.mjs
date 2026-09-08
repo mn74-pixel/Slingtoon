@@ -89,12 +89,14 @@ test("real main module: campaign navigation, touch shots, hints, medals, FIK and
     assert.equal(elements.resultPanel.hidden, false);
     assert.ok(elements.resultPanel.classes.has("is-success"), `mission ${i + 1} should succeed through actual UI handlers`);
     assert.match(elements.resultReward.textContent, /Przejście/);
-    if (i < 7) elements.againButton.click();
+    if (i < LEVELS.length - 1) elements.againButton.click();
   }
   elements.levelIndicator.click();
   assert.equal(elements.missionMap.open, true);
   assert.equal(elements.missionList.children.length, 8);
   assert.ok(elements.missionList.children.every((e) => !e.disabled));
+  elements.chapterSelect.value = "0";
+  elements.chapterSelect.dispatch("change", { target: elements.chapterSelect });
   elements.missionList.children[4].click();
   assert.equal(elements.missionMap.open, false);
   elements.hintButton.click();

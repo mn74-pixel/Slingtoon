@@ -17,6 +17,12 @@ test("malformed or unavailable storage and non-finite values cannot block play",
   const p = readProgress(storage({ [PROGRESS_KEY]: '{"version":3,"score":1e999,"hintTokens":-4,"highestUnlockedLevel":4.7,"hints":{"morning-mayhem":99}}' }), LEVELS);
   assert.equal(p.score, 0); assert.equal(p.hintTokens, 0); assert.equal(p.highestUnlockedLevel, 4); assert.equal(p.hints[LEVELS[0].id], 3);
 });
+test("a 0.13 player who completed mission 8 resumes with mission 9 unlocked", () => {
+  const legacy = { version: 3, highestUnlockedLevel: 7, score: 800, medals: { "duck-rescue": 1 } };
+  const p = readProgress(storage({ [PROGRESS_KEY]: JSON.stringify(legacy) }), LEVELS);
+  assert.equal(p.highestUnlockedLevel, 8);
+  assert.equal(p.resumeLevelId, LEVELS[8].id);
+});
 test("paid discoveries persist, cannot be bought twice and never overdraft tokens", () => {
   const p = empty(), level = LEVELS[4];
   assert.equal(purchaseHint(p, level, 0).ok, true);

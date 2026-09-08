@@ -3,7 +3,7 @@ export const TOKEN_SCORE_STEP = 200;
 const integer = (value, maximum = 1_000_000) => Number.isFinite(value) ? Math.max(0, Math.min(maximum, Math.floor(value))) : 0;
 
 export function readProgress(storage, levels) {
-  const result = { version: 3, highestUnlockedLevel: 0, score: 0, hintTokens: 2, bestScores: {}, hints: {}, medals: {} };
+  const result = { version: 3, highestUnlockedLevel: 0, resumeLevelId: levels[0].id, score: 0, hintTokens: 2, bestScores: {}, hints: {}, medals: {} };
   try {
     const current = storage.getItem(PROGRESS_KEY);
     const previous = storage.getItem("slingtoon-progress-v2");
@@ -18,8 +18,13 @@ export function readProgress(storage, levels) {
         result.hints[id] = integer(parsed.hints?.[id], 3);
         result.medals[id] = integer(parsed.medals?.[id], 7);
       }
+      // Completing the old final mission must unlock the first appended mission.
+      while (result.highestUnlockedLevel < levels.length - 1 && (result.medals[levels[result.highestUnlockedLevel].id] & 1)) result.highestUnlockedLevel++;
+      const resume = levels.findIndex((level) => level.id === parsed.resumeLevelId);
+      result.resumeLevelId = levels[resume >= 0 && resume <= result.highestUnlockedLevel ? resume : result.highestUnlockedLevel].id;
     } else {
       result.highestUnlockedLevel = integer(Number(storage.getItem("slingtoon-progress-v1")), levels.length - 1);
+      result.resumeLevelId = levels[result.highestUnlockedLevel].id;
     }
   } catch { /* Storage is an enhancement, not a requirement to play. */ }
   return result;

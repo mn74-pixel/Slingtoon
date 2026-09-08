@@ -15,9 +15,12 @@ const requiredFiles = [
   "src/main.js",
   "src/game.js",
   "src/levels.js",
+  "src/campaign.js",
+  "src/campaign-routes.js",
   "src/physics.js",
   "src/progress.js",
   "src/interactions-renderer.js",
+  "src/world-renderer.js",
   "src/render.js",
   "src/viewport.js",
   "src/audio.js",
@@ -68,7 +71,7 @@ assert.ok(main.includes(`serviceWorker.register("./sw.js?v=${version}")`));
 assert.ok(main.includes(`slingtoon-fullscreen-tip-${version}`));
 for (const level of LEVELS) {
   assert.ok(Object.isFrozen(level));
-  assert.ok(level.interactions.every((item) => ["breakable", "portal", "cushion", "steam", "switch", "gate", "solid", "water"].includes(item.type)));
+  assert.ok(level.interactions.every((item) => ["breakable", "portal", "cushion", "steam", "current", "bubble", "gravity", "switch", "gate", "solid", "water"].includes(item.type)));
   assert.ok(level.required.every((id) => level.interactions.some((item) => item.id === id)));
 }
 assert.equal(manifest.start_url, "./");
@@ -106,6 +109,8 @@ assert.match(levels, /id:\s*"gnome-emergency"/);
 assert.match(levels, /id:\s*"pigeon-protocol"/);
 assert.match(levels, /id:\s*"duck-rescue"/);
 assert.match(levels, /export const LEVELS/);
+assert.equal(LEVELS.length, 80);
+assert.equal(new Set(LEVELS.map((level) => level.id)).size, 80);
 assert.match(levels, /assistPull:\s*point/g);
 assert.match(levels, /scene:\s*"lake"/);
 assert.match(levels, /freeStages/);
@@ -177,5 +182,5 @@ for (const file of requiredFiles.filter((file) => !file.startsWith(".github") &&
   }
 }
 
-for (const file of ["physics", "progress", "interactions-renderer"]) assert.ok(worker.includes(`./src/${file}.js?v=${version}`));
+for (const file of ["campaign", "campaign-routes", "physics", "progress", "interactions-renderer", "world-renderer"]) assert.ok(worker.includes(`./src/${file}.js?v=${version}`));
 console.log(`SlingToon ${version}: campaign schema, privacy, mobile viewport and offline assets validated.`);

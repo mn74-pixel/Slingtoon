@@ -1,6 +1,7 @@
-import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.13.0";
-import { clientPointToWorld, createCropFreeViewport } from "./viewport.js?v=0.13.0";
-import { drawInteractions, drawObjective } from "./interactions-renderer.js?v=0.13.0";
+import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.14.0";
+import { clientPointToWorld, createCropFreeViewport } from "./viewport.js?v=0.14.0";
+import { drawInteractions, drawObjective } from "./interactions-renderer.js?v=0.14.0";
+import { drawCampaignGoal, drawCampaignScene, drawWorldCompanion } from "./world-renderer.js?v=0.14.0";
 
 const PALETTE = Object.freeze({
   ink: "#19142d",
@@ -168,7 +169,7 @@ export class GameRenderer {
       });
     }
     if (["interaction", "air-move", "collect"].includes(event.type)) {
-      const words = { break: "NIE RZUCAĆ… UPS!", portal: "WIROWANIE!", steam: "AL DENTE!", switch: "SEZAM!", cushion: "PEŁNA KULTURA.", water: "KWAK?" };
+      const words = { break: "NIE RZUCAĆ… UPS!", portal: "WIROWANIE!", steam: "PODMUCH!", current: "Z PRĄDEM!", bubble: "BUL-BUL!", gravity: "CIĄGNIE!", switch: "SEZAM!", cushion: "PEŁNA KULTURA.", water: "KWAK?" };
       this.spawnImpact(event.x, event.y, event.type === "collect" ? 14 : 9);
       this.callouts.push({ x: event.x, y: event.y - 50, text: event.type === "air-move" ? "FIK!" : event.type === "collect" ? "STYL +1!" : words[event.kind], age: 0, life: .85, angle: -.05 });
       if (event.kind === "portal") { this.trail.length = 0; this.lastTrailPoint = null; }
@@ -230,6 +231,7 @@ export class GameRenderer {
     this.drawSlingBack(ctx);
     this.drawTrajectory(ctx);
     this.drawPhysicalObjects(ctx);
+    drawWorldCompanion(ctx, this.model, this.time);
     this.drawAvatarShadow(ctx);
     this.drawAvatar(ctx);
     this.drawSlingFront(ctx);
@@ -275,10 +277,11 @@ export class GameRenderer {
       ctx.fillStyle = visual.wash;
       ctx.fillRect(0, 0, WORLD.width, WORLD.height);
     }
-    if (visual?.gag) this.drawSceneGag(ctx, visual.gag, visual.accent);
+    if (visual?.gag) this.drawSceneGag(ctx, visual.gag, visual.accent, visual.gagX, visual.gagY);
   }
 
   drawProceduralScene(ctx) {
+    if (drawCampaignScene(ctx, this.model.level)) return;
     const scenes = {
       laundry: () => this.drawLaundryScene(ctx),
       "living-room": () => this.drawLivingRoomScene(ctx),
@@ -416,9 +419,9 @@ export class GameRenderer {
     ctx.fillStyle = "rgba(25,20,45,.6)"; ctx.font = "900 28px system-ui, sans-serif"; ctx.fillText("JEZIORO · RATOWNIK: KACZKA", 55, 65);
   }
 
-  drawSceneGag(ctx, text, accent = PALETTE.gold) {
+  drawSceneGag(ctx, text, accent = PALETTE.gold, x = 914, y = 90) {
     ctx.save();
-    ctx.translate(914, 90);
+    ctx.translate(x, y);
     ctx.rotate(-0.035);
     roundedRect(ctx, -126, -18, 252, 36, 15);
     ctx.fillStyle = "rgba(27, 20, 45, 0.78)";
@@ -430,7 +433,7 @@ export class GameRenderer {
     ctx.font = "900 12px system-ui, sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(text, 0, 1);
+    ctx.fillText(text, 0, 1, 228);
     ctx.restore();
   }
 
@@ -474,6 +477,7 @@ export class GameRenderer {
   }
 
   drawGoalTarget(ctx) {
+    if (drawCampaignGoal(ctx, this.model, this.time, this.successPulse)) return;
     const drawers = {
       alarm: () => this.drawAlarmClock(ctx),
       coffee: () => this.drawCoffee(ctx),

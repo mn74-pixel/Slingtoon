@@ -1,12 +1,14 @@
-# SlingToon Web 0.13.0 — Kontrolowana katastrofa
+# SlingToon Web 0.14.0 — 80 misji kontrolowanego chaosu
 
 Samodzielna gra webowa przygotowana w tym samym modelu publikacji co Castle Conflict. Do uruchomienia i wdrożenia nie potrzeba JUCE, Projucera ani Xcode.
 
-Przebudowa usuwa powtarzaną trampolinę: każda misja ma inną zasadę. Pierwszy poziom pozostaje prosty; późniejsze wprowadzają przebijanie kartonu, portale, ukośne odbicie, parę, przycisk i bramkę, ruchomy cel oraz ślizg po wodzie. Kolory, bohater i lokalne Face Studio pozostają.
+Kampania prowadzi przez 80 krótkich misji w 10 rozdziałach. Zaczyna się od domowego chaosu, a potem odwiedza plażę, rafę, zatopiony hotel, port, lunapark, kosmodrom, Księżyc i stację orbitalną. Finał wraca do budzika z pierwszej misji. Kolory, bohater i lokalne Face Studio pozostają.
 
-![Osiem różnych mechanik](docs/campaign-0.13.png)
+Pierwszych osiem misji pozostaje bez zmian. Dalsze etapy wprowadzają m.in. prądy, bąble wypornościowe, pola przyciągania, wielostopniowe bramki i różne wartości grawitacji. Każdy etap ma łatwą drogę do ukończenia i opcjonalną gwiazdkę.
 
-[Prompt przebudowy](docs/PROMPT_PRZEBUDOWY_PL.md) · [Zakres wykonanych testów i pozostały playtest](docs/QA_0_13_PL.md)
+![Kampania 80 misji — stan początkowy i zwycięstwo](docs/campaign-0.14.png)
+
+[Prompt przebudowy](docs/PROMPT_PRZEBUDOWY_PL.md) · [Zakres wykonanych testów i pozostały playtest](docs/QA_0_14_PL.md)
 
 ## Uruchomienie lokalne
 
@@ -51,7 +53,7 @@ Na współczesnym iPhonie SlingToon pokazuje jednorazowy przycisk `Graj pełny e
 
 - `Quick Sling`: złap bohatera, naciągnij i puść.
 - `One Move`: wyzwanie dostępne w misji z ukośną poduszką. Przesuń ją raz, następnie wystrzel. Samo dotknięcie i anulowanie gestu nie zużywają ruchu.
-- Kampania zawiera osiem kolejno odblokowywanych misji w siedmiu wyraźnie różnych sceneriach: sypialni, pralni, salonie, kuchni, ogrodzie, parku i nad jeziorem.
+- Kampania zawiera 80 kolejno odblokowywanych misji w 10 rozdziałach. Mapa pokazuje po osiem etapów, umożliwia zmianę rozdziału i wznowienie ostatnio wybranej misji.
 - Jezioro pozwala na najwyżej dwa płaskie ślizgi z utratą energii; stromy lot kończy się zanurzeniem. Nie dodaje już magicznych kopnięć do przodu.
 - Od piątej misji: jeden `FIK!` w locie (przycisk, dotknięcie planszy lub spacja) podbija do góry i lekko do przodu. Wszystkie misje da się przejść także bez niego.
 - Klawiatura: spacja rozpoczyna celowanie, strzałki zmieniają naciąg, kolejna spacja wystrzeliwuje; `R` ponawia. Wyzwanie przestawienia poduszki obsługuje dotyk/mysz.
@@ -72,13 +74,16 @@ npm run build
 npm run smoke
 ```
 
-Testy sprawdzają Quick Sling, One Move, grywalną drogę przez wszystkie osiem misji, krzywą trudności obu mini-rozdziałów, wodne odbicie, stopniowe podpowiedzi, identyczny replay What If, realne działanie modyfikatorów, różnice między osobowościami, zachowanie naturalnych proporcji twarzy oraz serwowanie gotowego artefaktu GitHub Pages.
+Testy sprawdzają Quick Sling, One Move, zwycięską drogę i gwiazdkę we wszystkich 80 misjach, tolerancję naciągnięcia, wodne odbicie, wyporność, prądy, przyciąganie, stopniowe podpowiedzi, identyczny replay What If, naturalne proporcje twarzy oraz gotowy artefakt GitHub Pages.
 
 ## Struktura
 
 - `src/game.js` — fizyka i reguły bez zależności od przeglądarkowego UI,
 - `src/levels.js` — deklaratywne dane misji, geometrii, obiektów i celów,
+- `src/campaign.js` — 72 dalsze misje i struktura 10 rozdziałów,
+- `src/campaign-routes.js` — zmierzone trasy zwycięstwa oraz gwiazdek,
 - `src/render.js` — Canvas, avatar, scena i VFX,
+- `src/world-renderer.js` — lekkie tła podróży, nowe cele i postacie drugoplanowe,
 - `src/viewport.js` — adaptacyjna kamera oraz mapowanie dotyku bez kadrowania,
 - `src/audio.js` — lokalny dźwięk proceduralny,
 - `src/face-vision.js` — lokalne wykrywanie punktów twarzy i segmentacja głowy,

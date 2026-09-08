@@ -3,6 +3,7 @@ export const FIXED_STEP = 1 / 120;
 export const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
 export const magnitude = (p) => Math.hypot(p.x, p.y);
 export const contains = (r, p) => p.x >= r.x && p.x <= r.x + r.width && p.y >= r.y && p.y <= r.y + r.height;
+export const gateIsOpen = (item, state) => (item.switchIds ?? [item.switchId]).every((id) => state[id]);
 
 export function segmentDistance(a, b, p) {
   const dx = b.x - a.x, dy = b.y - a.y;
@@ -51,14 +52,35 @@ export function stepPhysics(model, dt = FIXED_STEP) {
   model.flightTime += dt;
   model.portalCooldown = Math.max(0, model.portalCooldown - dt);
   v.y += 620 * model.gravityScale * dt;
+  let resistance = model.level.environment?.drag ?? 0;
   for (const item of model.interactions) {
-    if (item.type === "steam" && contains(item, p)) {
-      v.x += item.force.x * model.fanScale * dt;
-      v.y += item.force.y * model.fanScale * dt;
-      model.markInteraction(item, "steam");
+    const distance = Math.hypot(p.x - item.x, p.y - item.y);
+    const inFlow = (item.type === "steam" || item.type === "current") && contains(item, p);
+    const inBubble = item.type === "bubble" && distance < item.radius;
+    if (inFlow || inBubble) {
+      const power = item.type === "steam" ? model.fanScale : 1;
+      v.x += item.force.x * power * dt;
+      v.y += item.force.y * power * dt;
+      resistance += item.drag ?? 0;
+      model.markInteraction(item, item.type);
+    }
+    if (item.type === "gravity" && distance < item.radius) {
+      // A bounded, continuous field; its visible core is a real collider.
+      const force = item.strength * (1 - distance / item.radius) / Math.max(distance, 30);
+      v.x += (item.x - p.x) * force * dt;
+      v.y += (item.y - p.y) * force * dt;
+      model.markInteraction(item, "gravity");
+      const core = (item.coreRadius ?? 26) + radius;
+      if (distance < core) {
+        const contact = distance > .001
+          ? { nx: (p.x - item.x) / distance, ny: (p.y - item.y) / distance, depth: core - distance }
+          : { nx: 0, ny: -1, depth: core };
+        const speed = resolveContact(p, v, contact, .45);
+        if (speed > 90) model.triggerImpact(speed, p.x, p.y, "planet");
+      }
     }
   }
-  const drag = Math.exp(-0.045 * dt);
+  const drag = Math.exp(-(.045 + resistance) * dt);
   v.x = clamp(v.x * drag, -1500, 1500);
   v.y = clamp(v.y * drag, -1500, 1500);
   p.x += v.x * dt;
@@ -90,7 +112,7 @@ export function stepPhysics(model, dt = FIXED_STEP) {
         if (speed > 90) model.triggerImpact(speed, p.x, p.y, "cardboard");
       }
     }
-    if (item.type === "solid" || (item.type === "gate" && !model.objectState[item.switchId])) {
+    if (item.type === "solid" || (item.type === "gate" && !gateIsOpen(item, model.objectState))) {
       const speed = resolveContact(p, v, rectContact(p, radius, item), 0.4 * model.bounceScale);
       if (speed > 90) model.triggerImpact(speed, p.x, p.y, item.type);
     }

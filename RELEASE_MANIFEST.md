@@ -1,11 +1,11 @@
-# SlingToon Web 0.13.0 — Release Manifest
+# SlingToon Web 0.14.0 — Release Manifest
 
-Data: 7 września 2026. Format: HTML5 Canvas / PWA, statyczny hosting GitHub Pages.
-Pakiet wydania 0.13.0. Publikacja pod istniejącym adresem zatwierdzona przez właściciela 8 września 2026.
+Data: 8 września 2026. Format: HTML5 Canvas / PWA, statyczny hosting GitHub Pages.
+Pakiet kandydujący 0.14.0. Publikacja wymaga osobnej zgody właściciela po obejrzeniu wersji roboczej.
 
 ## Zawartość
 
-Osiem przebudowanych misji w siedmiu sceneriach. Osiem odmiennych zasad rozgrywki, wspólny solver 120 Hz, opcjonalny FIK, dokładny What If, mapa, gwiazdki, medale i trzystopniowa pomoc. Migracja zachowuje wcześniejsze punkty, żetony i odblokowania. Brak nowych zależności runtime, kont i usług.
+80 misji w 10 rozdziałach. Pierwsze osiem pozostaje bez zmian, a 72 dalsze prowadzą przez plażę, podwodne światy, port, lunapark i kosmos. Nowe reguły obejmują prądy, wyporność, pola przyciągania, wieloprzyciskowe bramki oraz zmienną grawitację. Mapa wyświetla rozdziały po osiem misji i wznawia aktualny etap.
 
 Zachowano duży lokalny portret, lokalne modele MediaPipe z weryfikacją sum kontrolnych, prywatność zdjęć, CSP, PWA i crop-free viewport. Nowe moduły fizyki, zapisu i renderowania interakcji są ujęte w cache aplikacji.
 
@@ -13,13 +13,13 @@ Zachowano duży lokalny portret, lokalne modele MediaPipe z weryfikacją sum kon
 
 `npm run check`, `npm run build`, `npm run smoke`.
 
-Szczegółowe wyniki i granice weryfikacji: [QA 0.13](docs/QA_0_13_PL.md).
+Szczegółowe wyniki i granice weryfikacji: [QA 0.14](docs/QA_0_14_PL.md).
 Rendery plansz nie zastępują testu przeglądarki ani urządzenia. Pełny test dotykowy, dźwięku, instalacji i aktualizacji PWA pozostaje do wykonania przed uznaniem wersji za produkcyjnie sprawdzoną.
 
 ## Publikacja
 
-Publikować po zgodzie właściciela do istniejącego repozytorium i GitHub Pages. Nie tworzyć nowej strony ani nowych kont. Sprawdzić po wdrożeniu wersję `0.13.0` oraz aktualizację cache poprzedniej instalacji.
+Publikować po zgodzie właściciela do istniejącego repozytorium i GitHub Pages. Sprawdzić po wdrożeniu wersję `0.14.0`, mapę rozdziałów oraz aktualizację cache poprzedniej instalacji.
 
 ## Dalszy rozwój
 
-Najpierw playtest różnorodności, zrozumiałości portali, poduszki i rytmu ruchomego celu. Dopiero następnie rozdziały: rakieta/kosmos/zanurzenie. Płatności, reklamy, chmura i multiplayer pozostają poza zakresem.
+Najpierw playtest tempa rozdziałów, czytelności bąbli i pól przyciągania oraz misji 22, 38, 44, 62 i 75, które mają najmniejsze zmierzone okno tolerancji ±10. Płatności, reklamy, chmura i multiplayer pozostają poza zakresem.

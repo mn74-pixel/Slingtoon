@@ -65,23 +65,42 @@ export function drawInteractions(ctx, model, time) {
       ctx.restore();
       label(ctx, model.mode === "oneMoveChallenge" && !model.moveUsed ? "↔ PRZESUŃ RAZ" : "KĄT = KIERUNEK", (item.a.x + item.b.x) / 2, Math.min(item.a.y, item.b.y) - 33, violet);
     }
-    if (item.type === "steam") {
+    if (item.type === "steam" || item.type === "current") {
       const gradient = ctx.createLinearGradient(0, item.y, 0, item.y + item.height);
-      gradient.addColorStop(0, "rgba(92,225,189,.03)"); gradient.addColorStop(1, "rgba(92,225,189,.5)");
+      gradient.addColorStop(0, "rgba(92,225,189,.03)"); gradient.addColorStop(1, item.type === "current" ? "rgba(86,190,222,.38)" : "rgba(92,225,189,.5)");
       ctx.fillStyle = gradient; ctx.fillRect(item.x, item.y, item.width, item.height);
       ctx.strokeStyle = mint; ctx.lineWidth = 2; ctx.setLineDash([5, 10]); ctx.strokeRect(item.x, item.y, item.width, item.height); ctx.setLineDash([]);
       for (let i = 0; i < 12; i++) {
         const y = item.y + item.height - ((time * 105 + i * 39) % item.height);
         ctx.globalAlpha = .25 + .5 * (y - item.y) / item.height;
-        arrow(ctx, item.x + 34 + (i % 3) * 82, y, -Math.PI / 2, mint);
+        arrow(ctx, item.x + 34 + (i % 3) * 82, y, Math.atan2(item.force.y, item.force.x), mint);
       }
       ctx.globalAlpha = 1;
       box(ctx, item.x + 23, item.y + item.height - 8, item.width - 46, 40, coral, 9);
       ctx.fillStyle = ink; ctx.fillRect(item.x + 8, item.y + item.height, 20, 10); ctx.fillRect(item.x + item.width - 27, item.y + item.height, 20, 10);
       label(ctx, item.label, item.x + item.width / 2, item.y + item.height + 12, cream);
     }
+    if (item.type === "bubble") {
+      const pulse = Math.sin(time * 3 + item.x) * 5;
+      ctx.fillStyle = "rgba(130,232,239,.18)"; ctx.strokeStyle = mint; ctx.lineWidth = 4; ctx.setLineDash([8, 8]);
+      ctx.beginPath(); ctx.arc(item.x, item.y, item.radius + pulse, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.setLineDash([]);
+      for (let i = 0; i < 7; i++) {
+        const a = i * 2.4, r = 28 + (i * 31 + time * 24) % Math.max(35, item.radius - 18);
+        circle(ctx, item.x + Math.cos(a) * r, item.y + Math.sin(a) * r, 5 + i % 5, "rgba(255,245,217,.3)", 2);
+      }
+      arrow(ctx, item.x, item.y, -Math.PI / 2, cream); label(ctx, item.label, item.x, item.y + item.radius + 24, mint);
+    }
+    if (item.type === "gravity") {
+      ctx.strokeStyle = "rgba(162,139,255,.55)"; ctx.lineWidth = 3; ctx.setLineDash([7, 11]);
+      ctx.beginPath(); ctx.arc(item.x, item.y, item.radius, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+      const glow = ctx.createRadialGradient(item.x - 10, item.y - 12, 3, item.x, item.y, item.coreRadius + 16);
+      glow.addColorStop(0, gold); glow.addColorStop(1, violet);
+      circle(ctx, item.x, item.y, item.coreRadius, glow, 5);
+      for (let i = 0; i < 5; i++) circle(ctx, item.x - 12 + i * 7, item.y - 8 + (i % 2) * 10, 3 + i % 3, "rgba(25,20,45,.35)", 0);
+      label(ctx, item.label, item.x, item.y - item.radius - 22, violet, 11);
+    }
     if (item.type === "switch") {
-      const gate = model.interactions.find((entry) => entry.switchId === item.id);
+      const gate = model.interactions.find((entry) => entry.switchId === item.id || entry.switchIds?.includes(item.id));
       if (gate) {
         ctx.strokeStyle = used ? mint : "#a28bff"; ctx.lineWidth = 4; ctx.setLineDash(used ? [] : [8, 7]);
         ctx.beginPath(); ctx.moveTo(item.x, item.y); ctx.bezierCurveTo(item.x + 160, item.y + 190, gate.x - 100, gate.y + gate.height - 20, gate.x, gate.y + gate.height - 20); ctx.stroke(); ctx.setLineDash([]);
@@ -91,7 +110,8 @@ export function drawInteractions(ctx, model, time) {
       label(ctx, used ? "OTWARTE ✓" : "DZYŃ!", item.x, item.y, cream, 16);
     }
     if (item.type === "gate") {
-      if (model.objectState[item.switchId]) {
+      const open = (item.switchIds ?? [item.switchId]).every((id) => model.objectState[id]);
+      if (open) {
         box(ctx, item.x - 8, item.y - 9, item.width + 16, 25, mint);
         label(ctx, "ZAPRASZAMY →", item.x + 15, item.y - 33, mint);
       } else {
@@ -124,7 +144,7 @@ export function drawObjective(ctx, model, time) {
   ctx.lineWidth = 3; ctx.globalAlpha = .55 + Math.sin(time * 3) * .12; ctx.setLineDash([7, 7]);
   ctx.beginPath(); ctx.arc(goal.x, goal.y, model.goalRadius, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
   const required = model.interactions.find((item) => model.level.required.includes(item.id));
-  const requirement = { breakable: "PRZEBIJ PACZKĘ", portal: "NAJPIERW PORTAL", cushion: "ODBIJ OD PODUSZKI", steam: "PRZELEĆ PRZEZ PARĘ", switch: "WCIŚNIJ PRZYCISK", water: "NAJPIERW ŚLIZG" }[required?.type];
+  const requirement = { breakable: "PRZEBIJ PACZKĘ", portal: "NAJPIERW PORTAL", cushion: "ODBIJ SIĘ", steam: "PRZELEĆ PRZEZ PODMUCH", current: "ZŁAP PRĄD", bubble: "WEJDŹ W BĄBEL", gravity: "OKRĄŻ PLANETĘ", switch: "WCIŚNIJ PRZYCISK", water: "NAJPIERW ŚLIZG" }[required?.type];
   label(ctx, model.objectiveMet ? "TRAF TUTAJ" : requirement, goal.x, goal.y - model.goalRadius - 28, model.objectiveMet ? mint : cream, 11);
   const star = model.level.star;
   if (star && !model.collectedStar) {

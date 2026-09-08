@@ -12,12 +12,13 @@ function finish(model, hz = 60) {
   for (let frame = 0; frame < hz * 8 && model.phase === GamePhase.FLYING; frame++) model.update(1 / hz);
   assert.notEqual(model.phase, GamePhase.FLYING);
 }
-const starShots = [{ x: 120, y: 550 }, { x: 65, y: 525 }, { x: 105, y: 510 }, { x: 135, y: 565 }, { x: 130, y: 530 }, { x: 55, y: 550 }, { x: 65, y: 550 }, { x: 110, y: 520 }];
+const originalStarShots = [{ x: 120, y: 550 }, { x: 65, y: 525 }, { x: 105, y: 510 }, { x: 135, y: 565 }, { x: 130, y: 530 }, { x: 55, y: 550 }, { x: 65, y: 550 }, { x: 110, y: 520 }];
 
-test("eight distinct mechanics, stable progress IDs and immutable level data", () => {
-  assert.equal(LEVELS.length, 8);
-  assert.equal(new Set(LEVELS.map((l) => l.id)).size, 8);
-  assert.equal(new Set(LEVELS.map((l) => l.mechanic)).size, 8);
+test("80 authored missions, stable progress IDs and immutable level data", () => {
+  assert.equal(LEVELS.length, 80);
+  assert.equal(new Set(LEVELS.map((l) => l.id)).size, 80);
+  assert.equal(new Set(LEVELS.slice(0, 8).map((l) => l.mechanic)).size, 8);
+  assert.equal(new Set(LEVELS.map((l) => l.chapterId)).size, 10);
   assert.ok(LEVELS.every((l) => Object.isFrozen(l.interactions)));
   assert.ok(LEVELS.every((l) => !l.interactions.some((i) => i.type === "trampoline")));
   assert.equal(DEFAULT_LEVEL.interactions.length, 0);
@@ -46,7 +47,7 @@ for (const level of LEVELS) {
   });
   test(`mission ${level.number}: optional star can be collected in a successful shot`, () => {
     const model = new GameModel(() => {}, level);
-    launch(model, starShots[level.number - 1]); finish(model);
+    launch(model, originalStarShots[level.number - 1] ?? level.starPull); finish(model);
     assert.equal(model.phase, GamePhase.SUCCEEDED);
     assert.equal(model.collectedStar, true);
   });
@@ -219,6 +220,39 @@ test("steam acts only inside the drawn bounds and gate opens only after its swit
   assert.ok(gate.avatarVelocity.x < 0);
   gate.startFlight({ x: 700, y: 0 }, false, { x: 863, y: 340 }); gate.objectState.doorbell = true; stepPhysics(gate);
   assert.ok(gate.avatarVelocity.x > 0);
+});
+
+test("underwater lift, directional current and gravity well alter real trajectories", () => {
+  const bubbleLevel = LEVELS[16], bubble = bubbleLevel.interactions.find((item) => item.type === "bubble");
+  const lifted = new GameModel(() => {}, bubbleLevel);
+  lifted.startFlight({ x: 0, y: 0 }, false, { x: bubble.x, y: bubble.y }); stepPhysics(lifted);
+  assert.ok(lifted.avatarVelocity.y < 0);
+  assert.ok(lifted.visited.has(bubble.id));
+
+  const currentLevel = LEVELS[17], current = currentLevel.interactions.find((item) => item.type === "current");
+  const carried = new GameModel(() => {}, currentLevel);
+  carried.startFlight({ x: 0, y: 0 }, false, { x: current.x + 30, y: current.y + 30 }); stepPhysics(carried);
+  assert.ok(carried.avatarVelocity.x > 0);
+  assert.ok(carried.visited.has(current.id));
+
+  const gravityLevel = LEVELS[57], gravity = gravityLevel.interactions.find((item) => item.type === "gravity");
+  const attracted = new GameModel(() => {}, gravityLevel);
+  attracted.startFlight({ x: 0, y: 0 }, false, { x: gravity.x + 100, y: gravity.y }); stepPhysics(attracted);
+  assert.ok(attracted.avatarVelocity.x < 0);
+  assert.ok(attracted.visited.has(gravity.id));
+});
+
+test("a gate linked to two switches remains solid until both are active", () => {
+  const level = LEVELS[25], door = level.interactions.find((item) => item.switchIds);
+  const hit = (active = []) => {
+    const model = new GameModel(() => {}, level);
+    model.startFlight({ x: 700, y: 0 }, false, { x: door.x - 34, y: 340 });
+    for (const id of active) model.objectState[id] = true;
+    stepPhysics(model); return model.avatarVelocity.x;
+  };
+  assert.ok(hit() < 0);
+  assert.ok(hit([door.switchIds[0]]) < 0);
+  assert.ok(hit(door.switchIds) > 0);
 });
 
 test("water skip loses energy, caps skips, and a steep entry fails immediately", () => {

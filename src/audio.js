@@ -43,6 +43,9 @@ export class GameAudio {
       if (event.kind === "portal") this.tone({ frequency: 820, endFrequency: 140, duration: .28, volume: .1 });
       if (event.kind === "break") { this.noise(.16, .1); this.pop(120, .06); }
       if (event.kind === "steam") { this.noise(.22, .04); this.pop(420, .1); }
+      if (event.kind === "current") { this.noise(.18, .035); this.tone({ frequency: 260, endFrequency: 420, duration: .2, volume: .045 }); }
+      if (event.kind === "bubble") { this.pop(510, .08); this.pop(680, .07); }
+      if (event.kind === "gravity") this.tone({ frequency: 110, endFrequency: 190, duration: .24, type: "sine", volume: .055 });
       if (event.kind === "switch") { this.pop(560, .1); this.tone({ frequency: 880, duration: .13, volume: .06, delay: .1 }); }
     }
     if (event.type === "hint") {

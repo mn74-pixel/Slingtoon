@@ -1,12 +1,11 @@
-# SlingToon Web 0.13.0 — Controlled Catastrophe
+# SlingToon Web 0.14.0 — 80 missions of controlled chaos
 
 An offline-capable HTML5 Canvas PWA prepared for GitHub Pages. No JUCE, Projucer or native build is required for browser testing.
 
-Version 0.13 replaces the repeated trampoline puzzle with eight distinct missions: direct shot, breakable delivery, washing-machine portals, angled cushion, steam lift, switch-and-gate chain, moving target and limited water skips. Physics, predictions and replay share a deterministic 120 Hz solver. From mission five, a single optional FIK air maneuver adds an active choice. Stars, medals and a mission map create replay goals; permanent hint unlocks can be hidden. Existing scores, tokens and campaign unlocks migrate without resetting earned progress.
+Version 0.14 expands the campaign from 8 to 80 authored missions across ten chapters. The trip runs from domestic chaos through the beach, underwater worlds, harbour, fairground, spaceport and orbital environments, then returns to the original alarm clock. Every mission has a solver-verified forgiving completion route and a separate reachable star route. Physics, prediction and replay share the deterministic 120 Hz solver.
 
-The game still has no server/runtime dependencies. Portraits remain local, and the crop-free mobile camera is preserved. See [the Polish rebuild brief](docs/PROMPT_PRZEBUDOWY_PL.md) and [QA status](docs/QA_0_13_PL.md), including the outstanding real-device/browser playtest.
+The game still has no server/runtime dependencies. Portraits remain local, and the crop-free mobile camera is preserved. The chapter map shows eight missions at a time and resumes the current unlocked mission.
 
-![Eight different mechanics](docs/campaign-0.13.png)
 
 ## Run
 

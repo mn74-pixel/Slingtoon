@@ -16,7 +16,7 @@ function fakeContext() {
 }
 test("each new important interaction schedules bounded audio and mute silences it", () => {
   const audio = new GameAudio(); audio.context = fakeContext();
-  for (const event of [{ type: "air-move" }, { type: "collect" }, ...["break", "portal", "steam", "switch"].map((kind) => ({ type: "interaction", kind }))]) {
+  for (const event of [{ type: "air-move" }, { type: "collect" }, ...["break", "portal", "steam", "current", "bubble", "gravity", "switch"].map((kind) => ({ type: "interaction", kind }))]) {
     const before = audio.context.scheduled.length;
     audio.handleGameEvent(event);
     const count = audio.context.scheduled.length - before;

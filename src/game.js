@@ -1,6 +1,6 @@
-import { DEFAULT_LEVEL, WORLD } from "./levels.js?v=0.13.0";
-import { FIXED_STEP, clamp, contains, magnitude, stepPhysics } from "./physics.js?v=0.13.0";
-export { DEFAULT_LEVEL, LEVELS, WORLD, getLevel } from "./levels.js?v=0.13.0";
+import { DEFAULT_LEVEL, WORLD } from "./levels.js?v=0.14.0";
+import { FIXED_STEP, clamp, contains, magnitude, stepPhysics } from "./physics.js?v=0.14.0";
+export { DEFAULT_LEVEL, LEVELS, WORLD, getLevel } from "./levels.js?v=0.14.0";
 
 export const GameMode = Object.freeze({ QUICK: "quickSling", ONE_MOVE: "oneMoveChallenge" });
 export const GamePhase = Object.freeze({ READY: "ready", AIMING: "aiming", FLYING: "flying", SUCCEEDED: "succeeded", FAILED: "failed" });
@@ -271,7 +271,7 @@ export class GameModel {
     return centre;
   }
   get goalRadius() { return this.level.goal.radius; }
-  get gravityScale() { return this.modifier === Modifier.LOW_GRAVITY ? 0.65 : 1; }
+  get gravityScale() { return (this.level.environment?.gravity ?? 1) * (this.modifier === Modifier.LOW_GRAVITY ? 0.65 : 1); }
   get bounceScale() { return this.modifier === Modifier.SUPER_BOUNCY ? 1.3 : 1; }
   get fanScale() { return this.modifier === Modifier.STRONGER_FAN ? 1.65 : 1; }
   get suggestedModifier() {

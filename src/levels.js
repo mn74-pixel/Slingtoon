@@ -1,3 +1,5 @@
+import { CHAPTERS, EXTRA_LEVELS } from "./campaign.js?v=0.14.0";
+export { CHAPTERS } from "./campaign.js?v=0.14.0";
 const point = (x, y) => ({ x, y });
 function freeze(value) {
   if (value && typeof value === "object") {
@@ -10,10 +12,11 @@ export const WORLD = freeze({ width: 1280, height: 640 });
 
 function level(config) {
   const { number, title, mechanic, clue, direction, pull, win, lose, ...data } = config;
-  const freeStages = Math.max(0, 4 - number);
+  const freeStages = config.freeStages ?? Math.max(0, 4 - number);
   return freeze({
     anchor: point(173, 455), groundY: 586, background: null,
     water: { enabled: false },
+    chapterId: CHAPTERS[Math.floor((number - 1) / 8)].id,
     ...data, number, mechanic, airMove: number >= 5,
     mission: { kicker: `MISJA ${String(number).padStart(2, "0")} · ${mechanic}`, title, canvasLabel: title },
     result: { successTag: win[0], successTitle: win[1], failureTag: "UPS!", failureTitle: lose },
@@ -115,6 +118,7 @@ export const LEVELS = freeze([
     visual: { accent: "#5ce1bd", gag: "RATOWNIK: KWAK", wash: "rgba(44,174,157,.02)" },
     win: ["KWAK!", "Kaczka uznała Cię za łódź."], lose: "Jezioro wybrało tryb prania ręcznego.",
   }),
+  ...EXTRA_LEVELS.map(level),
 ]);
 
 export const DEFAULT_LEVEL = LEVELS[0];
