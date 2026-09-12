@@ -1,9 +1,9 @@
-import { GameModel, GameMode, GamePhase, LEVELS, modifierName } from "./game.js?v=0.14.0";
-import { GameRenderer } from "./render.js?v=0.14.0";
-import { GameAudio } from "./audio.js?v=0.14.0";
-import { FaceStudio } from "./face-studio.js?v=0.14.0";
-import { PROGRESS_KEY, TOKEN_SCORE_STEP, readProgress, hintOffer, purchaseHint, rewardSuccess, medalText } from "./progress.js?v=0.14.0";
-import { CHAPTERS } from "./levels.js?v=0.14.0";
+import { GameModel, GameMode, GamePhase, LEVELS, modifierName } from "./game.js?v=0.15.0";
+import { GameRenderer } from "./render.js?v=0.15.0";
+import { GameAudio } from "./audio.js?v=0.15.0";
+import { FaceStudio } from "./face-studio.js?v=0.15.0";
+import { PROGRESS_KEY, TOKEN_SCORE_STEP, readProgress, hintOffer, purchaseHint, rewardSuccess, medalText } from "./progress.js?v=0.15.0";
+import { CHAPTERS } from "./levels.js?v=0.15.0";
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -21,6 +21,7 @@ const elements = {
   oneMoveMode: $("#oneMoveMode"),
   personality: $("#personality"),
   faceButton: $("#faceButton"),
+  faceButtonThumb: $("#faceButtonThumb"),
   faceInput: $("#faceInput"),
   soundButton: $("#soundButton"),
   fullscreenButton: $("#fullscreenButton"),
@@ -50,6 +51,12 @@ const elements = {
   faceStylePreview: $("#faceStylePreview"),
   faceStyleStrength: $("#faceStyleStrength"),
   faceStyleValue: $("#faceStyleValue"),
+  faceStyleHeading: $("#faceStyleHeading"),
+  faceStyleNote: $("#faceStyleNote"),
+  facePipelineStep: $("#facePipelineStep"),
+  faceStudioTitle: $("#faceStudioTitle"),
+  faceModeCutout: $("#faceModeCutout"),
+  faceModeToon: $("#faceModeToon"),
   faceStatus: $("#faceStatus"),
   fullscreenGuide: $("#fullscreenGuide"),
   fullscreenBackdrop: $("#fullscreenBackdrop"),
@@ -82,7 +89,7 @@ let progress = loadProgress();
 let highestUnlockedLevel = progress.highestUnlockedLevel;
 let mapChapterIndex = 0;
 let lastReward = null;
-const FULLSCREEN_TIP_KEY = "slingtoon-fullscreen-tip-0.14.0";
+const FULLSCREEN_TIP_KEY = "slingtoon-fullscreen-tip-0.15.0";
 
 function loadProgress() {
   try {
@@ -114,7 +121,7 @@ function requestHint() {
   }
   const { ok, offer } = purchaseHint(progress, model.level, model.attempts);
   if (!ok) {
-    showToast(offer ? `Żetony: ${progress.hintTokens}. Co ${TOKEN_SCORE_STEP} punktów dostajesz kolejny. Po 5 próbach pomoc jest darmowa.` : model.activeHint?.text ?? "Wszystkie sekrety są odkryte.", Boolean(offer));
+    showToast(offer ? `Żetony: ${progress.hintTokens}. Co ${TOKEN_SCORE_STEP} punktów dostajesz kolejny. Po ${model.level.hints.policy.autoAfterAttempts + 2} próbach pomoc jest darmowa.` : model.activeHint?.text ?? "Wszystkie sekrety są odkryte.", Boolean(offer));
     return;
   }
   model.revealHint(offer.stage);
@@ -250,11 +257,17 @@ function showToast(message, isError = false) {
   }, isError ? 5200 : 2800);
 }
 
-function setFaceButton(hasFace) {
+// The button shows the player's own head once there is one: no glyph explains
+// "your face goes here" as clearly as the face itself.
+function setFaceButton(portrait) {
+  const hasFace = Boolean(portrait?.image);
   elements.faceButton.classList.toggle("has-face", hasFace);
-  elements.faceButton.textContent = hasFace ? "✓" : "☺";
-  elements.faceButton.title = hasFace ? "Edytuj lub zmień twarz" : "Dodaj twarz lokalnie";
-  elements.faceButton.setAttribute("aria-label", hasFace ? "Edytuj lub zmień twarz" : "Dodaj twarz lokalnie");
+  const label = hasFace ? "Zmień swoją twarz" : "Dodaj swoją twarz";
+  elements.faceButton.title = label;
+  elements.faceButton.setAttribute("aria-label", label);
+  elements.faceButtonThumb.hidden = !hasFace;
+  if (hasFace) elements.faceButtonThumb.src = portrait.image.toDataURL("image/png");
+  else elements.faceButtonThumb.removeAttribute("src");
 }
 
 const faceStudio = new FaceStudio(
@@ -272,16 +285,24 @@ const faceStudio = new FaceStudio(
     styleCanvas: elements.faceStylePreview,
     styleStrength: elements.faceStyleStrength,
     styleValue: elements.faceStyleValue,
+    styleHeading: elements.faceStyleHeading,
+    styleNote: elements.faceStyleNote,
+    pipelineStep: elements.facePipelineStep,
+    title: elements.faceStudioTitle,
+    cutoutMode: elements.faceModeCutout,
+    toonMode: elements.faceModeToon,
   },
   {
     onApply: (portrait) => {
       renderer.setFaceImage(portrait);
-      setFaceButton(true);
-      showToast("Rysunkowa głowa gotowa — bez okrągłej czaszki.");
+      setFaceButton(portrait);
+      showToast(portrait.metadata?.mode === "toon"
+        ? "Rysunkowa głowa gotowa — bez okrągłej czaszki."
+        : "Twoje zdjęcie w grze — wycięte z tła, bez przerysowania.");
     },
     onRemove: () => {
       renderer.setFaceImage(null);
-      setFaceButton(false);
+      setFaceButton(null);
       showToast("Twarz usunięta z tej sesji.");
     },
     onError: (message) => showToast(message, true),
@@ -692,7 +713,7 @@ window.addEventListener("keydown", (event) => {
 
 window.addEventListener("load", () => {
   if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
-    navigator.serviceWorker.register("./sw.js?v=0.14.0").catch(() => {});
+    navigator.serviceWorker.register("./sw.js?v=0.15.0").catch(() => {});
   }
   scheduleFullscreenSuggestion();
   syncGameViewport();

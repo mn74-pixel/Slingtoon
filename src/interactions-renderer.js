@@ -1,5 +1,7 @@
-// Visual language: mint = active/entry, coral = obstacle, gold = optional reward.
-const ink = "#19142d", cream = "#fff5d9", mint = "#5ce1bd", coral = "#ff6078", gold = "#ffd35f", violet = "#a28bff";
+// Visual language: mint = active/entry, coral = obstacle, gold = optional reward,
+// crimson + spikes = the one thing that ends the flight on touch.
+import { movedBody } from "./physics.js?v=0.15.0";
+const ink = "#19142d", cream = "#fff5d9", mint = "#5ce1bd", coral = "#ff6078", gold = "#ffd35f", violet = "#a28bff", danger = "#d6002f";
 function box(ctx, x, y, w, h, color, radius = 12) {
   ctx.beginPath(); ctx.roundRect(x, y, w, h, radius);
   ctx.fillStyle = color; ctx.fill(); ctx.strokeStyle = ink; ctx.lineWidth = 5; ctx.stroke();
@@ -20,10 +22,46 @@ function arrow(ctx, x, y, angle, color = cream) {
   ctx.beginPath(); ctx.moveTo(-18, 0); ctx.lineTo(18, 0); ctx.lineTo(7, -10); ctx.moveTo(18, 0); ctx.lineTo(7, 10); ctx.stroke(); ctx.restore();
 }
 
+function motionTrack(ctx, item) {
+  if (!item.motion) return;
+  const horizontal = item.motion.axis === "x";
+  const cx = item.x + item.width / 2, cy = item.y + item.height / 2;
+  const reach = item.motion.amplitude;
+  ctx.strokeStyle = "rgba(255,245,217,.4)"; ctx.lineWidth = 3; ctx.setLineDash([5, 9]);
+  ctx.beginPath();
+  if (horizontal) { ctx.moveTo(cx - reach, cy); ctx.lineTo(cx + reach, cy); }
+  else { ctx.moveTo(cx, cy - reach); ctx.lineTo(cx, cy + reach); }
+  ctx.stroke(); ctx.setLineDash([]);
+  for (const sign of [-1, 1]) {
+    arrow(ctx, horizontal ? cx + reach * sign : cx, horizontal ? cy : cy + reach * sign, horizontal ? (sign > 0 ? 0 : Math.PI) : (sign > 0 ? Math.PI / 2 : -Math.PI / 2), cream);
+  }
+}
+
 export function drawInteractions(ctx, model, time) {
   ctx.save(); ctx.lineCap = "round"; ctx.lineJoin = "round";
   for (const item of model.interactions) {
     const used = model.objectState[item.id];
+    const body = movedBody(item, model.flightTime);
+    if (item.type === "hazard") {
+      motionTrack(ctx, item);
+      box(ctx, body.x, body.y, body.width, body.height, danger, 10);
+      ctx.save(); ctx.beginPath(); ctx.rect(body.x, body.y, body.width, body.height); ctx.clip();
+      ctx.strokeStyle = "rgba(25,20,45,.55)"; ctx.lineWidth = 9;
+      for (let y = body.y - 40; y < body.y + body.height + 40; y += 34) {
+        ctx.beginPath(); ctx.moveTo(body.x - 10, y); ctx.lineTo(body.x + body.width + 10, y + 26); ctx.stroke();
+      }
+      ctx.restore();
+      // Spikes along both long edges: danger needs a silhouette, not just a colour.
+      ctx.fillStyle = danger; ctx.strokeStyle = ink; ctx.lineWidth = 3;
+      for (let y = body.y + 13; y < body.y + body.height - 6; y += 30) {
+        for (const [tipX, edgeX] of [[body.x - 15, body.x], [body.x + body.width + 15, body.x + body.width]]) {
+          ctx.beginPath(); ctx.moveTo(edgeX, y - 10); ctx.lineTo(tipX, y + 3); ctx.lineTo(edgeX, y + 13); ctx.closePath(); ctx.fill(); ctx.stroke();
+        }
+      }
+      ctx.globalAlpha = .75 + Math.sin(time * 6) * .25;
+      label(ctx, item.label ?? "NIE DOTYKAJ", body.x + body.width / 2, body.y - 24, danger);
+      ctx.globalAlpha = 1;
+    }
     if (item.type === "breakable") {
       if (used) {
         ctx.fillStyle = "#c88765";
@@ -112,21 +150,23 @@ export function drawInteractions(ctx, model, time) {
     if (item.type === "gate") {
       const open = (item.switchIds ?? [item.switchId]).every((id) => model.objectState[id]);
       if (open) {
-        box(ctx, item.x - 8, item.y - 9, item.width + 16, 25, mint);
-        label(ctx, "ZAPRASZAMY →", item.x + 15, item.y - 33, mint);
+        box(ctx, body.x - 8, body.y - 9, body.width + 16, 25, mint);
+        label(ctx, "ZAPRASZAMY →", body.x + 15, body.y - 33, mint);
       } else {
-        box(ctx, item.x, item.y, item.width, item.height, coral, 7);
-        ctx.save(); ctx.beginPath(); ctx.rect(item.x, item.y, item.width, item.height); ctx.clip();
+        motionTrack(ctx, item);
+        box(ctx, body.x, body.y, body.width, body.height, coral, 7);
+        ctx.save(); ctx.beginPath(); ctx.rect(body.x, body.y, body.width, body.height); ctx.clip();
         ctx.strokeStyle = ink; ctx.lineWidth = 12;
-        for (let y = item.y; y < item.y + item.height + 45; y += 46) { ctx.beginPath(); ctx.moveTo(item.x, y); ctx.lineTo(item.x + item.width, y - 30); ctx.stroke(); }
-        ctx.restore(); label(ctx, "BRAMKA", item.x + item.width / 2, item.y - 22, coral);
+        for (let y = body.y; y < body.y + body.height + 45; y += 46) { ctx.beginPath(); ctx.moveTo(body.x, y); ctx.lineTo(body.x + body.width, y - 30); ctx.stroke(); }
+        ctx.restore(); label(ctx, "BRAMKA", body.x + body.width / 2, body.y - 22, coral);
       }
     }
     if (item.type === "solid") {
-      box(ctx, item.x, item.y, item.width, item.height, "#2cae9d", 19);
+      motionTrack(ctx, item);
+      box(ctx, body.x, body.y, body.width, body.height, "#2cae9d", 19);
       ctx.strokeStyle = mint; ctx.lineWidth = 3;
-      for (let i = 0; i < 9; i++) { const x = item.x + 14 + (i % 3) * 30, y = item.y + 26 + Math.floor(i / 3) * 42; ctx.beginPath(); ctx.moveTo(x - 5, y + 4); ctx.lineTo(x, y - 5); ctx.lineTo(x + 5, y + 4); ctx.stroke(); }
-      label(ctx, "OMIŃ ↑", item.x + item.width / 2, item.y - 22, cream);
+      for (let i = 0; i < 9; i++) { const x = body.x + 14 + (i % 3) * 30, y = body.y + 26 + Math.floor(i / 3) * 42; ctx.beginPath(); ctx.moveTo(x - 5, y + 4); ctx.lineTo(x, y - 5); ctx.lineTo(x + 5, y + 4); ctx.stroke(); }
+      label(ctx, item.motion ? (item.motion.axis === "x" ? "RUCHOMA ↔" : "RUCHOMA ↕") : "OMIŃ ↑", body.x + body.width / 2, body.y - 22, cream);
     }
   }
   ctx.restore();
@@ -136,6 +176,15 @@ export function drawObjective(ctx, model, time) {
   ctx.save();
   const goal = model.goalCentre;
   const motion = model.level.goal.motion;
+  // Chapter scenery sits at fixed coordinates and can land right behind a
+  // mission goal. This halo knocks the decoration back so the one object the
+  // player must hit always reads first, without flattening the whole scene.
+  const haloRadius = Math.max(model.goalRadius, 74) + 108;
+  const halo = ctx.createRadialGradient(goal.x, goal.y, haloRadius * 0.32, goal.x, goal.y, haloRadius);
+  halo.addColorStop(0, "rgba(20,13,34,.40)");
+  halo.addColorStop(1, "rgba(20,13,34,0)");
+  ctx.fillStyle = halo;
+  ctx.beginPath(); ctx.arc(goal.x, goal.y, haloRadius, 0, Math.PI * 2); ctx.fill();
   if (motion) {
     ctx.strokeStyle = "rgba(255,245,217,.45)"; ctx.lineWidth = 3; ctx.setLineDash([4, 10]);
     ctx.beginPath(); ctx.moveTo(model.level.goal.x, model.level.goal.y - motion.amplitude); ctx.lineTo(model.level.goal.x, model.level.goal.y + motion.amplitude); ctx.stroke(); ctx.setLineDash([]);
@@ -145,7 +194,10 @@ export function drawObjective(ctx, model, time) {
   ctx.beginPath(); ctx.arc(goal.x, goal.y, model.goalRadius, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
   const required = model.interactions.find((item) => model.level.required.includes(item.id));
   const requirement = { breakable: "PRZEBIJ PACZKĘ", portal: "NAJPIERW PORTAL", cushion: "ODBIJ SIĘ", steam: "PRZELEĆ PRZEZ PODMUCH", current: "ZŁAP PRĄD", bubble: "WEJDŹ W BĄBEL", gravity: "OKRĄŻ PLANETĘ", switch: "WCIŚNIJ PRZYCISK", water: "NAJPIERW ŚLIZG" }[required?.type];
-  label(ctx, model.objectiveMet ? "TRAF TUTAJ" : requirement, goal.x, goal.y - model.goalRadius - 28, model.objectiveMet ? mint : cream, 11);
+  // The collider may sit inside the drawn object, so the caption clears the
+  // artwork rather than the hit circle.
+  const captionLift = Math.max(model.goalRadius, 74) + 28;
+  label(ctx, model.objectiveMet ? "TRAF TUTAJ" : requirement, goal.x, goal.y - captionLift, model.objectiveMet ? mint : cream, 11);
   const star = model.level.star;
   if (star && !model.collectedStar) {
     ctx.save(); ctx.translate(star.x, star.y); ctx.rotate(Math.sin(time * 2) * .13);

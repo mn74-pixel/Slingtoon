@@ -33,7 +33,7 @@ export function readProgress(storage, levels) {
 export function hintOffer(progress, level, attempts = 0) {
   const stage = (progress.hints[level.id] ?? 0) + 1;
   if (stage > level.hints.stages.length) return null;
-  const rescue = attempts >= 5;
+  const rescue = attempts >= level.hints.policy.autoAfterAttempts + 2;
   const free = stage <= level.hints.policy.freeStages || rescue;
   return { stage, cost: free ? 0 : level.hints.stages[stage - 1].cost, rescue, hint: level.hints.stages[stage - 1] };
 }
@@ -48,7 +48,9 @@ export function purchaseHint(progress, level, attempts) {
 
 export function rewardSuccess(progress, { id, attempts, star, mode, hintStage, modifier = "none" }) {
   const precision = attempts === 1 && modifier === "none";
-  const score = 100 + (star ? 60 : 0) + Math.max(0, 60 - Math.max(0, attempts - 1) * 12) + (mode === "oneMoveChallenge" && hintStage < 3 ? 20 : 0);
+  // Brute force has to be visible in the score: the shot bonus is gone by the
+  // fourth attempt, while the flat base keeps a hard mission from dead-ending.
+  const score = 100 + (star ? 60 : 0) + Math.max(0, 60 - Math.max(0, attempts - 1) * 20) + (mode === "oneMoveChallenge" && hintStage < 3 ? 20 : 0);
   const best = progress.bestScores[id] ?? 0;
   const gained = Math.max(0, score - best);
   const tokenGain = Math.floor((progress.score + gained) / TOKEN_SCORE_STEP) - Math.floor(progress.score / TOKEN_SCORE_STEP);

@@ -1,7 +1,17 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { readFileSync } from "node:fs";
 import { DEFAULT_LEVEL, GameModel, GameMode, GamePhase, LEVELS, Modifier, Personality } from "../src/game.js";
-import { FIXED_STEP, magnitude, rectContact, resolveContact, stepPhysics } from "../src/physics.js";
+import { FIXED_STEP, magnitude, movedBody, rectContact, resolveContact, stepPhysics } from "../src/physics.js";
+
+// The authoring tool measures how far each hint route may be nudged and still
+// win. Guarding the shipped number keeps a layout edit from silently widening
+// or breaking the difficulty curve.
+const MEASURED_MARGINS = new Map(
+  JSON.parse(readFileSync(new URL("../docs/campaign-balance-0.15.json", import.meta.url), "utf8"))
+    .map((entry) => [entry.number, entry.margin]),
+);
+const routeMargin = (level) => MEASURED_MARGINS.get(level.number) ?? 8;
 
 function launch(model, pull = model.level.assistPull) {
   assert.equal(model.beginSling(model.avatarPosition), true);
@@ -41,7 +51,9 @@ for (const level of LEVELS) {
     assert.equal(model.phase, GamePhase.SUCCEEDED);
     assert.equal(model.objectiveMet, true);
     assert.equal(model.airMoveUsed, false);
-    for (const dx of [-8, 0, 8]) for (const dy of [-8, 0, 8]) {
+    const margin = routeMargin(level);
+    assert.ok(margin >= 5, `mission ${level.number} hint route is too tight to aim at`);
+    for (const dx of [-margin, 0, margin]) for (const dy of [-margin, 0, margin]) {
       assert.equal(model.simulate({ x: level.assistPull.x + dx, y: level.assistPull.y + dy }).reachesGoal, true, `hint tolerance ${dx},${dy}`);
     }
   });
@@ -305,4 +317,38 @@ test("ordinary retry preserves hints, clears transient objects, and cannot run f
   assert.equal(model.setLevel(LEVELS[0]), true);
   assert.equal(model.hintStage, 0);
   assert.equal(model.setLevel(null), false);
+});
+
+test("a moving obstacle rests at its drawn position and then sweeps its marked line", () => {
+  const still = { id: "a", type: "solid", x: 600, y: 300, width: 80, height: 120 };
+  const mover = { ...still, motion: { axis: "y", amplitude: 80, speed: 0.9 } };
+  assert.strictEqual(movedBody(still, 1.4), still, "a still obstacle allocates nothing");
+  assert.equal(movedBody(mover, 0).y, 300, "the shot starts against the obstacle the player was shown");
+  const swept = movedBody(mover, Math.PI / 2 / 0.9).y;
+  assert.equal(Math.round(swept), 380);
+  assert.equal(movedBody({ ...mover, motion: { axis: "x", amplitude: 60, speed: 0.9 } }, 0).x, 600);
+});
+
+test("a hazard ends the flight on touch and never becomes a required objective", () => {
+  const hazards = LEVELS.filter((level) => level.interactions.some((item) => item.type === "hazard"));
+  assert.ok(hazards.length >= 5, "the danger rule is used across the late campaign");
+  for (const level of hazards) {
+    const zone = level.interactions.find((item) => item.type === "hazard");
+    assert.ok(!level.required.includes(zone.id));
+    assert.ok(zone.label && zone.failure, "danger has to explain itself in words the player reads");
+
+    const model = new GameModel(() => {}, level);
+    model.startFlight({ x: 0, y: 0 }, true, { x: zone.x + zone.width / 2, y: zone.y + zone.height / 2 });
+    model.update(FIXED_STEP);
+    assert.equal(model.phase, GamePhase.FAILED, `mission ${level.number} hazard should end the flight`);
+    assert.equal(model.failureReason, zone.failure);
+  }
+});
+
+test("the goal collider matches the drawn object instead of an invisible buffer", () => {
+  const late = LEVELS.filter((level) => level.number >= 49);
+  assert.ok(late.every((level) => level.goal.radius <= 72), "late goals stay near the honest contact edge");
+  assert.ok(late.every((level) => level.goal.radius >= 54), "no goal shrinks below what the art shows");
+  const openers = LEVELS.filter((level) => level.number > 8 && (level.number - 1) % 8 === 0);
+  assert.ok(openers.every((level) => level.goal.radius > 60), "a new rule is never taught on a pinpoint target");
 });

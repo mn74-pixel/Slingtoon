@@ -1,6 +1,11 @@
 const clamp = (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value));
 
 export const DEFAULT_PORTRAIT_STYLE = 0.78;
+export const MAX_OUTLINE_WIDTH = 15;
+export const PORTRAIT_MODES = Object.freeze({ CUTOUT: "cutout", TOON: "toon" });
+// Likeness beats stylisation: the default keeps the player's real face.
+export const DEFAULT_PORTRAIT_MODE = PORTRAIT_MODES.CUTOUT;
+export const DEFAULT_OUTLINE_STRENGTH = 0.34;
 export const FACE_CATEGORIES = Object.freeze({
   BACKGROUND: 0,
   HAIR: 1,
@@ -13,6 +18,19 @@ export const FACE_CATEGORIES = Object.freeze({
 export function normalizePortraitStyle(value) {
   const numeric = Number(value);
   return clamp(Number.isFinite(numeric) ? numeric : DEFAULT_PORTRAIT_STYLE, 0.45, 1);
+}
+
+export function normalizePortraitMode(value) {
+  return value === PORTRAIT_MODES.TOON ? PORTRAIT_MODES.TOON : PORTRAIT_MODES.CUTOUT;
+}
+
+export function normalizeOutlineStrength(value) {
+  const numeric = Number(value);
+  return clamp(Number.isFinite(numeric) ? numeric : DEFAULT_OUTLINE_STRENGTH, 0, 1);
+}
+
+export function outlineWidthFor(strength) {
+  return normalizeOutlineStrength(strength) * MAX_OUTLINE_WIDTH;
 }
 
 export function boundsFromLandmarks(landmarks, indices = null) {
@@ -275,6 +293,94 @@ function drawOffsetOutline(context, layer, radius) {
   }
 }
 
+// Bilinear upscaling of the 256 px segmentation mask leaves a wide translucent
+// fringe that would smuggle photo background into the cut-out. A steep alpha
+// ramp removes that halo and still keeps about one pixel of antialiasing.
+function sharpenAlpha(canvas, low = 0.42, high = 0.7) {
+  const context = canvas.getContext("2d", { willReadFrequently: true });
+  const image = context.getImageData(0, 0, canvas.width, canvas.height);
+  const floor = low * 255;
+  const span = (high - low) * 255;
+  for (let index = 3; index < image.data.length; index += 4) {
+    const alpha = image.data[index];
+    image.data[index] = alpha <= floor ? 0 : Math.min(255, Math.round(((alpha - floor) / span) * 255));
+  }
+  context.putImageData(image, 0, 0);
+  return canvas;
+}
+
+function headSilhouette(mask, headBounds, transform, imageWidth, imageHeight, outputSize) {
+  const headMask = createHeadMaskCanvas(mask, headBounds, [255, 255, 255, 255]);
+  const layer = createCanvas(outputSize, outputSize);
+  const context = layer.getContext("2d");
+  context.imageSmoothingEnabled = true;
+  context.imageSmoothingQuality = "high";
+  context.drawImage(headMask, transform.offsetX, transform.offsetY, imageWidth * transform.scale, imageHeight * transform.scale);
+  return sharpenAlpha(layer);
+}
+
+function tintLayer(layer, color) {
+  const tinted = createCanvas(layer.width, layer.height);
+  const context = tinted.getContext("2d");
+  context.drawImage(layer, 0, 0);
+  context.globalCompositeOperation = "source-in";
+  context.fillStyle = color;
+  context.fillRect(0, 0, layer.width, layer.height);
+  return tinted;
+}
+
+// The cut-out keeps the photograph itself. Nothing is redrawn, so the head in
+// the game still looks like the person; only the background is removed and an
+// optional comic outline separates it from a busy stage.
+export function createCutoutPortrait(sourceCanvas, analysis, outlineStrength = DEFAULT_OUTLINE_STRENGTH, outputSize = 512) {
+  const { landmarks, mask } = analysis;
+  const headBounds = analysis.headBounds ?? deriveHeadBounds(landmarks, mask);
+  const transform = createPortraitTransform(headBounds, sourceCanvas.width, sourceCanvas.height, outputSize);
+  const silhouette = headSilhouette(mask, headBounds, transform, sourceCanvas.width, sourceCanvas.height, outputSize);
+
+  const photo = createCanvas(outputSize, outputSize);
+  const photoContext = photo.getContext("2d");
+  photoContext.imageSmoothingEnabled = true;
+  photoContext.imageSmoothingQuality = "high";
+  photoContext.drawImage(silhouette, 0, 0);
+  photoContext.globalCompositeOperation = "source-in";
+  photoContext.drawImage(
+    sourceCanvas,
+    transform.offsetX,
+    transform.offsetY,
+    sourceCanvas.width * transform.scale,
+    sourceCanvas.height * transform.scale,
+  );
+
+  const canvas = createCanvas(outputSize, outputSize);
+  const context = canvas.getContext("2d");
+  const outlineWidth = outlineWidthFor(outlineStrength);
+  if (outlineWidth >= 0.5) drawOffsetOutline(context, tintLayer(silhouette, "rgb(27, 20, 44)"), outlineWidth);
+  context.drawImage(photo, 0, 0);
+
+  const face = headBounds.face;
+  const metadata = {
+    version: 4,
+    technique: "segmented-photo-cutout",
+    mode: PORTRAIT_MODES.CUTOUT,
+    autoFaceZoom: true,
+    outlineWidth,
+    faceFillRatio: (face.height * sourceCanvas.height * transform.scale) / outputSize,
+    sourceFaceHeightPixels: face.height * sourceCanvas.height,
+    headAspect: (headBounds.width * sourceCanvas.width) / Math.max(1, headBounds.height * sourceCanvas.height),
+    faceAspect: (face.width * sourceCanvas.width) / Math.max(1, face.height * sourceCanvas.height),
+    hasHairMask: headBounds.foundHair,
+  };
+  canvas.slingtoonPortrait = metadata;
+  return { image: canvas, metadata, headBounds };
+}
+
+export function createPortrait(sourceCanvas, analysis, options = {}) {
+  return normalizePortraitMode(options.mode) === PORTRAIT_MODES.TOON
+    ? createToonPortrait(sourceCanvas, analysis, options.style, options.outputSize)
+    : createCutoutPortrait(sourceCanvas, analysis, options.outline, options.outputSize);
+}
+
 function averagePoint(landmarks, indices, transform) {
   const points = indices.map((index) => landmarks[index]).filter(Boolean).map(transform.map);
   if (!points.length) return { x: 0, y: 0 };
@@ -436,8 +542,9 @@ export function createToonPortrait(sourceCanvas, analysis, style = DEFAULT_PORTR
   }
 
   const metadata = {
-    version: 3,
+    version: 4,
     technique: "segmented-vector-portrait",
+    mode: PORTRAIT_MODES.TOON,
     autoFaceZoom: true,
     faceFillRatio: faceHeightPixels / outputSize,
     sourceFaceHeightPixels: face.height * sourceCanvas.height,

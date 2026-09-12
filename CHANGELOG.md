@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.15.0 — Twoja twarz, prawdziwa krzywa trudności
+
+- Face Studio ma dwa tryby głowy: domyślny **wycinek zdjęcia**, który usuwa tło i nie tyka samego zdjęcia, oraz dotychczasowy **TOON** przerysowujący twarz z 478 punktów,
+- w trybie wycinka suwak ustawia wyłącznie grubość komiksowego konturu, a `0%` to naprawdę zero efektu; maska jest wyostrzana, więc tło zdjęcia nie przecieka na krawędziach,
+- przełączenie trybu nie kasuje ustawienia drugiego, a nagłówek, opis i etap 3 w pasku postępu opisują faktycznie wybrany tryb,
+- przycisk wyboru twarzy dostał czytelną ikonę (sylwetka głowy w ramce z plakietką `+`) zamiast nierozpoznawalnego glifu, a po ustawieniu twarzy pokazuje jej miniaturę,
+- pole trafienia celu ma teraz krzywą: startuje z zapasem, a od misji 48 odpowiada rysunkowi obiektu, więc trzeba faktycznie do niego dolecieć,
+- udział zwycięskich naciągnięć w całej przestrzeni celowania spadł z płaskich ~30% do 25% na początku i 15% w finałowych rozdziałach — trudność wreszcie rośnie,
+- dwie nowe reguły: **ruchoma przeszkoda** jadąca po zaznaczonej linii (od misji 37) i **strefa zakazana** kończąca lot od dotknięcia (od misji 41), z własnym kolorem, kolcami i podpisem,
+- dziewięć misji oddechu nie jest już dziewięcioma identycznymi planszami bez przeszkód — każda dostała jeden charakterystyczny obiekt swojego rozdziału,
+- misja 76 przestała być drugą wersją misji 30; misje 13, 21, 29, 37, 41, 45, 53, 61, 69 i 77 mają nowe mechaniki i opisy,
+- osiem misji rozdziału ma osiem różnych tł: inna godzina dnia, inny układ scenerii, inne gwiazdy — wcześniej cały rozdział wyglądał jak jedna plansza powtórzona ośmiokrotnie,
+- puenta zwycięstwa nie jest już wyświetlana nad planszą przed strzałem; żart pojawia się tam, gdzie działa — w panelu wyniku,
+- cel dostał subtelną aureolę odsuwającą dekoracje, a podpis celu omija grafikę obiektu zamiast collidera; szyld ratownika zniknął z wysokości rozgrywki,
+- premia za strzał wygasa do czwartej próby (zamiast siódmej), a darmowa pomoc ratunkowa wchodzi po 5 próbach na początku i po 7 w końcowych rozdziałach,
+- poprawiono błąd w narzędziu autorskim: pomiar tolerancji przeskakiwał narożniki pola dotyku i raportował tolerancję, której nigdy nie zweryfikował; skrypt wyklucza też gwiazdki wewnątrz stref zakazanych i pasa ruchu przeszkód,
+- testy pilnują zmierzonej tolerancji każdej z 80 tras, obu nowych reguł fizyki i granic krzywej celu; zachowano deterministyczną fizykę 120 Hz, prywatność zdjęć i działanie offline.
+
 ## 0.14.0 — Dookoła absurdu w 80 misji
 
 - rozszerzono kampanię z 8 do 80 ręcznie opisanych misji w 10 rozdziałach po 8 etapów,

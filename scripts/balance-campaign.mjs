@@ -15,7 +15,19 @@ function starIsReadable(point, level) {
   if (point.x < 340 || point.x > 1090 || point.y < 145 || point.y > 470) return false;
   if (pointDistance(point, level.goal) < level.goal.radius + 85) return false;
   return level.interactions.every((item) => {
-    if (["solid", "gate", "breakable"].includes(item.type)) return !contains({ x: item.x - 30, y: item.y - 30, width: item.width + 60, height: item.height + 60 }, point);
+    // A star inside a hazard could never be collected, and a moving obstacle
+    // sweeps a whole band, not just its resting rectangle.
+    if (["solid", "gate", "breakable", "hazard"].includes(item.type)) {
+      const reach = item.motion?.amplitude ?? 0;
+      const spreadX = item.motion?.axis === "x" ? reach : 0;
+      const spreadY = item.motion?.axis === "y" ? reach : 0;
+      return !contains({
+        x: item.x - 30 - spreadX,
+        y: item.y - 30 - spreadY,
+        width: item.width + 60 + spreadX * 2,
+        height: item.height + 60 + spreadY * 2,
+      }, point);
+    }
     if (item.type === "portal") return [item.entry, item.exit].every((p) => pointDistance(point, p) > item.radius + 35);
     if (item.type === "switch") return pointDistance(point, item) > item.radius + 35;
     if (item.type === "gravity") return pointDistance(point, item) > item.coreRadius + 40;
@@ -33,8 +45,14 @@ for (const level of LEVELS.slice(8).filter((l) => !selected || l.number === Numb
     const shot = model.simulate(pull, 70);
     if (shot.reachesGoal && shot.points.every((p) => p.y > 70 && p.x > 15 && p.x < 1320)) winners.push({ pull: { x, y }, shot });
   }
+  // A fixed 4 px stride skipped the far corners of the box, so a reported
+  // tolerance could be one the route never actually survived. Sample a grid
+  // that always lands exactly on ±margin.
   const tolerates = (pull, margin) => {
-    for (let dx = -margin; dx <= margin; dx += 4) for (let dy = -margin; dy <= margin; dy += 4) {
+    const steps = Math.max(2, Math.ceil((margin * 2) / 4));
+    for (let ix = 0; ix <= steps; ix += 1) for (let iy = 0; iy <= steps; iy += 1) {
+      const dx = -margin + (margin * 2 * ix) / steps;
+      const dy = -margin + (margin * 2 * iy) / steps;
       if (!model.simulate({ x: pull.x + dx, y: pull.y + dy }, 1).reachesGoal) return false;
     }
     return true;
@@ -42,7 +60,9 @@ for (const level of LEVELS.slice(8).filter((l) => !selected || l.number === Numb
   let best = null, margin = 0;
   // Favour modest pull lengths and plenty of headroom, not edge-of-screen solutions.
   winners.sort((a, b) => Math.abs(pointDistance(a.pull, model.anchor) - 110) - Math.abs(pointDistance(b.pull, model.anchor) - 110));
-  for (const tolerance of [20, 16, 12, 10, 8]) {
+  // The widest window that still works is the one we ship. Late missions have
+  // smaller goals, so the ladder has to reach below the old ±8 floor.
+  for (const tolerance of [20, 16, 12, 10, 8, 6, 5]) {
     best = winners.find((entry) => tolerates(entry.pull, tolerance));
     if (best) { margin = tolerance; break; }
   }
@@ -81,6 +101,6 @@ if (failed.length) {
   process.exitCode = 1;
 } else if (process.argv.includes("--write") && !selected) {
   await writeFile("src/campaign-routes.js", `// Measured with scripts/balance-campaign.mjs. No search runs on the player's device.\nexport const CAMPAIGN_ROUTES = ${JSON.stringify(routes, null, 2)};\n`);
-  await writeFile("docs/campaign-balance-0.14.json", JSON.stringify(report, null, 2) + "\n");
+  await writeFile("docs/campaign-balance-0.15.json", JSON.stringify(report, null, 2) + "\n");
   console.log("Stored 72 forgiving routes, alternate star routes and their measured tolerance.");
 }
