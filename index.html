@@ -10,10 +10,10 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="SlingToon">
   <title>SlingToon — 80 misji kontrolowanego chaosu</title>
-  <link rel="manifest" href="manifest.webmanifest?v=0.15.0">
+  <link rel="manifest" href="manifest.webmanifest?v=0.16.0">
   <link rel="icon" href="assets/icon-192.png" sizes="192x192">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="styles.css?v=0.15.0">
+  <link rel="stylesheet" href="styles.css?v=0.16.0">
 </head>
 <body>
   <div class="ambient ambient--one" aria-hidden="true"></div>
@@ -77,7 +77,10 @@
         <div id="stage" class="stage">
           <canvas id="gameCanvas" width="1280" height="640" tabindex="0" aria-describedby="keyboardHelp" aria-label="Złap bohatera, naciągnij procę i traf w budzik"></canvas>
           <p id="objectiveStatus" class="objective-status">☆ Gwiazdka jest opcjonalna</p>
-          <button id="airMoveButton" class="air-move-button" type="button" title="Jedno podbicie w górę i do przodu. Możesz też nacisnąć spację." hidden>↗ FIK! · 1</button>
+          <div id="flightMoves" class="flight-moves">
+            <button id="airMoveButton" class="flight-move air-move-button" type="button" title="Podbicie w górę i do przodu. Możesz też nacisnąć spację." hidden>↗ FIK! · 1</button>
+            <button id="diveMoveButton" class="flight-move dive-move-button" type="button" title="Ścina lot w dół i hamuje pęd do przodu. Możesz też nacisnąć strzałkę w dół." hidden>↓ KAMIEŃ! · 1</button>
+          </div>
 
           <div id="loadingPanel" class="loading-panel" aria-live="polite">
             <span class="loader-face">😴</span>
@@ -121,10 +124,10 @@
     </main>
 
     <footer>
-      <span>SLINGTOON WEB 0.15.0</span>
+      <span>SLINGTOON WEB 0.16.0</span>
       <span>Offline PWA · GitHub Pages Ready</span>
     </footer>
-    <p id="keyboardHelp" class="keyboard-help">Dotyk: pociągnij bohatera i puść. Klawiatura: spacja rozpoczyna celowanie, strzałki zmieniają naciąg, spacja wystrzeliwuje. W locie: spacja = jeden FIK od misji 5. R = ponów.</p>
+    <p id="keyboardHelp" class="keyboard-help">Dotyk: pociągnij bohatera i puść. Klawiatura: spacja rozpoczyna celowanie, strzałki zmieniają naciąg, spacja wystrzeliwuje. W locie: spacja = FIK w górę (od misji 5), strzałka w dół = KAMIEŃ w dół (od misji 17). R = ponów.</p>
   </div>
 
   <dialog id="missionMap" class="mission-map" aria-labelledby="missionMapTitle">
@@ -227,6 +230,6 @@
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
   <noscript>Do uruchomienia SlingToon potrzebna jest obsługa JavaScript.</noscript>
-  <script type="module" src="src/main.js?v=0.15.0"></script>
+  <script type="module" src="src/main.js?v=0.16.0"></script>
 </body>
 </html>

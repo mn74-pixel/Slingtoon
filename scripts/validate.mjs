@@ -4,6 +4,7 @@ import { access, readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { LEVELS } from "../src/levels.js";
+import { FLIGHT_STYLES } from "../src/game.js";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const requiredFiles = [
@@ -158,6 +159,21 @@ assert.doesNotMatch(render, /ctx\.clip\(\);\s*this\.drawImageCover\(ctx, this\.f
 assert.match(render, /const CUSTOM_HEAD_SCALE = 1\.92;/);
 assert.match(render, /ctx\.scale\(CUSTOM_HEAD_SCALE, CUSTOM_HEAD_SCALE\)/);
 assert.match(game, /avatarGrabRadius/);
+assert.match(game, /useDiveMove\(automatic/);
+assert.match(game, /FLIGHT_STYLES/);
+assert.match(html, /id="diveMoveButton"/);
+assert.match(main, /useDiveMove\(\)/);
+// Personality is a real toolkit, so every character must differ on every dial
+// while the launch itself stays shared.
+for (const dial of ["lift", "push", "drop", "brake"]) {
+  const values = Object.values(FLIGHT_STYLES).map((style) => style[dial]);
+  assert.equal(new Set(values).size, values.length, `characters share the same ${dial}`);
+}
+assert.ok(Object.values(FLIGHT_STYLES).every((style) => style.charges >= 1 && style.brake > 0 && style.brake < 1));
+for (const level of LEVELS) {
+  assert.equal(level.airMove, level.number >= 5);
+  assert.equal(level.diveMove, level.number >= 17);
+}
 assert.match(html, /id="fullscreenButton"/);
 assert.match(html, /id="fullscreenGuide"/);
 assert.match(main, /window\.navigator\.standalone/);

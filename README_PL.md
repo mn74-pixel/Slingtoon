@@ -1,4 +1,4 @@
-# SlingToon Web 0.15.0 — 80 misji kontrolowanego chaosu
+# SlingToon Web 0.16.0 — 80 misji kontrolowanego chaosu
 
 Samodzielna gra webowa przygotowana w tym samym modelu publikacji co Castle Conflict. Do uruchomienia i wdrożenia nie potrzeba JUCE, Projucera ani Xcode.
 
@@ -8,7 +8,7 @@ Pierwszych osiem misji pozostaje bez zmian. Dalsze etapy wprowadzają m.in. prą
 
 ![Kampania 80 misji — stan początkowy i zwycięstwo](docs/campaign-0.14.png)
 
-[Prompt przebudowy](docs/PROMPT_PRZEBUDOWY_PL.md) · [Zakres wykonanych testów i pozostały playtest](docs/QA_0_15_PL.md)
+[Prompt przebudowy](docs/PROMPT_PRZEBUDOWY_PL.md) · [Zakres wykonanych testów i pozostały playtest](docs/QA_0_16_PL.md)
 
 ## Uruchomienie lokalne
 
@@ -57,7 +57,8 @@ Na współczesnym iPhonie SlingToon pokazuje jednorazowy przycisk `Graj pełny e
 - Jezioro pozwala na najwyżej dwa płaskie ślizgi z utratą energii; stromy lot kończy się zanurzeniem. Nie dodaje już magicznych kopnięć do przodu.
 - Dwie reguły dochodzą w trakcie podróży. **Ruchoma przeszkoda** (od misji 37) jeździ po zaznaczonej linii i startuje z pozycji, którą widzisz przed strzałem, więc trasa pozostaje do wyliczenia. **Strefa zakazana** (od misji 41) jest jedynym obiektem, który kończy lot od samego dotknięcia — ma własny kolor, kolce i podpis.
 - Trudność rośnie przez precyzję i układ, nie przez większą liczbę przeciwników. Cel zaczyna z zapasem, a od misji 48 jego pole trafienia odpowiada temu, co widać na ekranie: trzeba faktycznie dolecieć do obiektu. Pierwsza misja rozdziału i misja oddechu zawsze mają szerszy cel.
-- Od piątej misji: jeden `FIK!` w locie (przycisk, dotknięcie planszy lub spacja) podbija do góry i lekko do przodu. Wszystkie misje da się przejść także bez niego.
+- Od piątej misji: `FIK!` w locie (przycisk, dotknięcie planszy lub spacja) podbija do góry i lekko do przodu. Od misji 17 dochodzi `KAMIEŃ!` (przycisk lub strzałka w dół), który ścina tor w dół i hamuje część pędu — działa tylko dopóki jeszcze się wznosisz, więc jest decyzją na czas, a nie przyciskiem naprawiającym każdy błąd. Wszystkie misje da się przejść także bez obu manewrów.
+- Charakter bohatera to zestaw manewrów, nie skórka. Drama Queen skacze najwyżej, Tough Guy leci najdalej w przód i najciężej nurkuje, Panic dostaje po dwa słabsze ładunki każdego manewru, Zen najmocniej wytraca pęd. Sam wystrzał i lot swobodny są identyczne dla wszystkich, dlatego zmiana charakteru może otworzyć nowe rozwiązanie, ale nigdy nie odbiera istniejącego.
 - Klawiatura: spacja rozpoczyna celowanie, strzałki zmieniają naciąg, kolejna spacja wystrzeliwuje; `R` ponawia. Wyzwanie przestawienia poduszki obsługuje dotyk/mysz.
 - Kliknij licznik poziomów, aby otworzyć mapę. Gwiazdki są opcjonalne. Medale za przejście, gwiazdkę i pierwszy strzał kumulują się między podejściami.
 - Podpowiedzi mają trzy poziomy: żartobliwa wskazówka, kierunek oraz pełny duch toru. Pierwsze misje uczą za darmo, późniejsze zużywają żetony zdobywane za Punkty Sprytu.

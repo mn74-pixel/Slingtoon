@@ -1,7 +1,7 @@
-import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.15.0";
-import { clientPointToWorld, createCropFreeViewport } from "./viewport.js?v=0.15.0";
-import { drawInteractions, drawObjective } from "./interactions-renderer.js?v=0.15.0";
-import { drawCampaignGoal, drawCampaignScene, drawWorldCompanion } from "./world-renderer.js?v=0.15.0";
+import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.16.0";
+import { clientPointToWorld, createCropFreeViewport } from "./viewport.js?v=0.16.0";
+import { drawInteractions, drawObjective } from "./interactions-renderer.js?v=0.16.0";
+import { drawCampaignGoal, drawCampaignScene, drawWorldCompanion } from "./world-renderer.js?v=0.16.0";
 
 const PALETTE = Object.freeze({
   ink: "#19142d",
@@ -168,11 +168,18 @@ export class GameRenderer {
         angle: 0.07,
       });
     }
-    if (["interaction", "air-move", "collect"].includes(event.type)) {
+    if (["interaction", "air-move", "dive-move", "collect"].includes(event.type)) {
       const words = { break: "NIE RZUCAĆ… UPS!", portal: "WIROWANIE!", steam: "PODMUCH!", current: "Z PRĄDEM!", bubble: "BUL-BUL!", gravity: "CIĄGNIE!", switch: "SEZAM!", cushion: "PEŁNA KULTURA.", water: "KWAK?" };
+      const moveText = { "air-move": "FIK!", "dive-move": "KAMIEŃ!", collect: "STYL +1!" };
       this.spawnImpact(event.x, event.y, event.type === "collect" ? 14 : 9);
-      this.callouts.push({ x: event.x, y: event.y - 50, text: event.type === "air-move" ? "FIK!" : event.type === "collect" ? "STYL +1!" : words[event.kind], age: 0, life: .85, angle: -.05 });
+      this.callouts.push({ x: event.x, y: event.y - 50, text: moveText[event.type] ?? words[event.kind], age: 0, life: .85, angle: -.05 });
       if (event.kind === "portal") { this.trail.length = 0; this.lastTrailPoint = null; }
+    }
+    // The drop reads as weight, so it gets a shake the upward FIK does not.
+    if (event.type === "dive-move") {
+      this.shake = Math.max(this.shake, 9);
+      this.trail.length = 0;
+      this.lastTrailPoint = null;
     }
     if (this.particles.length > 140) this.particles.splice(0, this.particles.length - 140);
     if (this.callouts.length > 4) this.callouts.splice(0, this.callouts.length - 4);
