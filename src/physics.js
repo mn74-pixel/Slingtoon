@@ -5,6 +5,20 @@ export const magnitude = (p) => Math.hypot(p.x, p.y);
 export const contains = (r, p) => p.x >= r.x && p.x <= r.x + r.width && p.y >= r.y && p.y <= r.y + r.height;
 export const gateIsOpen = (item, state) => (item.switchIds ?? [item.switchId]).every((id) => state[id]);
 
+// Obstacles that move follow the shot clock, not the wall clock: they rest at
+// their drawn position until launch, so a route stays learnable and replayable.
+export function itemShift(item, time) {
+  return item.motion ? Math.sin(time * item.motion.speed) * item.motion.amplitude : 0;
+}
+
+export function movedBody(item, time) {
+  if (!item.motion) return item;
+  const shift = itemShift(item, time);
+  return item.motion.axis === "x"
+    ? { ...item, x: item.x + shift }
+    : { ...item, y: item.y + shift };
+}
+
 export function segmentDistance(a, b, p) {
   const dx = b.x - a.x, dy = b.y - a.y;
   const t = clamp(((p.x - a.x) * dx + (p.y - a.y) * dy) / (dx * dx + dy * dy || 1), 0, 1);
@@ -112,8 +126,15 @@ export function stepPhysics(model, dt = FIXED_STEP) {
         if (speed > 90) model.triggerImpact(speed, p.x, p.y, "cardboard");
       }
     }
+    // A hazard is the only object that ends a flight on touch. It is drawn in
+    // danger coral with spikes so the rule is readable before the first shot.
+    if (item.type === "hazard" && rectContact(p, radius, movedBody(item, model.flightTime))) {
+      model.failureReason = item.failure ?? "Strefa zakazana! Poprowadź tor obok niej, nie przez nią.";
+      model.finishAttempt(false);
+      return;
+    }
     if (item.type === "solid" || (item.type === "gate" && !gateIsOpen(item, model.objectState))) {
-      const speed = resolveContact(p, v, rectContact(p, radius, item), 0.4 * model.bounceScale);
+      const speed = resolveContact(p, v, rectContact(p, radius, movedBody(item, model.flightTime)), 0.4 * model.bounceScale);
       if (speed > 90) model.triggerImpact(speed, p.x, p.y, item.type);
     }
     if (item.type === "cushion") {

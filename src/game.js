@@ -1,6 +1,6 @@
-import { DEFAULT_LEVEL, WORLD } from "./levels.js?v=0.14.0";
-import { FIXED_STEP, clamp, contains, magnitude, stepPhysics } from "./physics.js?v=0.14.0";
-export { DEFAULT_LEVEL, LEVELS, WORLD, getLevel } from "./levels.js?v=0.14.0";
+import { DEFAULT_LEVEL, WORLD } from "./levels.js?v=0.15.0";
+import { FIXED_STEP, clamp, contains, magnitude, stepPhysics } from "./physics.js?v=0.15.0";
+export { DEFAULT_LEVEL, LEVELS, WORLD, getLevel } from "./levels.js?v=0.15.0";
 
 export const GameMode = Object.freeze({ QUICK: "quickSling", ONE_MOVE: "oneMoveChallenge" });
 export const GamePhase = Object.freeze({ READY: "ready", AIMING: "aiming", FLYING: "flying", SUCCEEDED: "succeeded", FAILED: "failed" });
@@ -190,7 +190,7 @@ export class GameModel {
     if (this.phase !== GamePhase.FLYING) return;
     this.phase = success ? GamePhase.SUCCEEDED : GamePhase.FAILED;
     this.avatarVelocity = { x: 0, y: 0 };
-    if (!success && this.attempts >= 3 && this.hintStage === 0) this.revealHint(1, true);
+    if (!success && this.attempts >= this.level.hints.policy.autoAfterAttempts && this.hintStage === 0) this.revealHint(1, true);
     this.emit(success ? "success" : "failure", { position: copy(this.avatarPosition), attempt: this.attempts, levelId: this.level.id, goalKind: this.level.goal.kind, star: this.collectedStar });
   }
   simulate(pull, numberOfDots = 32, duration = 6) {

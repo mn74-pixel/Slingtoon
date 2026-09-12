@@ -1,5 +1,5 @@
-import { CHAPTERS, EXTRA_LEVELS } from "./campaign.js?v=0.14.0";
-export { CHAPTERS } from "./campaign.js?v=0.14.0";
+import { CHAPTERS, EXTRA_LEVELS } from "./campaign.js?v=0.15.0";
+export { CHAPTERS } from "./campaign.js?v=0.15.0";
 const point = (x, y) => ({ x, y });
 function freeze(value) {
   if (value && typeof value === "object") {
@@ -25,7 +25,8 @@ function level(config) {
     tutorial: number === 1 ? { pull, title: "Pociągnij w dół i w lewo", status: "Zielone kropki pomogą tylko na rozgrzewce." } : null,
     assistPull: point(pull.x, pull.y),
     hints: {
-      policy: { freeStages, autoAfterAttempts: 3 },
+      // A veteran gets more room to work a puzzle out before the game steps in.
+      policy: { freeStages, autoAfterAttempts: number <= 16 ? 3 : number <= 48 ? 4 : 5 },
       stages: [
         { title: "Zasada", text: clue, cost: 1 },
         { title: "Kierunek", text: direction, cost: 1 },

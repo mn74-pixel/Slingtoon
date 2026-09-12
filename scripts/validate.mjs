@@ -71,8 +71,10 @@ assert.ok(main.includes(`serviceWorker.register("./sw.js?v=${version}")`));
 assert.ok(main.includes(`slingtoon-fullscreen-tip-${version}`));
 for (const level of LEVELS) {
   assert.ok(Object.isFrozen(level));
-  assert.ok(level.interactions.every((item) => ["breakable", "portal", "cushion", "steam", "current", "bubble", "gravity", "switch", "gate", "solid", "water"].includes(item.type)));
+  assert.ok(level.interactions.every((item) => ["breakable", "portal", "cushion", "steam", "current", "bubble", "gravity", "switch", "gate", "solid", "water", "hazard"].includes(item.type)));
   assert.ok(level.required.every((id) => level.interactions.some((item) => item.id === id)));
+  // A hazard ends the flight, so it can never be an objective the player must visit.
+  assert.ok(level.interactions.filter((item) => item.type === "hazard").every((item) => !level.required.includes(item.id)));
 }
 assert.equal(manifest.start_url, "./");
 assert.equal(manifest.scope, "./");
@@ -136,8 +138,14 @@ assert.match(html, /id="faceStudio"/);
 assert.match(html, /id="faceStylePreview"/);
 assert.match(html, /id="faceStyleStrength"/);
 assert.match(main, /new FaceStudio/);
-assert.match(faceStudio, /createToonPortrait/);
+assert.match(faceStudio, /createPortrait/);
 assert.match(faceStudio, /requestFile\(\)/);
+assert.match(html, /id="faceModeCutout"/);
+assert.match(html, /id="faceModeToon"/);
+assert.match(html, /id="faceButtonThumb"/);
+assert.match(portrait, /segmented-photo-cutout/);
+assert.match(portrait, /createCutoutPortrait/);
+assert.match(portrait, /PORTRAIT_MODES/);
 assert.match(faceVision, /ImageSegmenter\.createFromOptions/);
 assert.match(faceVision, /delegate:\s*"CPU"/);
 assert.match(faceVision, /FACE_LANDMARKS_FACE_OVAL/);

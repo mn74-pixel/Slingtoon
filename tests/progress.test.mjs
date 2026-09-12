@@ -49,7 +49,20 @@ test("only improved records add points; medals accumulate across runs without to
   assert.equal(rewardSuccess(p, clean).score, 160);
   assert.equal(rewardSuccess(p, clean).gained, 0);
   const reward = rewardSuccess(p, { ...clean, star: true, attempts: 2 });
-  assert.equal(reward.score, 208); assert.equal(reward.gained, 48); assert.equal(reward.tokenGain, 1);
-  assert.equal(p.score, 208); assert.equal(p.hintTokens, 3); assert.equal(p.medals[id], 7);
+  assert.equal(reward.score, 200); assert.equal(reward.gained, 40); assert.equal(reward.tokenGain, 1);
+  assert.equal(p.score, 200); assert.equal(p.hintTokens, 3); assert.equal(p.medals[id], 7);
   assert.equal(rewardSuccess(p, { ...clean, attempts: 7 }).gained, 0);
+});
+test("the shot bonus is spent by the fourth attempt, but a hard mission still pays the base", () => {
+  const id = LEVELS[0].id;
+  const scoreAfter = (attempts) => rewardSuccess(empty(), { id, attempts, star: false, mode: "quickSling", hintStage: 0 }).score;
+  assert.deepEqual([1, 2, 3, 4, 9].map(scoreAfter), [160, 140, 120, 100, 100]);
+});
+test("later chapters wait longer before stepping in with help", () => {
+  const p = empty();
+  assert.equal(LEVELS[0].hints.policy.autoAfterAttempts, 3);
+  assert.equal(LEVELS[59].hints.policy.autoAfterAttempts, 5);
+  assert.equal(hintOffer(p, LEVELS[0], 5).rescue, true);
+  assert.equal(hintOffer(p, LEVELS[59], 5).rescue, false);
+  assert.equal(hintOffer(p, LEVELS[59], 7).rescue, true);
 });

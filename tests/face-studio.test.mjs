@@ -1,7 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { FaceStudio, containRect, isLikelyImageFile, rotatedDimensions } from "../src/face-studio.js";
+import { FaceStudio, MODE_COPY, containRect, isLikelyImageFile, rotatedDimensions } from "../src/face-studio.js";
+import { PORTRAIT_MODES, normalizeOutlineStrength, normalizePortraitMode, outlineWidthFor } from "../src/portrait.js";
 
 function classListMock() {
   const values = new Set();
@@ -19,8 +20,12 @@ function classListMock() {
 }
 
 function elementMock(overrides = {}) {
-  return {
-    addEventListener() {},
+  const element = {
+    addEventListener(type, handler) { (this.handlers[type] ??= []).push(handler); },
+    handlers: {},
+    attributes: {},
+    setAttribute(name, value) { this.attributes[name] = value; },
+    removeAttribute(name) { delete this.attributes[name]; },
     classList: classListMock(),
     click() {},
     disabled: false,
@@ -28,6 +33,33 @@ function elementMock(overrides = {}) {
     hidden: false,
     textContent: "",
     value: "",
+    ...overrides,
+  };
+  element.emit = (type) => (element.handlers[type] ?? []).forEach((handler) => handler({}));
+  return element;
+}
+
+function studioElements(overrides = {}) {
+  return {
+    root: elementMock({ hidden: true }),
+    backdrop: elementMock(),
+    canvas: canvasMock(),
+    cancel: elementMock(),
+    confirm: elementMock(),
+    input: elementMock(),
+    remove: elementMock(),
+    replace: elementMock(),
+    rotate: elementMock(),
+    status: elementMock(),
+    styleCanvas: canvasMock(),
+    styleStrength: elementMock({ value: "0.34" }),
+    styleValue: elementMock(),
+    styleHeading: elementMock(),
+    styleNote: elementMock(),
+    pipelineStep: elementMock(),
+    title: elementMock(),
+    cutoutMode: elementMock(),
+    toonMode: elementMock(),
     ...overrides,
   };
 }
@@ -93,24 +125,9 @@ test("Face Studio opens before the iOS photo picker and can reselect the same fi
 
   try {
     const input = elementMock({ click: () => { inputClicks += 1; }, value: "previous-photo" });
-    const root = elementMock({ hidden: true });
-    const replace = elementMock();
-    const confirm = elementMock();
-    const studio = new FaceStudio({
-      root,
-      backdrop: elementMock(),
-      canvas: canvasMock(),
-      cancel: elementMock(),
-      confirm,
-      input,
-      remove: elementMock(),
-      replace,
-      rotate: elementMock(),
-      status: elementMock(),
-      styleCanvas: canvasMock(),
-      styleStrength: elementMock({ value: "0.78" }),
-      styleValue: elementMock(),
-    });
+    const elements = studioElements({ input });
+    const { root, replace, confirm } = elements;
+    const studio = new FaceStudio(elements);
 
     studio.openEditor();
     assert.equal(root.hidden, false);
@@ -121,6 +138,52 @@ test("Face Studio opens before the iOS photo picker and can reselect the same fi
     studio.requestFile();
     assert.equal(input.value, "");
     assert.equal(inputClicks, 1);
+  } finally {
+    globalThis.document = previousDocument;
+    globalThis.requestAnimationFrame = previousAnimationFrame;
+  }
+});
+
+test("cut-out is the default head and its slider can mean no effect at all", () => {
+  assert.equal(normalizePortraitMode(undefined), PORTRAIT_MODES.CUTOUT);
+  assert.equal(normalizePortraitMode("toon"), PORTRAIT_MODES.TOON);
+  assert.equal(normalizeOutlineStrength(0), 0);
+  assert.equal(normalizeOutlineStrength(-4), 0);
+  assert.equal(normalizeOutlineStrength(9), 1);
+  assert.equal(outlineWidthFor(0), 0);
+  assert.ok(outlineWidthFor(1) > 10);
+});
+
+test("switching head style retargets the single slider and keeps both settings", () => {
+  const previousDocument = globalThis.document;
+  const previousAnimationFrame = globalThis.requestAnimationFrame;
+  globalThis.document = { addEventListener() {}, body: { classList: classListMock() } };
+  globalThis.requestAnimationFrame = (callback) => { callback(); return 1; };
+
+  try {
+    const elements = studioElements();
+    const studio = new FaceStudio(elements);
+
+    assert.equal(studio.mode, PORTRAIT_MODES.CUTOUT);
+    assert.equal(elements.styleHeading.textContent, MODE_COPY[PORTRAIT_MODES.CUTOUT].heading);
+    assert.equal(elements.styleStrength.min, "0");
+    assert.equal(elements.cutoutMode.classList.contains("is-active"), true);
+
+    elements.styleStrength.value = "0";
+    elements.styleStrength.emit("input");
+    assert.equal(studio.outlineStrength, 0);
+    assert.equal(elements.styleValue.textContent, "0%");
+
+    studio.setMode(PORTRAIT_MODES.TOON);
+    assert.equal(elements.styleHeading.textContent, MODE_COPY[PORTRAIT_MODES.TOON].heading);
+    assert.equal(elements.styleStrength.min, "0.45");
+    assert.equal(elements.styleStrength.value, "0.78");
+    assert.equal(elements.toonMode.classList.contains("is-active"), true);
+    assert.equal(elements.cutoutMode.classList.contains("is-active"), false);
+
+    studio.setMode(PORTRAIT_MODES.CUTOUT);
+    assert.equal(elements.styleStrength.value, "0");
+    assert.equal(studio.styleStrength, 0.78);
   } finally {
     globalThis.document = previousDocument;
     globalThis.requestAnimationFrame = previousAnimationFrame;

@@ -24,7 +24,7 @@ for (const [index, level] of LEVELS.entries()) {
   ctx.fillStyle = "#fff5d9"; ctx.font = "bold 8px sans-serif";
   ctx.fillText(`${level.number}. ${level.name}`, x + 5, y + 11, 150);
   ctx.drawImage(canvas, x, y + 20, 160, 80);
-  if ([8, 16, 37, 40, 56, 64, 79].includes(index)) await writeFile(resolve(output, `mission-${level.number}-ready.png`), canvas.toBuffer("image/png"));
+  if ([8, 12, 36, 40, 47, 57, 64, 75, 79].includes(index)) await writeFile(resolve(output, `mission-${level.number}-ready.png`), canvas.toBuffer("image/png"));
   model.beginSling(model.anchor); model.dragSling(level.assistPull); model.releaseSling();
   for (let frame = 0; frame < 720 && model.phase === GamePhase.FLYING; frame++) {
     model.update(1 / 120); renderer.update(1 / 120);
@@ -33,7 +33,7 @@ for (const [index, level] of LEVELS.entries()) {
   if (renderer.particles.length > 140 || renderer.callouts.length > 4) throw new Error("VFX budget exceeded");
   renderer.render();
   ctx.drawImage(canvas, x, y + 100, 160, 80);
-  if ([8, 16, 37, 40, 56, 64, 79].includes(index)) await writeFile(resolve(output, `mission-${level.number}-success.png`), canvas.toBuffer("image/png"));
+  if ([8, 12, 36, 40, 47, 57, 64, 75, 79].includes(index)) await writeFile(resolve(output, `mission-${level.number}-success.png`), canvas.toBuffer("image/png"));
 }
 await writeFile(resolve(output, "campaign.png"), sheet.toBuffer("image/png"));
 // Crop-free mobile aspect ratio: actual canvas surface, not a fake browser screenshot.

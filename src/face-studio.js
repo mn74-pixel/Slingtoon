@@ -1,12 +1,38 @@
-import { FaceVision } from "./face-vision.js?v=0.14.0";
+import { FaceVision } from "./face-vision.js?v=0.15.0";
 import {
+  DEFAULT_OUTLINE_STRENGTH,
+  DEFAULT_PORTRAIT_MODE,
   DEFAULT_PORTRAIT_STYLE,
+  PORTRAIT_MODES,
   connectionPaths,
   createHeadMaskCanvas,
-  createToonPortrait,
+  createPortrait,
   deriveHeadBounds,
+  normalizeOutlineStrength,
+  normalizePortraitMode,
   normalizePortraitStyle,
-} from "./portrait.js?v=0.14.0";
+} from "./portrait.js?v=0.15.0";
+
+export const MODE_COPY = Object.freeze({
+  [PORTRAIT_MODES.CUTOUT]: {
+    title: "Wytnij swoje zdjęcie",
+    heading: "GRUBOŚĆ KONTURU",
+    note: "Zdjęcie zostaje takie, jakie jest — znika tylko tło. Zero na suwaku to czysty wycinek bez żadnego efektu.",
+    ready: "Gotowe: tło usunięte, zdjęcie nietknięte. To nadal Twoja twarz.",
+    idle: "Wybierz zdjęcie z przodu. Wytnę głowę z tłem, ale nie przerysuję twarzy.",
+    step: "WYCINEK",
+    slider: { min: 0, max: 1, step: 0.02 },
+  },
+  [PORTRAIT_MODES.TOON]: {
+    title: "Zrób rysunkową głowę",
+    heading: "SIŁA STYLIZACJI",
+    note: "Twarz jest rysowana od nowa z 478 punktów. Wygląda komiksowo, ale mniej przypomina oryginał.",
+    ready: "Gotowe: rysunkowy portret z osobnymi włosami i rysowanymi rysami.",
+    idle: "Wybierz zdjęcie z przodu. Gra przerysuje twarz w stylu komiksowym.",
+    step: "TOON",
+    slider: { min: 0.45, max: 1, step: 0.01 },
+  },
+});
 
 const PREVIEW_SIZE = 640;
 const MAX_ANALYSIS_EDGE = 1024;
@@ -128,7 +154,9 @@ export class FaceStudio {
     this.previewMask = null;
     this.portrait = null;
     this.quarterTurns = 0;
-    this.styleStrength = normalizePortraitStyle(elements.styleStrength?.value ?? DEFAULT_PORTRAIT_STYLE);
+    this.mode = DEFAULT_PORTRAIT_MODE;
+    this.styleStrength = normalizePortraitStyle(DEFAULT_PORTRAIT_STYLE);
+    this.outlineStrength = normalizeOutlineStrength(DEFAULT_OUTLINE_STRENGTH);
     this.hasAppliedFace = false;
     this.snapshot = null;
     this.analysisToken = 0;
@@ -140,15 +168,18 @@ export class FaceStudio {
   }
 
   bindEvents() {
-    const { backdrop, cancel, confirm, remove, replace, rotate, styleStrength } = this.elements;
+    const { backdrop, cancel, confirm, cutoutMode, remove, replace, rotate, styleStrength, toonMode } = this.elements;
     replace.addEventListener("click", () => this.requestFile());
     rotate.addEventListener("click", () => this.rotatePhoto());
     confirm.addEventListener("click", () => this.apply());
     remove.addEventListener("click", () => this.remove());
     cancel.addEventListener("click", () => this.cancel());
     backdrop.addEventListener("click", () => this.cancel());
+    cutoutMode.addEventListener("click", () => this.setMode(PORTRAIT_MODES.CUTOUT));
+    toonMode.addEventListener("click", () => this.setMode(PORTRAIT_MODES.TOON));
     styleStrength.addEventListener("input", () => {
-      this.styleStrength = normalizePortraitStyle(styleStrength.value);
+      if (this.mode === PORTRAIT_MODES.TOON) this.styleStrength = normalizePortraitStyle(styleStrength.value);
+      else this.outlineStrength = normalizeOutlineStrength(styleStrength.value);
       this.updateStyleUi();
       this.schedulePortrait();
     });
@@ -157,15 +188,19 @@ export class FaceStudio {
     });
   }
 
+  setMode(mode) {
+    const next = normalizePortraitMode(mode);
+    if (next === this.mode) return;
+    this.mode = next;
+    this.updateStyleUi();
+    if (this.analysis) this.refreshPortrait();
+    else this.setBusy(false, MODE_COPY[next].idle);
+  }
+
   openEditor() {
     this.beginSession();
     this.show();
-    this.setBusy(
-      false,
-      this.portrait
-        ? "Kontur głowy i rysunkowy portret są gotowe. Możesz zmienić styl albo zdjęcie."
-        : "Wybierz zdjęcie z przodu. Gra sama oddzieli głowę i włosy od tła.",
-    );
+    this.setBusy(false, this.portrait ? MODE_COPY[this.mode].ready : MODE_COPY[this.mode].idle);
   }
 
   requestFile() {
@@ -233,8 +268,8 @@ export class FaceStudio {
     this.setBusy(
       false,
       analysis.headBounds.foundHair
-        ? "Gotowe: automatyczny zoom dopasował twarz, tło usunięte i włosy wykryte."
-        : "Gotowe: automatyczny zoom dopasował twarz. Włosy są słabo widoczne, ale nie używam okrągłej maski.",
+        ? MODE_COPY[this.mode].ready
+        : `${MODE_COPY[this.mode].ready} Włosy są słabo widoczne, ale nie używam okrągłej maski.`,
     );
   }
 
@@ -264,7 +299,9 @@ export class FaceStudio {
       previewMask: this.previewMask,
       portrait: this.portrait,
       quarterTurns: this.quarterTurns,
+      mode: this.mode,
       styleStrength: this.styleStrength,
+      outlineStrength: this.outlineStrength,
     };
   }
 
@@ -348,11 +385,28 @@ export class FaceStudio {
     this.elements.rotate.disabled = isBusy || !this.sourceImage;
     this.elements.replace.disabled = isBusy;
     this.elements.styleStrength.disabled = isBusy || !this.analysis;
+    this.elements.cutoutMode.disabled = isBusy;
+    this.elements.toonMode.disabled = isBusy;
   }
 
   updateStyleUi() {
-    this.elements.styleStrength.value = String(this.styleStrength);
-    this.elements.styleValue.textContent = `${Math.round(this.styleStrength * 100)}%`;
+    const cutout = this.mode === PORTRAIT_MODES.CUTOUT;
+    const copy = MODE_COPY[this.mode];
+    const slider = this.elements.styleStrength;
+    slider.min = String(copy.slider.min);
+    slider.max = String(copy.slider.max);
+    slider.step = String(copy.slider.step);
+    slider.value = String(cutout ? this.outlineStrength : this.styleStrength);
+    slider.setAttribute("aria-label", copy.heading);
+    this.elements.styleValue.textContent = `${Math.round((cutout ? this.outlineStrength : this.styleStrength) * 100)}%`;
+    this.elements.styleHeading.textContent = copy.heading;
+    this.elements.styleNote.textContent = copy.note;
+    this.elements.title.textContent = copy.title;
+    this.elements.pipelineStep.textContent = copy.step;
+    for (const [button, isActive] of [[this.elements.cutoutMode, cutout], [this.elements.toonMode, !cutout]]) {
+      button.classList.toggle("is-active", isActive);
+      button.setAttribute("aria-pressed", String(isActive));
+    }
   }
 
   schedulePortrait(delay = 70) {
@@ -366,7 +420,11 @@ export class FaceStudio {
 
   refreshPortrait() {
     if (!this.analysisCanvas || !this.analysis) return;
-    this.portrait = createToonPortrait(this.analysisCanvas, this.analysis, this.styleStrength);
+    this.portrait = createPortrait(this.analysisCanvas, this.analysis, {
+      mode: this.mode,
+      style: this.styleStrength,
+      outline: this.outlineStrength,
+    });
     this.renderPortraitPreview();
     this.elements.confirm.disabled = false;
   }
