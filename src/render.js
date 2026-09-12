@@ -1071,17 +1071,19 @@ export class GameRenderer {
         ctx.stroke();
       }
 
+      // On the stock skull this band sits on the forehead. Over a photo that
+      // crosses the player's eyes, so it rides the crown instead.
       if (personality === Personality.TOUGH_GUY) {
         ctx.strokeStyle = PALETTE.coral;
-        ctx.lineWidth = 8;
+        ctx.lineWidth = 7;
         ctx.beginPath();
-        ctx.arc(0, -1, 36, Math.PI * 1.08, Math.PI * 1.92);
+        ctx.arc(0, -6, 45, Math.PI * 1.18, Math.PI * 1.82);
         ctx.stroke();
         ctx.fillStyle = PALETTE.coral;
         ctx.beginPath();
-        ctx.moveTo(31, -19);
-        ctx.lineTo(49, -8);
-        ctx.lineTo(30, -1);
+        ctx.moveTo(37, -32);
+        ctx.lineTo(57, -24);
+        ctx.lineTo(38, -14);
         ctx.fill();
       }
       ctx.restore();
@@ -1257,17 +1259,27 @@ export class GameRenderer {
     ctx.restore();
   }
 
+  // These accents are positioned against the 36 px stock skull. A custom head is
+  // a photo of a real person drawn at CUSTOM_HEAD_SCALE, so anything authored for
+  // the stock head lands on the player's face: the star sat on an eye. Accents
+  // that only make sense as drawn features are dropped for a photo head, and the
+  // rest move clear of it. Personality still reads from the torso badge, the
+  // cape and the hair bun.
   drawPersonalityFront(ctx, personality) {
+    const photoHead = Boolean(this.faceImage);
     if (personality === Personality.DRAMA_QUEEN) {
+      const centreX = photoHead ? 88 : 24;
+      const centreY = photoHead ? -98 : -40;
+      const outer = photoHead ? 16 : 12;
       ctx.fillStyle = PALETTE.gold;
       ctx.strokeStyle = PALETTE.ink;
       ctx.lineWidth = 4;
       ctx.beginPath();
       for (let point = 0; point < 10; point += 1) {
-        const radius = point % 2 === 0 ? 12 : 5;
+        const radius = point % 2 === 0 ? outer : outer * 0.42;
         const angle = -Math.PI * 0.5 + (point * Math.PI) / 5;
-        const x = 24 + Math.cos(angle) * radius;
-        const y = -40 + Math.sin(angle) * radius;
+        const x = centreX + Math.cos(angle) * radius;
+        const y = centreY + Math.sin(angle) * radius;
         if (point === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
       }
@@ -1275,7 +1287,7 @@ export class GameRenderer {
       ctx.fill();
       ctx.stroke();
     }
-    if (personality === Personality.ZEN) {
+    if (personality === Personality.ZEN && !photoHead) {
       ctx.strokeStyle = PALETTE.coral;
       ctx.lineWidth = 5;
       ctx.beginPath();
