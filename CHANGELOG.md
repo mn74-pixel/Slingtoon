@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.16.0 — Charakter to narzędzia, nie skórka
+
+- dodano drugi manewr w locie: **KAMIEŃ** ścina tor w dół i hamuje część pędu do przodu, uzupełniając FIK, który lot wydłuża,
+- KAMIEŃ działa wyłącznie dopóki bohater się wznosi — pomiar pokazał, że wersja bez tego ograniczenia ratowała trzy czwarte złych strzałów i czyniła celowanie bezcelowym,
+- KAMIEŃ pojawia się od misji 17, na rafie, gdzie słabsza grawitacja czyni nagłe nurkowanie najbardziej czytelnym,
+- **charakter przestał być kosmetyką**: każda z czterech osobowości ma własny zestaw manewrów — Drama Queen skacze najwyżej, Tough Guy leci najdalej w przód i najciężej nurkuje, Panic dostaje po dwa słabsze ładunki każdego manewru, Zen najmocniej wytraca pęd,
+- lot swobodny i wystrzał pozostają identyczne dla wszystkich charakterów, więc zmiana bohatera może otworzyć nowe rozwiązanie, ale nigdy nie odbiera istniejącego; wszystkie 72 zmierzone trasy zachowują ważność,
+- zmierzona wartość obu narzędzi: FIK ratuje 33% przegrywających naciągnięć, KAMIEŃ 43–62% zależnie od charakteru, oba w oknie około 0,5 s — to decyzja na czas, nie przycisk naprawiający każdy błąd,
+- What If odtwarza teraz pełną sekwencję manewrów w kolejności i przywraca charakter, którym wykonano strzał,
+- przyciski manewrów stoją w jednym rzędzie i nigdy nie dzielą koloru: miętowy podbija, fioletowy ścina; przycisk KAMIENIA gaśnie w chwili, gdy zaczynasz spadać,
+- strzałka w dół obsługuje KAMIEŃ z klawiatury, spacja nadal FIK,
+- przy zmianie charakteru gra mówi, co dokładnie dostałeś do ręki.
+
 ## 0.15.0 — Twoja twarz, prawdziwa krzywa trudności
 
 - Face Studio ma dwa tryby głowy: domyślny **wycinek zdjęcia**, który usuwa tło i nie tyka samego zdjęcia, oraz dotychczasowy **TOON** przerysowujący twarz z 478 punktów,

@@ -1,9 +1,9 @@
-import { GameModel, GameMode, GamePhase, LEVELS, modifierName } from "./game.js?v=0.15.0";
-import { GameRenderer } from "./render.js?v=0.15.0";
-import { GameAudio } from "./audio.js?v=0.15.0";
-import { FaceStudio } from "./face-studio.js?v=0.15.0";
-import { PROGRESS_KEY, TOKEN_SCORE_STEP, readProgress, hintOffer, purchaseHint, rewardSuccess, medalText } from "./progress.js?v=0.15.0";
-import { CHAPTERS } from "./levels.js?v=0.15.0";
+import { GameModel, GameMode, GamePhase, LEVELS, modifierName } from "./game.js?v=0.16.0";
+import { GameRenderer } from "./render.js?v=0.16.0";
+import { GameAudio } from "./audio.js?v=0.16.0";
+import { FaceStudio } from "./face-studio.js?v=0.16.0";
+import { PROGRESS_KEY, TOKEN_SCORE_STEP, readProgress, hintOffer, purchaseHint, rewardSuccess, medalText } from "./progress.js?v=0.16.0";
+import { CHAPTERS } from "./levels.js?v=0.16.0";
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -64,6 +64,7 @@ const elements = {
   fullscreenClose: $("#fullscreenClose"),
   toast: $("#toast"),
   airMove: $("#airMoveButton"),
+  diveMove: $("#diveMoveButton"),
   objective: $("#objectiveStatus"),
   missions: $("#missionMap"),
   missionList: $("#missionList"),
@@ -89,7 +90,7 @@ let progress = loadProgress();
 let highestUnlockedLevel = progress.highestUnlockedLevel;
 let mapChapterIndex = 0;
 let lastReward = null;
-const FULLSCREEN_TIP_KEY = "slingtoon-fullscreen-tip-0.15.0";
+const FULLSCREEN_TIP_KEY = "slingtoon-fullscreen-tip-0.16.0";
 
 function loadProgress() {
   try {
@@ -548,7 +549,14 @@ function instructionForState() {
     return { icon: "✦", title: model.activeHint.title };
   }
   if (model.phase === GamePhase.AIMING) return { icon: "◎", title: "Wybierz kierunek i puść" };
-  if (model.phase === GamePhase.FLYING) return { icon: "⚡", title: model.level.airMove ? model.airMoveUsed ? "FIK zużyty — trzymamy kciuki" : "Jeden FIK! · dotknij lub naciśnij spację" : "Obserwuj tor — następny strzał będzie Twój" };
+  if (model.phase === GamePhase.FLYING) {
+    if (!model.level.airMove && !model.level.diveMove) return { icon: "⚡", title: "Obserwuj tor — następny strzał będzie Twój" };
+    const left = [];
+    if (model.airMovesLeft > 0) left.push(`↗ FIK ×${model.airMovesLeft}`);
+    if (model.canDive) left.push(`↓ KAMIEŃ ×${model.diveMovesLeft}`);
+    else if (model.diveMovesLeft > 0) left.push("↓ KAMIEŃ tylko na wznoszeniu");
+    return { icon: "⚡", title: left.length ? `W powietrzu: ${left.join(" · ")}` : "Manewry zużyte — trzymamy kciuki" };
+  }
   if (model.phase === GamePhase.SUCCEEDED) return { icon: "★", title: "Sukces — ale styl też się liczy" };
   if (model.phase === GamePhase.FAILED) return { icon: "↻", title: "Powtórz albo zmień fizykę" };
   return { icon: "☝", title: "Złap bohatera i pociągnij" };
@@ -568,6 +576,7 @@ function updateUi() {
   elements.shotBadge.textContent = `SHOT ${Math.max(1, model.attempts + (preparing ? 1 : 0))}`;
   elements.scoreBadge.textContent = `★ ${progress.score}`;
 
+  elements.personality.value = model.personality;
   const instruction = instructionForState();
   elements.instructionIcon.textContent = instruction.icon;
   elements.instructionTitle.textContent = instruction.title;
@@ -582,9 +591,15 @@ function updateUi() {
       : `💡 ${offer.stage}/3 · ${offer.rescue ? "RATUNKOWA" : "GRATIS"}`
     : model.hintStage < (progress.hints[model.level.id] ?? 0) ? "💡 POKAŻ ODKRYTE" : "💡 UKRYJ PODPOWIEDŹ";
   elements.hintButton.title = offer ? "Odkryj zasadę, kierunek, a na końcu pełną trasę. Odkrycia zostają zapisane." : model.activeHint?.text ?? "Wszystkie podpowiedzi wykorzystane";
-  elements.airMove.hidden = !model.level.airMove || model.phase !== GamePhase.FLYING;
-  elements.airMove.disabled = model.phase !== GamePhase.FLYING || model.airMoveUsed || model.replaying;
-  elements.airMove.textContent = model.airMoveUsed ? "✓ FIK ZUŻYTY" : "↗ FIK! · 1";
+  const flying = model.phase === GamePhase.FLYING;
+  elements.airMove.hidden = !model.level.airMove || !flying;
+  elements.airMove.disabled = !flying || model.airMovesLeft <= 0 || model.replaying;
+  elements.airMove.textContent = model.airMovesLeft > 0 ? `↗ FIK! · ${model.airMovesLeft}` : "✓ FIK ZUŻYTY";
+  elements.diveMove.hidden = !model.level.diveMove || !flying;
+  elements.diveMove.disabled = !flying || !model.canDive || model.replaying;
+  elements.diveMove.textContent = model.diveMovesLeft <= 0
+    ? "✓ KAMIEŃ ZUŻYTY"
+    : model.canDive ? `↓ KAMIEŃ! · ${model.diveMovesLeft}` : "↓ JUŻ SPADASZ";
   elements.objective.textContent = `${model.objectiveMet ? "✓ Cel odblokowany" : model.level.mechanic} · ${model.collectedStar ? "★ Gwiazdka!" : "☆ Gwiazdka opcjonalna"}`;
   elements.levelIndicator.disabled = !controlsEnabled;
   elements.quickMode.disabled = !controlsEnabled;
@@ -628,8 +643,11 @@ elements.resumeMission.addEventListener("click", () => {
   elements.canvas.focus({ preventScroll: true });
 });
 elements.airMove.addEventListener("click", () => { audio.unlock().catch(() => {}); model.useAirMove(); });
+elements.diveMove.addEventListener("click", () => { audio.unlock().catch(() => {}); model.useDiveMove(); });
 elements.personality.addEventListener("change", (event) => {
   model.setPersonality(event.target.value);
+  const style = model.flightStyle;
+  showToast(`${style.air} · ${style.dive}${style.charges > 1 ? ` · ${style.charges} ładunki każdego` : ""}`);
   updateUi();
 });
 elements.faceButton.addEventListener("click", () => faceStudio.openEditor());
@@ -701,6 +719,12 @@ window.addEventListener("keydown", (event) => {
     else if (model.phase === GamePhase.SUCCEEDED) elements.againButton.click();
     else if (model.beginSling(model.anchor)) model.dragSling({ x: model.anchor.x - 80, y: model.anchor.y + 40 });
   }
+  if (event.code === "ArrowDown" && model.phase === GamePhase.FLYING) {
+    event.preventDefault();
+    audio.unlock().catch(() => {});
+    model.useDiveMove();
+    return;
+  }
   if (event.key.startsWith("Arrow") && model.phase === GamePhase.AIMING) {
     event.preventDefault();
     const step = event.shiftKey ? 10 : 4;
@@ -713,7 +737,7 @@ window.addEventListener("keydown", (event) => {
 
 window.addEventListener("load", () => {
   if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
-    navigator.serviceWorker.register("./sw.js?v=0.15.0").catch(() => {});
+    navigator.serviceWorker.register("./sw.js?v=0.16.0").catch(() => {});
   }
   scheduleFullscreenSuggestion();
   syncGameViewport();

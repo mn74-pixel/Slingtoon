@@ -1,11 +1,30 @@
-import { DEFAULT_LEVEL, WORLD } from "./levels.js?v=0.15.0";
-import { FIXED_STEP, clamp, contains, magnitude, stepPhysics } from "./physics.js?v=0.15.0";
-export { DEFAULT_LEVEL, LEVELS, WORLD, getLevel } from "./levels.js?v=0.15.0";
+import { DEFAULT_LEVEL, WORLD } from "./levels.js?v=0.16.0";
+import { FIXED_STEP, clamp, contains, magnitude, stepPhysics } from "./physics.js?v=0.16.0";
+export { DEFAULT_LEVEL, LEVELS, WORLD, getLevel } from "./levels.js?v=0.16.0";
 
 export const GameMode = Object.freeze({ QUICK: "quickSling", ONE_MOVE: "oneMoveChallenge" });
 export const GamePhase = Object.freeze({ READY: "ready", AIMING: "aiming", FLYING: "flying", SUCCEEDED: "succeeded", FAILED: "failed" });
 export const Modifier = Object.freeze({ NONE: "none", STRONGER_FAN: "strongerFan", LOW_GRAVITY: "lowGravity", SUPER_BOUNCY: "superBouncy", GIANT_HEAD: "giantHead" });
 export const Personality = Object.freeze({ DRAMA_QUEEN: "dramaQueen", TOUGH_GUY: "toughGuy", PANIC: "panic", ZEN: "zen" });
+
+// Personality is the player's in-flight toolkit, not a skin. It deliberately
+// leaves the launch and the free flight untouched: every mission's measured
+// route is verified winnable without spending a single move, so changing
+// character can open a new solution but can never take one away.
+// lift/push shape the upward FIK, drop/brake shape the downward KAMIEŃ, and
+// charges say how many of each you get per flight.
+//
+// KAMIEŃ steepens the arc; it deliberately does not stop the hero dead. A hard
+// brake was measured rescuing three quarters of every bad pull, which made
+// aiming pointless. Keeping most of the forward pace leaves it a real tool for
+// an arc that sails too flat, and still demands the horizontal aim be close.
+export const FLIGHT_STYLES = Object.freeze({
+  [Personality.DRAMA_QUEEN]: { lift: 325, push: 40, drop: 285, brake: 0.88, charges: 1, air: "WYSOKI SKOK", dive: "STROME ŚCIĘCIE" },
+  [Personality.TOUGH_GUY]: { lift: 205, push: 140, drop: 360, brake: 0.8, charges: 1, air: "NISKI TARAN", dive: "CIĘŻKI MŁOT" },
+  [Personality.PANIC]: { lift: 175, push: 50, drop: 200, brake: 0.9, charges: 2, air: "DWA MACHNIĘCIA", dive: "DWA NURKOWANIA" },
+  [Personality.ZEN]: { lift: 250, push: 80, drop: 235, brake: 0.72, charges: 1, air: "SPOKOJNY SKOK", dive: "WYHAMOWANIE" },
+});
+
 const MAX_PULL = 132;
 const LAUNCH_MULTIPLIER = 7;
 const copy = (p) => ({ x: p.x, y: p.y });
@@ -65,7 +84,9 @@ export class GameModel {
     this.objectState = Object.create(null);
     this.visited = new Set();
     this.collectedStar = false;
-    this.airMoveUsed = false;
+    this.airMovesLeft = this.level.airMove ? this.flightStyle.charges : 0;
+    this.diveMovesLeft = this.level.diveMove ? this.flightStyle.charges : 0;
+    this.replayCursor = 0;
     this.replaying = false;
     this.portalCooldown = 0;
     this.waterSkips = 0;
@@ -100,7 +121,7 @@ export class GameModel {
       this.emit("cancel-shot");
       return false;
     }
-    this.previousShot = { launchVelocity: copy(velocity), launchPosition: copy(this.avatarPosition), layoutOffset: this.layoutOffset, levelId: this.level.id, airMoveAt: null };
+    this.previousShot = { launchVelocity: copy(velocity), launchPosition: copy(this.avatarPosition), layoutOffset: this.layoutOffset, levelId: this.level.id, personality: this.personality, moves: [] };
     this.startFlight(velocity, true, this.avatarPosition);
     return true;
   }
@@ -148,6 +169,12 @@ export class GameModel {
     if (this.phase !== GamePhase.FAILED || !this.previousShot || this.previousShot.levelId !== this.level.id || !Object.values(Modifier).includes(modifier) || modifier === Modifier.NONE) return false;
     const shot = this.previousShot;
     this.layoutOffset = shot.layoutOffset;
+    // What If promises the same shot with one law changed, so it has to replay
+    // the character that made it — the moves were recorded at that toolkit.
+    if (shot.personality && shot.personality !== this.personality) {
+      this.personality = shot.personality;
+      this.emit("personality", { personality: this.personality });
+    }
     this.startFlight(shot.launchVelocity, true, shot.launchPosition);
     this.modifier = modifier;
     this.replaying = true;
@@ -155,13 +182,46 @@ export class GameModel {
     return true;
   }
   useAirMove(automatic = false) {
-    if (this.phase !== GamePhase.FLYING || !this.level.airMove || this.airMoveUsed || (this.replaying && !automatic)) return false;
-    this.airMoveUsed = true;
-    this.avatarVelocity.y -= 260;
-    this.avatarVelocity.x += 65;
-    if (!automatic && this.previousShot) this.previousShot.airMoveAt = this.flightTime;
-    this.emit("air-move", { x: this.avatarPosition.x, y: this.avatarPosition.y });
+    if (this.phase !== GamePhase.FLYING || this.airMovesLeft <= 0 || (this.replaying && !automatic)) return false;
+    const style = this.flightStyle;
+    this.airMovesLeft -= 1;
+    this.avatarVelocity.y -= style.lift;
+    this.avatarVelocity.x += style.push;
+    this.recordMove("air", automatic);
+    this.emit("air-move", { x: this.avatarPosition.x, y: this.avatarPosition.y, left: this.airMovesLeft });
     return true;
+  }
+  // The opposite correction to FIK: FIK saves a shot that falls short, KAMIEŃ
+  // saves one that would sail past. Together they make the flight a decision
+  // instead of a wait.
+  // Only while the hero is still rising. Allowing it during the fall turned it
+  // into a universal rescue — a drop into a circular goal works from almost any
+  // arc — so the move is a commitment made early, in competition with FIK for
+  // the same moment, instead of a button that fixes every miss.
+  get canDive() { return this.diveMovesLeft > 0 && this.avatarVelocity.y < 0; }
+  useDiveMove(automatic = false) {
+    if (this.phase !== GamePhase.FLYING || !this.canDive || (this.replaying && !automatic)) return false;
+    const style = this.flightStyle;
+    this.diveMovesLeft -= 1;
+    this.avatarVelocity.x *= style.brake;
+    this.avatarVelocity.y += style.drop;
+    this.recordMove("dive", automatic);
+    this.emit("dive-move", { x: this.avatarPosition.x, y: this.avatarPosition.y, left: this.diveMovesLeft });
+    return true;
+  }
+  recordMove(kind, automatic) {
+    if (automatic || !this.previousShot) return;
+    this.previousShot.moves.push({ kind, at: this.flightTime });
+  }
+  replayRecordedMoves() {
+    const moves = this.previousShot?.moves;
+    if (!moves) return;
+    while (this.replayCursor < moves.length && this.flightTime + 1e-8 >= moves[this.replayCursor].at) {
+      const move = moves[this.replayCursor];
+      this.replayCursor += 1;
+      if (move.kind === "dive") this.useDiveMove(true);
+      else this.useAirMove(true);
+    }
   }
   update(deltaSeconds) {
     if (!Number.isFinite(deltaSeconds) || deltaSeconds <= 0) return;
@@ -170,7 +230,7 @@ export class GameModel {
     if (this.phase !== GamePhase.FLYING) { this.accumulator = 0; return; }
     this.accumulator += dt;
     while (this.accumulator + 1e-10 >= FIXED_STEP && this.phase === GamePhase.FLYING) {
-      if (this.replaying && this.previousShot?.airMoveAt !== null && this.flightTime + 1e-8 >= this.previousShot?.airMoveAt) this.useAirMove(true);
+      if (this.replaying) this.replayRecordedMoves();
       stepPhysics(this, FIXED_STEP);
       this.accumulator -= FIXED_STEP;
     }
@@ -257,6 +317,11 @@ export class GameModel {
     this.interactionCache = { level: this.level, offset: this.layoutOffset, items };
     return items;
   }
+  get flightStyle() { return FLIGHT_STYLES[this.personality] ?? FLIGHT_STYLES[Personality.DRAMA_QUEEN]; }
+  // "Used" means the player spent something this flight, so a mission that
+  // never offers the move reports false rather than "all charges gone".
+  get airMoveUsed() { return Boolean(this.level.airMove) && this.airMovesLeft < this.flightStyle.charges; }
+  get diveMoveUsed() { return Boolean(this.level.diveMove) && this.diveMovesLeft < this.flightStyle.charges; }
   get objectiveMet() { return this.level.required.every((id) => this.visited.has(id)); }
   get activeHint() { return this.level.hints.stages[this.hintStage - 1] ?? null; }
   get anchor() { return this.level.anchor; }

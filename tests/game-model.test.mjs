@@ -1,14 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
-import { DEFAULT_LEVEL, GameModel, GameMode, GamePhase, LEVELS, Modifier, Personality } from "../src/game.js";
+import { DEFAULT_LEVEL, FLIGHT_STYLES, GameModel, GameMode, GamePhase, LEVELS, Modifier, Personality } from "../src/game.js";
 import { FIXED_STEP, magnitude, movedBody, rectContact, resolveContact, stepPhysics } from "../src/physics.js";
 
 // The authoring tool measures how far each hint route may be nudged and still
 // win. Guarding the shipped number keeps a layout edit from silently widening
 // or breaking the difficulty curve.
 const MEASURED_MARGINS = new Map(
-  JSON.parse(readFileSync(new URL("../docs/campaign-balance-0.15.json", import.meta.url), "utf8"))
+  JSON.parse(readFileSync(new URL("../docs/campaign-balance-0.16.json", import.meta.url), "utf8"))
     .map((entry) => [entry.number, entry.margin]),
 );
 const routeMargin = (level) => MEASURED_MARGINS.get(level.number) ?? 8;
@@ -160,30 +160,105 @@ test("full hint in ONE MOVE explicitly restores the reference layout", () => {
   assert.equal(model.phase, GamePhase.SUCCEEDED);
 });
 
-test("FIK is once per shot, absent from early lessons and reproducible with replay timing", () => {
+test("FIK spends a charge, is absent from early lessons and replays at its recorded time", () => {
   const early = new GameModel(); launch(early);
-  assert.equal(early.useAirMove(), false);
+  assert.equal(early.useAirMove(), false, "the first missions teach the sling alone");
   const model = new GameModel(() => {}, LEVELS[5]);
+  const style = model.flightStyle;
   launch(model, { x: 150, y: 465 });
   model.update(.1);
   const velocity = { ...model.avatarVelocity };
   assert.equal(model.useAirMove(), true);
-  assert.equal(model.avatarVelocity.x, velocity.x + 65);
-  assert.equal(model.avatarVelocity.y, velocity.y - 260);
-  assert.equal(model.useAirMove(), false);
+  assert.equal(model.avatarVelocity.x, velocity.x + style.push);
+  assert.equal(model.avatarVelocity.y, velocity.y - style.lift);
+  assert.equal(model.useAirMove(), false, "one charge for this character");
   const saved = structuredClone(model.previousShot);
+  assert.equal(saved.moves.length, 1);
   finish(model); assert.equal(model.phase, GamePhase.FAILED);
   assert.equal(model.replayWith(Modifier.LOW_GRAVITY), true);
   const control = new GameModel(() => {}, model.level);
   control.startFlight(saved.launchVelocity, false, saved.launchPosition);
   control.modifier = Modifier.LOW_GRAVITY;
   for (let i = 0; i < 200 && control.phase === GamePhase.FLYING; i++) {
-    if (control.flightTime + 1e-8 >= saved.airMoveAt) control.useAirMove();
+    if (control.flightTime + 1e-8 >= saved.moves[0].at) control.useAirMove();
     control.update(FIXED_STEP); model.update(FIXED_STEP);
     assert.deepEqual(model.avatarPosition, control.avatarPosition);
   }
   assert.deepEqual(model.previousShot, saved);
   model.resetLevel(false); assert.equal(model.airMoveUsed, false);
+});
+
+test("KAMIEŃ is the opposite correction to FIK and arrives only once it is taught", () => {
+  const beforeReef = new GameModel(() => {}, LEVELS[5]);
+  launch(beforeReef);
+  assert.equal(beforeReef.useDiveMove(), false, "mission 6 has not met the drop yet");
+
+  const model = new GameModel(() => {}, LEVELS[16]);
+  assert.equal(model.level.diveMove, true);
+  const style = model.flightStyle;
+  launch(model);
+  model.update(.1);
+  const velocity = { ...model.avatarVelocity };
+  assert.equal(model.useDiveMove(), true);
+  assert.equal(model.avatarVelocity.x, velocity.x * style.brake);
+  assert.equal(model.avatarVelocity.y, velocity.y + style.drop);
+  assert.ok(style.brake < 1 && style.drop > 0, "the drop brakes forward pace and adds fall");
+  assert.equal(model.useDiveMove(), false);
+  assert.equal(model.diveMoveUsed, true);
+  assert.equal(model.airMoveUsed, false, "the two moves are counted apart");
+});
+
+test("character changes the in-flight toolkit and nothing about the free flight", () => {
+  const kits = Object.values(Personality).map((personality) => {
+    const model = new GameModel(() => {}, LEVELS[16]);
+    model.setPersonality(personality);
+    launch(model);
+    for (let i = 0; i < 30; i++) model.update(FIXED_STEP);
+    return { personality, position: { ...model.avatarPosition }, style: model.flightStyle, charges: model.airMovesLeft };
+  });
+  for (const kit of kits.slice(1)) {
+    assert.deepEqual(kit.position, kits[0].position, `${kit.personality} must not bend the free flight`);
+  }
+  const lifts = kits.map((kit) => kit.style.lift);
+  assert.equal(new Set(lifts).size, lifts.length, "every character lifts differently");
+  assert.equal(kits.find((kit) => kit.personality === Personality.PANIC).charges, 2, "Panic trades power for a second correction");
+  assert.equal(kits.find((kit) => kit.personality === Personality.TOUGH_GUY).charges, 1);
+  const tough = FLIGHT_STYLES[Personality.TOUGH_GUY], drama = FLIGHT_STYLES[Personality.DRAMA_QUEEN];
+  assert.ok(drama.lift > tough.lift && tough.push > drama.push, "Drama Queen goes up, Tough Guy goes forward");
+  assert.ok(FLIGHT_STYLES[Personality.ZEN].brake < tough.brake, "Zen kills the most forward pace");
+});
+
+test("What If replays both moves in order and restores the character that made the shot", () => {
+  const model = new GameModel(() => {}, LEVELS[16]);
+  model.setPersonality(Personality.PANIC);
+  // A pull that loses even after all three corrections, so What If has a real
+  // failure to replay.
+  launch(model, { x: 35, y: 480 });
+  model.update(.08); assert.equal(model.useAirMove(), true);
+  model.update(.08); assert.equal(model.useDiveMove(), true);
+  model.update(.08); assert.equal(model.useAirMove(), true, "Panic has a second charge");
+  const saved = structuredClone(model.previousShot);
+  assert.deepEqual(saved.moves.map((move) => move.kind), ["air", "dive", "air"]);
+  finish(model);
+  assert.equal(model.phase, GamePhase.FAILED);
+
+  model.setPersonality(Personality.ZEN);
+  assert.equal(model.replayWith(Modifier.GIANT_HEAD), true);
+  assert.equal(model.personality, Personality.PANIC, "the replay restores the recorded toolkit");
+  const control = new GameModel(() => {}, model.level);
+  control.setPersonality(Personality.PANIC);
+  control.startFlight(saved.launchVelocity, false, saved.launchPosition);
+  control.modifier = Modifier.GIANT_HEAD;
+  let cursor = 0;
+  for (let i = 0; i < 400 && control.phase === GamePhase.FLYING; i++) {
+    while (cursor < saved.moves.length && control.flightTime + 1e-8 >= saved.moves[cursor].at) {
+      const move = saved.moves[cursor++];
+      if (move.kind === "dive") control.useDiveMove(); else control.useAirMove();
+    }
+    control.update(FIXED_STEP); model.update(FIXED_STEP);
+    assert.deepEqual(model.avatarPosition, control.avatarPosition);
+  }
+  assert.deepEqual(model.previousShot, saved, "a replay never rewrites the recipe");
 });
 
 test("rect collision pushes an interior centre fully out and does not energize separating motion", () => {
@@ -351,4 +426,18 @@ test("the goal collider matches the drawn object instead of an invisible buffer"
   assert.ok(late.every((level) => level.goal.radius >= 54), "no goal shrinks below what the art shows");
   const openers = LEVELS.filter((level) => level.number > 8 && (level.number - 1) % 8 === 0);
   assert.ok(openers.every((level) => level.goal.radius > 60), "a new rule is never taught on a pinpoint target");
+});
+
+test("KAMIEŃ is a commitment during the climb, not a rescue on the way down", () => {
+  const model = new GameModel(() => {}, LEVELS[16]);
+  launch(model);
+  assert.ok(model.avatarVelocity.y < 0, "the shot starts by rising");
+  assert.equal(model.canDive, true);
+
+  for (let step = 0; step < 900 && model.avatarVelocity.y < 0; step += 1) model.update(FIXED_STEP);
+  assert.ok(model.avatarVelocity.y >= 0, "the hero is now falling");
+  assert.equal(model.canDive, false, "the window closes at the top of the arc");
+  assert.equal(model.useDiveMove(), false);
+  assert.equal(model.diveMoveUsed, false, "a refused move never spends a charge");
+  assert.ok(model.airMovesLeft > 0, "FIK stays available for the fall");
 });

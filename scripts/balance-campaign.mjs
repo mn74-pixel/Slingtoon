@@ -101,6 +101,6 @@ if (failed.length) {
   process.exitCode = 1;
 } else if (process.argv.includes("--write") && !selected) {
   await writeFile("src/campaign-routes.js", `// Measured with scripts/balance-campaign.mjs. No search runs on the player's device.\nexport const CAMPAIGN_ROUTES = ${JSON.stringify(routes, null, 2)};\n`);
-  await writeFile("docs/campaign-balance-0.15.json", JSON.stringify(report, null, 2) + "\n");
+  await writeFile("docs/campaign-balance-0.16.json", JSON.stringify(report, null, 2) + "\n");
   console.log("Stored 72 forgiving routes, alternate star routes and their measured tolerance.");
 }

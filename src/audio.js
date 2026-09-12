@@ -35,6 +35,12 @@ export class GameAudio {
       this.tone({ frequency: 180, endFrequency: 850, duration: .16, type: "triangle", volume: .09 });
       this.noise(.06, .05);
     }
+    // Falling pitch against the FIK's rising one: the ear hears which way you went.
+    if (event.type === "dive-move") {
+      this.tone({ frequency: 760, endFrequency: 90, duration: .2, type: "sawtooth", volume: .075 });
+      this.tone({ frequency: 120, endFrequency: 58, duration: .26, type: "sine", volume: .09, delay: .05 });
+      this.noise(.09, .06);
+    }
     if (event.type === "collect") {
       this.pop(740, .09);
       this.tone({ frequency: 1100, duration: .12, volume: .05, delay: .08 });
