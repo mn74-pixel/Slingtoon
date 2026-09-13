@@ -2,7 +2,12 @@
 // behind the gameplay wash; interactive geometry is drawn by interactions-renderer.
 const C = { ink: "#19142d", cream: "#fff5d9", mint: "#5ce1bd", coral: "#ff6078", gold: "#ffd35f", violet: "#a28bff", teal: "#2cae9d" };
 const TAU = Math.PI * 2;
-function finish(ctx, fill, width = 5, stroke = C.ink) { ctx.fillStyle = fill; ctx.fill(); ctx.strokeStyle = stroke; ctx.lineWidth = width; if (width) ctx.stroke(); }
+// Decoration and gameplay used the same hard ink outline, so a painted parasol
+// read exactly like a solid obstacle. Scenery now strokes in a muted tint while
+// goals and colliders keep full ink — the outline itself says what is real.
+const DECOR_STROKE = "rgba(25, 20, 45, 0.34)";
+let outline = C.ink;
+function finish(ctx, fill, width = 5, stroke = outline) { ctx.fillStyle = fill; ctx.fill(); ctx.strokeStyle = stroke; ctx.lineWidth = width; if (width) ctx.stroke(); }
 function box(ctx, x, y, w, h, fill, r = 12, width = 5) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); finish(ctx, fill, width); }
 function oval(ctx, x, y, rx, ry, fill, width = 5) { ctx.beginPath(); ctx.ellipse(x, y, rx, ry, 0, 0, TAU); finish(ctx, fill, width); }
 function path(ctx, points, fill, width = 5) { ctx.beginPath(); points.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.closePath(); finish(ctx, fill, width); }
@@ -48,15 +53,10 @@ function fish(ctx, x, y, scale, color, happy = false) {
   oval(ctx, 0, 0, 46, 30, color); path(ctx, [[-8, -23], [8, -47], [23, -19]], color, 3);
   eyes(ctx, -12, -3, happy, 4); ctx.restore();
 }
-function chapterLabel(ctx, level, subtitle) {
-  ctx.save(); ctx.globalAlpha = .6; ctx.textAlign = "left"; ctx.fillStyle = C.cream;
-  ctx.font = "900 24px system-ui, sans-serif"; ctx.fillText(level.chapter, 48, 60, 650);
-  ctx.font = "700 13px system-ui, sans-serif"; ctx.fillText(subtitle, 49, 83, 650); ctx.restore();
-}
-
 export function drawCampaignScene(ctx, level) {
   const variant = level.visual?.variant ?? 0, scene = level.scene;
   ctx.save(); ctx.lineCap = "round"; ctx.lineJoin = "round";
+  outline = DECOR_STROKE;
   if (scene === "beach") {
     const [skyTop, skyBottom, sand] = pick(variant, [
       ["#73cfdc", "#efd6b9", "#dfb884"], ["#8ed9e3", "#f4e0c6", "#e5c091"],
@@ -80,7 +80,6 @@ export function drawCampaignScene(ctx, level) {
     const parasolX = 215 + variant * 26;
     line(ctx, [[parasolX + 65, 465], [parasolX + 95, 350]], "#ad7880", 7);
     path(ctx, [[parasolX, 360], [parasolX + 95, 305], [parasolX + 165, 375]], "#b690ad", 3);
-    chapterLabel(ctx, level, "Piasek wszędzie. Planów brak.");
   } else if (scene === "reef" || scene === "wreck") {
     const [top, bottom] = scene === "reef"
       ? pick(variant, [["#469fac", "#366b8c"], ["#3f95a8", "#2f6285"], ["#52a8b0", "#3b7390"], ["#3c8ea3", "#2b5b80"]])
@@ -109,7 +108,6 @@ export function drawCampaignScene(ctx, level) {
       for (let i = 0; i < shoal; i++) fish(ctx, 350 + i * 145 - variant * 22, 130 + i % 2 * 50 + variant * 9, .35, "#79a6ad");
       path(ctx, [[370, 568], [440, 465], [530, 565], [650, 485], [730, 580]], "#618a98", 3);
     }
-    chapterLabel(ctx, level, scene === "wreck" ? "Pięć gwiazdek. Wszystkie morskie." : "Oddychaj spokojnie. Bohater ogarnia bąble.");
   } else if (scene === "harbour") {
     const [skyTop, skyBottom] = pick(variant, [["#a69ac6", "#efc0ac"], ["#9a8fc0", "#e8b6a4"], ["#b3a4cd", "#f5d0b6"], ["#8d84b6", "#dfa896"]]);
     gradient(ctx, skyTop, skyBottom); clouds(ctx, "#e6d2db");
@@ -122,7 +120,6 @@ export function drawCampaignScene(ctx, level) {
     line(ctx, [[craneX + 330, 125], [craneX + 330, 250]], "#625770", 4); box(ctx, craneX + 315, 245, 30, 40, "#b99b8b", 7, 3);
     ctx.fillStyle = "#b08f89"; ctx.fillRect(0, 542, 1280, 98);
     for (let i = 0; i < 16; i++) line(ctx, [[i * 90, 545], [i * 90 - 25, 640]], "#8b727e", 3);
-    chapterLabel(ctx, level, "Ładunek: pasażer. Stan: lekko zaskoczony.");
   } else if (scene === "fairground") {
     const [skyTop, skyBottom] = pick(variant, [["#70659d", "#d194a7"], ["#655b93", "#c489a0"], ["#7d71a8", "#dba0ad"], ["#5c5389", "#b87e98"]]);
     gradient(ctx, skyTop, skyBottom);
@@ -138,7 +135,6 @@ export function drawCampaignScene(ctx, level) {
     line(ctx, [[0, 115], [1280, 140]], "#81748f", 3);
     for (let i = 0; i < 18; i++) path(ctx, [[i * 78 - variant * 9, 116 + i], [i * 78 + 50 - variant * 9, 117 + i], [i * 78 + 23 - variant * 9, 150 + i]], (i + variant) % 2 ? "#bea290" : "#a883a4", 0);
     ctx.fillStyle = "#80657e"; ctx.fillRect(0, 552, 1280, 88);
-    chapterLabel(ctx, level, "Wszystkie atrakcje mają wyjście. Chyba.");
   } else if (["spaceport", "moon", "station", "comet"].includes(scene)) {
     gradient(ctx, scene === "spaceport" ? pick(variant, ["#78669b", "#6d5c92", "#8271a4", "#63548a"]) : pick(variant, ["#30284e", "#2a2346", "#372e57", "#251f40"]), scene === "moon" ? "#635576" : "#605281");
     stars(ctx, variant);
@@ -172,8 +168,8 @@ export function drawCampaignScene(ctx, level) {
         line(ctx, [[flagX, 545], [flagX, 347]], "#aa929c", 5); path(ctx, [[flagX + 2, 350], [flagX + 83, 355], [flagX + 62, 405], [flagX + 2, 399]], "#b695a1", 3);
       }
     }
-    chapterLabel(ctx, level, scene === "spaceport" ? "Bagaż podręczny: jeden cały bohater." : scene === "moon" ? "Grawitacja: obniżona. Ambicje: nie." : scene === "station" ? "Prosimy nie parkować na orbicie." : "Kierunek: dom. Objazd: wszechświat.");
-  } else { ctx.restore(); return false; }
+  } else { outline = C.ink; ctx.restore(); return false; }
+  outline = C.ink;
   ctx.restore(); return true;
 }
 

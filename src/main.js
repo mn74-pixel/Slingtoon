@@ -1,9 +1,9 @@
-import { GameModel, GameMode, GamePhase, LEVELS, modifierName } from "./game.js?v=0.16.0";
-import { GameRenderer } from "./render.js?v=0.16.0";
-import { GameAudio } from "./audio.js?v=0.16.0";
-import { FaceStudio } from "./face-studio.js?v=0.16.0";
-import { PROGRESS_KEY, TOKEN_SCORE_STEP, readProgress, hintOffer, purchaseHint, rewardSuccess, medalText } from "./progress.js?v=0.16.0";
-import { CHAPTERS } from "./levels.js?v=0.16.0";
+import { GameModel, GameMode, GamePhase, LEVELS, modifierName } from "./game.js?v=0.16.1";
+import { GameRenderer } from "./render.js?v=0.16.1";
+import { GameAudio } from "./audio.js?v=0.16.1";
+import { FaceStudio } from "./face-studio.js?v=0.16.1";
+import { PROGRESS_KEY, TOKEN_SCORE_STEP, readProgress, hintOffer, purchaseHint, rewardSuccess, medalText } from "./progress.js?v=0.16.1";
+import { CHAPTERS } from "./levels.js?v=0.16.1";
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -90,7 +90,7 @@ let progress = loadProgress();
 let highestUnlockedLevel = progress.highestUnlockedLevel;
 let mapChapterIndex = 0;
 let lastReward = null;
-const FULLSCREEN_TIP_KEY = "slingtoon-fullscreen-tip-0.16.0";
+const FULLSCREEN_TIP_KEY = "slingtoon-fullscreen-tip-0.16.1";
 
 function loadProgress() {
   try {
@@ -587,10 +587,12 @@ function updateUi() {
   elements.hintButton.disabled = model.phase !== GamePhase.READY;
   elements.hintButton.textContent = offer
     ? offer.cost > 0
-      ? `💡 ${offer.stage}/3 · ${offer.cost} żet. (masz ${progress.hintTokens})`
-      : `💡 ${offer.stage}/3 · ${offer.rescue ? "RATUNKOWA" : "GRATIS"}`
+      ? `💡 PODPOWIEDŹ ${offer.stage}/3 · ${offer.cost} żeton`
+      : `💡 PODPOWIEDŹ ${offer.stage}/3 · ${offer.rescue ? "RATUNKOWA" : "GRATIS"}`
     : model.hintStage < (progress.hints[model.level.id] ?? 0) ? "💡 POKAŻ ODKRYTE" : "💡 UKRYJ PODPOWIEDŹ";
-  elements.hintButton.title = offer ? "Odkryj zasadę, kierunek, a na końcu pełną trasę. Odkrycia zostają zapisane." : model.activeHint?.text ?? "Wszystkie podpowiedzi wykorzystane";
+  elements.hintButton.title = offer
+    ? `Masz ${progress.hintTokens} żetonów. Odkryj zasadę, kierunek, a na końcu pełną trasę. Odkrycia zostają zapisane.`
+    : model.activeHint?.text ?? "Wszystkie podpowiedzi wykorzystane";
   const flying = model.phase === GamePhase.FLYING;
   elements.airMove.hidden = !model.level.airMove || !flying;
   elements.airMove.disabled = !flying || model.airMovesLeft <= 0 || model.replaying;
@@ -600,7 +602,9 @@ function updateUi() {
   elements.diveMove.textContent = model.diveMovesLeft <= 0
     ? "✓ KAMIEŃ ZUŻYTY"
     : model.canDive ? `↓ KAMIEŃ! · ${model.diveMovesLeft}` : "↓ JUŻ SPADASZ";
-  elements.objective.textContent = `${model.objectiveMet ? "✓ Cel odblokowany" : model.level.mechanic} · ${model.collectedStar ? "★ Gwiazdka!" : "☆ Gwiazdka opcjonalna"}`;
+  // The plate above the board carries the full requirement, so the board itself
+  // does not have to spell it out next to the wrong object.
+  elements.objective.textContent = `${model.objectiveMet ? "✓ Cel odblokowany" : model.level.required.length ? model.level.requirement : model.level.mechanic} · ${model.collectedStar ? "★ Gwiazdka!" : "☆ Gwiazdka opcjonalna"}`;
   elements.levelIndicator.disabled = !controlsEnabled;
   elements.quickMode.disabled = !controlsEnabled;
   elements.oneMoveMode.disabled = !controlsEnabled || !model.level.editable;
@@ -737,7 +741,7 @@ window.addEventListener("keydown", (event) => {
 
 window.addEventListener("load", () => {
   if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
-    navigator.serviceWorker.register("./sw.js?v=0.16.0").catch(() => {});
+    navigator.serviceWorker.register("./sw.js?v=0.16.1").catch(() => {});
   }
   scheduleFullscreenSuggestion();
   syncGameViewport();

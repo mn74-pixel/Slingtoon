@@ -162,6 +162,16 @@ assert.match(game, /avatarGrabRadius/);
 assert.match(game, /useDiveMove\(automatic/);
 assert.match(game, /FLIGHT_STYLES/);
 assert.match(html, /id="diveMoveButton"/);
+// Scenery must never borrow the outline that marks a real collider, and the
+// shell must never grow past the viewport — that is what clipped the footer.
+const world = await readFile(resolve(root, "src/world-renderer.js"), "utf8");
+assert.match(world, /const DECOR_STROKE/);
+assert.match(world, /outline = DECOR_STROKE/);
+assert.doesNotMatch(world, /chapterLabel/);
+assert.match(css, /\.app-shell\s*\{[^}]*height:\s*100dvh/);
+// The stage takes leftover height instead of deriving it from page width;
+// a portrait breakpoint may still pin 2:1, the default rule may not.
+assert.match(css, /\.stage\s*\{[^}]*flex:\s*1 1 auto/);
 assert.match(main, /useDiveMove\(\)/);
 // Personality is a real toolkit, so every character must differ on every dial
 // while the launch itself stays shared.

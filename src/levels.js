@@ -1,5 +1,5 @@
-import { CHAPTERS, EXTRA_LEVELS } from "./campaign.js?v=0.16.0";
-export { CHAPTERS } from "./campaign.js?v=0.16.0";
+import { CHAPTERS, EXTRA_LEVELS } from "./campaign.js?v=0.16.1";
+export { CHAPTERS } from "./campaign.js?v=0.16.1";
 const point = (x, y) => ({ x, y });
 function freeze(value) {
   if (value && typeof value === "object") {

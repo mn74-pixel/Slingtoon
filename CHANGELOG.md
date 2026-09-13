@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.16.1 — Nic nie wychodzi poza ekran, nic nie udaje przeszkody
+
+- naprawiono przycinanie dolnej części strony: `.stage` miał sztywne `aspect-ratio: 2/1`, więc wysokość karty gry wynikała z szerokości okna i na laptopie przekraczała ekran — w pełnym ekranie na MacBooku Air ginęło 95 px, a w zwykłym oknie nawet 231 px,
+- powłoka strony ma teraz dokładnie wysokość okna, a plansza bierze tę wysokość, która zostanie; kamera i tak jest crop-free, więc każdy kształt planszy pokazuje pełny świat 1280×640,
+- w pełnym ekranie znika stopka i pomoc klawiaturowa — to nie jest treść gry i tylko zabierała wysokość,
+- dekoracja rozdziału przestała udawać przeszkodę: sceneria ma teraz przygaszony kontur, a pełna czerń pozostaje zarezerwowana dla celów i rzeczywistych colliderów,
+- podpis przy celu nie powtarza już polecenia dotyczącego obiektu stojącego w innym miejscu ekranu — mówi wyłącznie, czy cel jest zamknięty; pełne zdanie z zadaniem trafiło na płytkę nad planszą,
+- usunięto nazwę rozdziału rysowaną na planszy: ta sama informacja jest w pasku nad grą, a na canvasie wchodziła na odznakę celu,
+- tytuł misji może złamać się na dwie linie zamiast urywać się wielokropkiem,
+- przycisk podpowiedzi mówi po ludzku („PODPOWIEDŹ 1/3 · 1 żeton"), a stan żetonów przeniesiono do dymka,
+- aureola pod celem jest subtelniejsza, żeby nie było jej widać na gładkim niebie,
+- walidacja pilnuje teraz, że sceneria nie pożycza konturu collidera, a powłoka nie może urosnąć ponad okno.
+
 ## 0.16.0 — Charakter to narzędzia, nie skórka
 
 - dodano drugi manewr w locie: **KAMIEŃ** ścina tor w dół i hamuje część pędu do przodu, uzupełniając FIK, który lot wydłuża,
