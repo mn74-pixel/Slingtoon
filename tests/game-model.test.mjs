@@ -8,7 +8,7 @@ import { FIXED_STEP, magnitude, movedBody, rectContact, resolveContact, stepPhys
 // win. Guarding the shipped number keeps a layout edit from silently widening
 // or breaking the difficulty curve.
 const MEASURED_MARGINS = new Map(
-  JSON.parse(readFileSync(new URL("../docs/campaign-balance-0.16.json", import.meta.url), "utf8"))
+  JSON.parse(readFileSync(new URL("../docs/campaign-balance-0.16.1.json", import.meta.url), "utf8"))
     .map((entry) => [entry.number, entry.margin]),
 );
 const routeMargin = (level) => MEASURED_MARGINS.get(level.number) ?? 8;

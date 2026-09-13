@@ -34,7 +34,7 @@ Najwęższe okno (±5–6) mają misje 38, 44, 58, 72, 74 i 78 — to pierwsze k
 
 ## Poprawiony błąd w narzędziu autorskim
 
-`scripts/balance-campaign.mjs` mierzył tolerancję ze stałym krokiem 4 px, więc przy oknie ±5 badał przesunięcia −5, −1 i +3, nigdy nie sprawdzając narożników pola. Raportowana tolerancja mogła być więc taka, której trasa nie przetrwała. Pomiar chodzi teraz po siatce lądującej dokładnie na ±margin, a test regresji porównuje każdą z 80 tras z zapisaną w `docs/campaign-balance-0.16.json` wartością. Skrypt wyklucza też gwiazdki wewnątrz stref zakazanych i w pasie ruchu ruchomych przeszkód.
+`scripts/balance-campaign.mjs` mierzył tolerancję ze stałym krokiem 4 px, więc przy oknie ±5 badał przesunięcia −5, −1 i +3, nigdy nie sprawdzając narożników pola. Raportowana tolerancja mogła być więc taka, której trasa nie przetrwała. Pomiar chodzi teraz po siatce lądującej dokładnie na ±margin, a test regresji porównuje każdą z 80 tras z zapisaną w `docs/campaign-balance-0.16.1.json` wartością. Skrypt wyklucza też gwiazdki wewnątrz stref zakazanych i w pasie ruchu ruchomych przeszkód.
 
 Raport pomiaru jest generowany od nowa przy każdym wydaniu, dlatego istnieje jeden aktualny plik, a nie osobny plik na wersję.
 

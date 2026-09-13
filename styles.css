@@ -80,8 +80,7 @@ select:focus-visible {
 .app-shell {
   position: relative;
   width: min(1500px, 100%);
-  min-height: 100vh;
-  min-height: 100dvh;
+  height: 100dvh;
   margin: 0 auto;
   padding: max(14px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left));
   display: grid;
@@ -240,11 +239,15 @@ footer,
 main {
   min-height: 0;
   display: grid;
-  align-items: center;
+  align-items: stretch;
 }
 
 .game-card {
   width: 100%;
+  min-height: 0;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.13);
   border-radius: clamp(18px, 2vw, 30px);
@@ -322,7 +325,10 @@ main {
   line-height: 1.05;
   letter-spacing: -0.025em;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 
 .mission-badges {
@@ -365,8 +371,8 @@ main {
   position: relative;
   overflow: hidden;
   width: 100%;
-  aspect-ratio: 2 / 1;
-  min-height: 240px;
+  flex: 1 1 auto;
+  min-height: 200px;
   background: #382a5d;
   isolation: isolate;
 }
@@ -1608,6 +1614,12 @@ noscript {
     width: 100%;
     justify-content: center;
   }
+}
+
+/* Fullscreen is for playing, so page furniture never competes for height. */
+body.is-fullscreen-active footer,
+body.is-fullscreen-active .keyboard-help {
+  display: none;
 }
 
 /*

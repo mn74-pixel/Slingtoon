@@ -1,6 +1,6 @@
 // Visual language: mint = active/entry, coral = obstacle, gold = optional reward,
 // crimson + spikes = the one thing that ends the flight on touch.
-import { movedBody } from "./physics.js?v=0.16.0";
+import { movedBody } from "./physics.js?v=0.16.1";
 const ink = "#19142d", cream = "#fff5d9", mint = "#5ce1bd", coral = "#ff6078", gold = "#ffd35f", violet = "#a28bff", danger = "#d6002f";
 function box(ctx, x, y, w, h, color, radius = 12) {
   ctx.beginPath(); ctx.roundRect(x, y, w, h, radius);
@@ -181,7 +181,7 @@ export function drawObjective(ctx, model, time) {
   // player must hit always reads first, without flattening the whole scene.
   const haloRadius = Math.max(model.goalRadius, 74) + 108;
   const halo = ctx.createRadialGradient(goal.x, goal.y, haloRadius * 0.32, goal.x, goal.y, haloRadius);
-  halo.addColorStop(0, "rgba(20,13,34,.40)");
+  halo.addColorStop(0, "rgba(20,13,34,.28)");
   halo.addColorStop(1, "rgba(20,13,34,0)");
   ctx.fillStyle = halo;
   ctx.beginPath(); ctx.arc(goal.x, goal.y, haloRadius, 0, Math.PI * 2); ctx.fill();
@@ -192,12 +192,14 @@ export function drawObjective(ctx, model, time) {
   ctx.strokeStyle = model.objectiveMet ? mint : coral;
   ctx.lineWidth = 3; ctx.globalAlpha = .55 + Math.sin(time * 3) * .12; ctx.setLineDash([7, 7]);
   ctx.beginPath(); ctx.arc(goal.x, goal.y, model.goalRadius, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
-  const required = model.interactions.find((item) => model.level.required.includes(item.id));
-  const requirement = { breakable: "PRZEBIJ PACZKĘ", portal: "NAJPIERW PORTAL", cushion: "ODBIJ SIĘ", steam: "PRZELEĆ PRZEZ PODMUCH", current: "ZŁAP PRĄD", bubble: "WEJDŹ W BĄBEL", gravity: "OKRĄŻ PLANETĘ", switch: "WCIŚNIJ PRZYCISK", water: "NAJPIERW ŚLIZG" }[required?.type];
+  // The caption used to repeat the requirement at the goal while the object it
+  // described stood elsewhere on screen — an instruction pointing at the wrong
+  // thing. Each required object already labels its own action, so the goal only
+  // states whether it is open. The full sentence lives in the UI strip.
   // The collider may sit inside the drawn object, so the caption clears the
   // artwork rather than the hit circle.
   const captionLift = Math.max(model.goalRadius, 74) + 28;
-  label(ctx, model.objectiveMet ? "TRAF TUTAJ" : requirement, goal.x, goal.y - captionLift, model.objectiveMet ? mint : cream, 11);
+  label(ctx, model.objectiveMet ? "TRAF TUTAJ" : "CEL ZAMKNIĘTY", goal.x, goal.y - captionLift, model.objectiveMet ? mint : coral, 11);
   const star = model.level.star;
   if (star && !model.collectedStar) {
     ctx.save(); ctx.translate(star.x, star.y); ctx.rotate(Math.sin(time * 2) * .13);
