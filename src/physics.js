@@ -173,7 +173,13 @@ export function stepPhysics(model, dt = FIXED_STEP) {
     model.collectedStar = true;
     model.emit("collect", { x: star.x, y: star.y });
   }
-  model.closestGoal = Math.min(model.closestGoal, segmentDistance(before, p, model.goalCentre) - radius - model.goalRadius);
+  const goalGap = segmentDistance(before, p, model.goalCentre) - radius - model.goalRadius;
+  if (goalGap < model.closestGoal) {
+    model.closestGoal = goalGap;
+    // Remember where the shot came closest, so a miss can say which way it was
+    // wrong instead of offering the same shrug every time.
+    model.closestGoalPoint = { x: p.x, y: p.y };
+  }
   if (model.objectiveMet && segmentDistance(before, p, model.goalCentre) <= radius + model.goalRadius) {
     model.finishAttempt(true);
     return;
@@ -182,9 +188,27 @@ export function stepPhysics(model, dt = FIXED_STEP) {
   const grounded = p.y + radius >= model.groundY - 1 && magnitude(v) < 100;
   model.settledTime = grounded ? model.settledTime + dt : 0;
   if (p.x < -120 || p.x > 1410 || p.y > 760 || model.flightTime > 6 || model.settledTime > 0.28) {
-    model.failureReason = !model.objectiveMet && model.closestGoal < 30
-      ? model.level.requirement
-      : model.closestGoal < 65 ? "O włos! Zmień naciągnięcie tylko odrobinę." : "Spróbuj innego kąta. Godność jest odnawialna.";
+    model.failureReason = describeMiss(model);
     model.finishAttempt(false);
   }
+}
+
+// A player who retries a lot learns from the miss or from nothing at all. The
+// closest approach says which way the shot was wrong, so the advice names a
+// direction to correct rather than repeating "try another angle".
+export function describeMiss(model) {
+  if (!model.objectiveMet && model.closestGoal < 30) return model.level.requirement;
+  const point = model.closestGoalPoint;
+  if (!point) return "Lot skończył się daleko od celu. Spróbuj zupełnie innego naciągnięcia.";
+  const goal = model.goalCentre;
+  const dx = point.x - goal.x, dy = point.y - goal.y;
+  const grazed = model.closestGoal < 45;
+  if (Math.abs(dx) >= Math.abs(dy)) {
+    return dx < 0
+      ? grazed ? "Zabrakło kawałka w prawo. Naciągnij odrobinę mocniej." : "Za krótko. Naciągnij wyraźnie mocniej."
+      : grazed ? "Minąłeś cel z prawej. Odpuść odrobinę naciągu." : "Za daleko. Naciągnij wyraźnie słabiej.";
+  }
+  return dy < 0
+    ? grazed ? "Przeszedłeś tuż nad celem. Celuj odrobinę płasko." : "Za wysoko. Spłaszcz łuk."
+    : grazed ? "Przeszedłeś tuż pod celem. Podnieś łuk odrobinę." : "Za nisko. Unieś łuk.";
 }

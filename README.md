@@ -1,8 +1,8 @@
-# SlingToon Web 0.16.1 — 80 missions of controlled chaos
+# SlingToon Web 0.17.0 — 80 missions of controlled chaos
 
 An offline-capable HTML5 Canvas PWA prepared for GitHub Pages. No JUCE, Projucer or native build is required for browser testing.
 
-Version 0.16 gives the hero a second in-flight move and turns character choice into a real physics toolkit. Version 0.15 tightened the difficulty curve and added a photo cut-out head. Version 0.14 expanded the campaign from 8 to 80 authored missions across ten chapters. The trip runs from domestic chaos through the beach, underwater worlds, harbour, fairground, spaceport and orbital environments, then returns to the original alarm clock. Every mission has a solver-verified forgiving completion route and a separate reachable star route. Physics, prediction and replay share the deterministic 120 Hz solver.
+Version 0.17 keeps the previous attempt on screen as a ghost trail and tells the player which way a miss was wrong. Version 0.16 gave the hero a second in-flight move and turns character choice into a real physics toolkit. Version 0.15 tightened the difficulty curve and added a photo cut-out head. Version 0.14 expanded the campaign from 8 to 80 authored missions across ten chapters. The trip runs from domestic chaos through the beach, underwater worlds, harbour, fairground, spaceport and orbital environments, then returns to the original alarm clock. Every mission has a solver-verified forgiving completion route and a separate reachable star route. Physics, prediction and replay share the deterministic 120 Hz solver.
 
 The game still has no server/runtime dependencies. Portraits remain local, and the crop-free mobile camera is preserved. The chapter map shows eight missions at a time and resumes the current unlocked mission.
 
