@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.18.0 — Restart przygody i koniec fioletowej ramki wokół planszy
+
+- **restart całej przygody** w mapie misji, za dwustopniowym potwierdzeniem: przycisk odsłania ostrzeżenie mówiące dokładnie, co zniknie, i dopiero druga decyzja kasuje postęp,
+- restart czyści zapis (również stare klucze 0.12 i 0.13), zeruje punkty, żetony, medale i odkryte podpowiedzi, po czym wraca na misję 1,
+- naprawiono regresję z 0.16.1: odkąd plansza bierze wolną wysokość, na szerokim ekranie bywa szersza niż 2:1, a odsłonięty margines był wypełniany płaskim fioletowym gradientem, który ramkował grę jak błąd,
+- margines pokazuje teraz rozciągniętą i przyciemnioną kopię sceny, więc pokój czyta się, jakby po prostu wychodził poza krawędzie ekranu,
+- podkład jest cache'owany raz na misję w jednej ósmej rozdzielczości — powiększenie samo go rozmywa, więc efekt kosztuje jedno tanie rysowanie zamiast drugiej pełnej sceny na klatkę,
+- renderer przyjmuje własną fabrykę powierzchni offscreen, dzięki czemu offline'owy render QA pokazuje dokładnie to, co widzi gracz.
+
 ## 0.17.0 — Widzisz, gdzie poleciał poprzedni strzał
 
 - **ślad poprzedniej próby** zostaje na planszy podczas celowania: kropkowany tor i znacznik w miejscu, w którym lot się skończył; wcześniej ślad żył 0,75 s i znikał, więc każda powtórka była zgadywaniem na ślepo,

@@ -717,6 +717,87 @@ footer {
   background: #2b2047;
 }
 
+/* The only irreversible action in the game, so it looks like one and asks first. */
+.map-danger {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 96, 120, 0.22);
+}
+
+.map-danger__open {
+  padding: 10px 16px;
+  border: 1px solid rgba(255, 96, 120, 0.4);
+  border-radius: 13px;
+  color: rgba(255, 168, 182, 0.95);
+  background: rgba(255, 96, 120, 0.09);
+  font-size: 12px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.map-danger__open:hover {
+  border-color: rgba(255, 96, 120, 0.72);
+  background: rgba(255, 96, 120, 0.16);
+}
+
+.map-danger__confirm {
+  display: grid;
+  gap: 8px;
+  padding: 15px 17px;
+  border: 1px solid rgba(255, 96, 120, 0.5);
+  border-radius: 16px;
+  background: rgba(255, 96, 120, 0.1);
+}
+
+.map-danger__confirm[hidden] {
+  display: none;
+}
+
+.map-danger__confirm strong {
+  color: #ffb0be;
+  font-size: 14px;
+  font-weight: 950;
+}
+
+.map-danger__confirm span {
+  color: rgba(255, 245, 217, 0.8);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.map-danger__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-top: 3px;
+}
+
+.map-danger__cancel,
+.map-danger__yes {
+  min-height: 42px;
+  padding: 0 18px;
+  border-radius: 13px;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.map-danger__cancel {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--cream);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.map-danger__yes {
+  border: 1px solid #ff6078;
+  color: #2a1020;
+  background: linear-gradient(145deg, #ff8093, #ff5771);
+}
+
+.map-danger__yes:hover {
+  filter: brightness(1.07);
+}
+
 .face-mode {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

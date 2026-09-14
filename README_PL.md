@@ -1,4 +1,4 @@
-# SlingToon Web 0.17.0 — 80 misji kontrolowanego chaosu
+# SlingToon Web 0.18.0 — 80 misji kontrolowanego chaosu
 
 Samodzielna gra webowa przygotowana w tym samym modelu publikacji co Castle Conflict. Do uruchomienia i wdrożenia nie potrzeba JUCE, Projucera ani Xcode.
 
@@ -60,6 +60,7 @@ Na współczesnym iPhonie SlingToon pokazuje jednorazowy przycisk `Graj pełny e
 - Od piątej misji: `FIK!` w locie (przycisk, dotknięcie planszy lub spacja) podbija do góry i lekko do przodu. Od misji 17 dochodzi `KAMIEŃ!` (przycisk lub strzałka w dół), który ścina tor w dół i hamuje część pędu — działa tylko dopóki jeszcze się wznosisz, więc jest decyzją na czas, a nie przyciskiem naprawiającym każdy błąd. Wszystkie misje da się przejść także bez obu manewrów.
 - Charakter bohatera to zestaw manewrów, nie skórka. Drama Queen skacze najwyżej, Tough Guy leci najdalej w przód i najciężej nurkuje, Panic dostaje po dwa słabsze ładunki każdego manewru, Zen najmocniej wytraca pęd. Sam wystrzał i lot swobodny są identyczne dla wszystkich, dlatego zmiana charakteru może otworzyć nowe rozwiązanie, ale nigdy nie odbiera istniejącego.
 - Klawiatura: spacja rozpoczyna celowanie, strzałki zmieniają naciąg, kolejna spacja wystrzeliwuje; `R` ponawia. Wyzwanie przestawienia poduszki obsługuje dotyk/mysz.
+- Na dole mapy misji jest restart całej przygody. Wymaga dwóch decyzji: pierwszy przycisk odsłania ostrzeżenie mówiące dokładnie, co zniknie, i dopiero potwierdzenie kasuje postęp. Wracasz wtedy na misję 1 z wyzerowanymi punktami, żetonami i medalami.
 - Kliknij licznik poziomów, aby otworzyć mapę. Gwiazdki są opcjonalne. Medale za przejście, gwiazdkę i pierwszy strzał kumulują się między podejściami.
 - Podpowiedzi mają trzy poziomy: żartobliwa wskazówka, kierunek oraz pełny duch toru. Pierwsze misje uczą za darmo, późniejsze zużywają żetony zdobywane za Punkty Sprytu.
 - Odkrycia są zapamiętywane; pełny tor można pokazać lub ukryć bez ponownego płacenia. Darmowa pomoc ratunkowa wchodzi po 5 próbach w pierwszych rozdziałach i po 7 w końcowych — weteran ma więcej miejsca na własne rozwiązanie. Co 200 nowych punktów otrzymujesz żeton; powtórzenie tego samego rekordu nie daje kolejnych punktów.

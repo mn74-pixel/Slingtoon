@@ -1,9 +1,9 @@
-import { GameModel, GameMode, GamePhase, LEVELS, modifierName } from "./game.js?v=0.17.0";
-import { GameRenderer } from "./render.js?v=0.17.0";
-import { GameAudio } from "./audio.js?v=0.17.0";
-import { FaceStudio } from "./face-studio.js?v=0.17.0";
-import { PROGRESS_KEY, TOKEN_SCORE_STEP, readProgress, hintOffer, purchaseHint, rewardSuccess, medalText } from "./progress.js?v=0.17.0";
-import { CHAPTERS } from "./levels.js?v=0.17.0";
+import { GameModel, GameMode, GamePhase, LEVELS, modifierName } from "./game.js?v=0.18.0";
+import { GameRenderer } from "./render.js?v=0.18.0";
+import { GameAudio } from "./audio.js?v=0.18.0";
+import { FaceStudio } from "./face-studio.js?v=0.18.0";
+import { PROGRESS_KEY, TOKEN_SCORE_STEP, readProgress, hintOffer, purchaseHint, rewardSuccess, medalText } from "./progress.js?v=0.18.0";
+import { CHAPTERS } from "./levels.js?v=0.18.0";
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -73,6 +73,10 @@ const elements = {
   chapterSummary: $("#chapterSummary"),
   campaignSummary: $("#campaignSummary"),
   resumeMission: $("#resumeMission"),
+  resetProgress: $("#resetProgress"),
+  resetConfirm: $("#resetConfirm"),
+  resetCancel: $("#resetCancel"),
+  resetConfirmYes: $("#resetConfirmYes"),
 };
 
 const audio = new GameAudio();
@@ -90,7 +94,7 @@ let progress = loadProgress();
 let highestUnlockedLevel = progress.highestUnlockedLevel;
 let mapChapterIndex = 0;
 let lastReward = null;
-const FULLSCREEN_TIP_KEY = "slingtoon-fullscreen-tip-0.17.0";
+const FULLSCREEN_TIP_KEY = "slingtoon-fullscreen-tip-0.18.0";
 
 function loadProgress() {
   try {
@@ -395,8 +399,39 @@ function setLevelIndex(index) {
   return true;
 }
 
+// Wiping the campaign is the one irreversible thing the game can do to the
+// player, so it asks in the same place it shows what would be lost.
+function showResetConfirm(asking) {
+  elements.resetConfirm.hidden = !asking;
+  elements.resetProgress.hidden = asking;
+}
+
+function wipeProgress() {
+  for (const key of [PROGRESS_KEY, "slingtoon-progress-v2", "slingtoon-progress-v1"]) {
+    try {
+      window.localStorage.removeItem(key);
+    } catch {
+      // A blocked storage simply has nothing to clear.
+    }
+  }
+  progress = readProgress({ getItem: () => null }, LEVELS);
+  highestUnlockedLevel = 0;
+  currentLevelIndex = 0;
+  mapChapterIndex = 0;
+  lastReward = null;
+  hideResult();
+  model.setLevel(LEVELS[0]);
+  saveProgress();
+  showResetConfirm(false);
+  elements.missions.close();
+  elements.canvas.focus({ preventScroll: true });
+  showToast("Przygoda skasowana. Zaczynamy od misji 1.");
+  updateUi();
+}
+
 function openMissionMap() {
   if ([GamePhase.AIMING, GamePhase.FLYING].includes(model.phase)) return;
+  showResetConfirm(false);
   mapChapterIndex = Math.floor(currentLevelIndex / 8);
   elements.chapterSelect.replaceChildren();
   for (const chapter of CHAPTERS) {
@@ -635,6 +670,9 @@ elements.previousLevel.addEventListener("click", () => setLevelIndex(currentLeve
 elements.nextLevel.addEventListener("click", () => setLevelIndex(currentLevelIndex + 1));
 elements.levelIndicator.addEventListener("click", openMissionMap);
 elements.closeMissions.addEventListener("click", () => elements.missions.close());
+elements.resetProgress.addEventListener("click", () => showResetConfirm(true));
+elements.resetCancel.addEventListener("click", () => showResetConfirm(false));
+elements.resetConfirmYes.addEventListener("click", wipeProgress);
 elements.chapterSelect.addEventListener("change", () => {
   mapChapterIndex = Math.max(0, Math.min(CHAPTERS.length - 1, Number(elements.chapterSelect.value) || 0));
   renderMissionChapter();
@@ -741,7 +779,7 @@ window.addEventListener("keydown", (event) => {
 
 window.addEventListener("load", () => {
   if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
-    navigator.serviceWorker.register("./sw.js?v=0.17.0").catch(() => {});
+    navigator.serviceWorker.register("./sw.js?v=0.18.0").catch(() => {});
   }
   scheduleFullscreenSuggestion();
   syncGameViewport();

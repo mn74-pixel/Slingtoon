@@ -165,6 +165,14 @@ assert.match(html, /id="diveMoveButton"/);
 // A retry has to correct a shot the player can still see, and a miss has to say
 // which way it was wrong.
 assert.match(render, /drawGhostPath\(ctx\)/);
+// Restarting the campaign is irreversible, so it must be a two-step action.
+assert.match(html, /id="resetProgress"/);
+assert.match(html, /id="resetConfirm"/);
+assert.match(html, /id="resetConfirmYes"/);
+assert.match(main, /localStorage\.removeItem/);
+assert.match(main, /function wipeProgress/);
+// A screen wider than 2:1 must not frame the board with a flat purple band.
+assert.match(render, /sceneBackdrop\(\)/);
 assert.match(render, /this\.ghost = this\.flightPath\.length > 2/);
 const physics = await readFile(resolve(root, "src/physics.js"), "utf8");
 assert.match(physics, /export function describeMiss/);

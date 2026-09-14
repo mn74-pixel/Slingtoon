@@ -1,7 +1,7 @@
-# SlingToon Web 0.17.0 — Release Manifest
+# SlingToon Web 0.18.0 — Release Manifest
 
 Data: 8 września 2026. Format: HTML5 Canvas / PWA, statyczny hosting GitHub Pages.
-Pakiet kandydujący 0.17.0. Publikacja wymaga osobnej zgody właściciela po obejrzeniu wersji roboczej.
+Pakiet kandydujący 0.18.0. Publikacja wymaga osobnej zgody właściciela po obejrzeniu wersji roboczej.
 
 ## Zawartość
 
@@ -18,7 +18,7 @@ Rendery plansz nie zastępują testu przeglądarki ani urządzenia. Pełny test 
 
 ## Publikacja
 
-Publikować po zgodzie właściciela do istniejącego repozytorium i GitHub Pages. Sprawdzić po wdrożeniu wersję `0.17.0`, mapę rozdziałów oraz aktualizację cache poprzedniej instalacji.
+Publikować po zgodzie właściciela do istniejącego repozytorium i GitHub Pages. Sprawdzić po wdrożeniu wersję `0.18.0`, mapę rozdziałów oraz aktualizację cache poprzedniej instalacji.
 
 ## Dalszy rozwój
 
