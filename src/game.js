@@ -1,6 +1,6 @@
-import { DEFAULT_LEVEL, WORLD } from "./levels.js?v=0.16.1";
-import { FIXED_STEP, clamp, contains, magnitude, stepPhysics } from "./physics.js?v=0.16.1";
-export { DEFAULT_LEVEL, LEVELS, WORLD, getLevel } from "./levels.js?v=0.16.1";
+import { DEFAULT_LEVEL, WORLD } from "./levels.js?v=0.17.0";
+import { FIXED_STEP, clamp, contains, magnitude, stepPhysics } from "./physics.js?v=0.17.0";
+export { DEFAULT_LEVEL, LEVELS, WORLD, getLevel } from "./levels.js?v=0.17.0";
 
 export const GameMode = Object.freeze({ QUICK: "quickSling", ONE_MOVE: "oneMoveChallenge" });
 export const GamePhase = Object.freeze({ READY: "ready", AIMING: "aiming", FLYING: "flying", SUCCEEDED: "succeeded", FAILED: "failed" });
@@ -91,6 +91,7 @@ export class GameModel {
     this.portalCooldown = 0;
     this.waterSkips = 0;
     this.closestGoal = Infinity;
+    this.closestGoalPoint = null;
     this.settledTime = 0;
     this.failureReason = "";
     this.lastImpactTime = -1;

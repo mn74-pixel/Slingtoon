@@ -162,6 +162,13 @@ assert.match(game, /avatarGrabRadius/);
 assert.match(game, /useDiveMove\(automatic/);
 assert.match(game, /FLIGHT_STYLES/);
 assert.match(html, /id="diveMoveButton"/);
+// A retry has to correct a shot the player can still see, and a miss has to say
+// which way it was wrong.
+assert.match(render, /drawGhostPath\(ctx\)/);
+assert.match(render, /this\.ghost = this\.flightPath\.length > 2/);
+const physics = await readFile(resolve(root, "src/physics.js"), "utf8");
+assert.match(physics, /export function describeMiss/);
+assert.match(physics, /model\.closestGoalPoint = \{/);
 // Scenery must never borrow the outline that marks a real collider, and the
 // shell must never grow past the viewport — that is what clipped the footer.
 const world = await readFile(resolve(root, "src/world-renderer.js"), "utf8");

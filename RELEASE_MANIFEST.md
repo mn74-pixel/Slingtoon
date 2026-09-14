@@ -1,7 +1,7 @@
-# SlingToon Web 0.16.1 — Release Manifest
+# SlingToon Web 0.17.0 — Release Manifest
 
 Data: 8 września 2026. Format: HTML5 Canvas / PWA, statyczny hosting GitHub Pages.
-Pakiet kandydujący 0.16.1. Publikacja wymaga osobnej zgody właściciela po obejrzeniu wersji roboczej.
+Pakiet kandydujący 0.17.0. Publikacja wymaga osobnej zgody właściciela po obejrzeniu wersji roboczej.
 
 ## Zawartość
 
@@ -18,8 +18,8 @@ Rendery plansz nie zastępują testu przeglądarki ani urządzenia. Pełny test 
 
 ## Publikacja
 
-Publikować po zgodzie właściciela do istniejącego repozytorium i GitHub Pages. Sprawdzić po wdrożeniu wersję `0.16.1`, mapę rozdziałów oraz aktualizację cache poprzedniej instalacji.
+Publikować po zgodzie właściciela do istniejącego repozytorium i GitHub Pages. Sprawdzić po wdrożeniu wersję `0.17.0`, mapę rozdziałów oraz aktualizację cache poprzedniej instalacji.
 
 ## Dalszy rozwój
 
-Najpierw playtest dwóch manewrów w locie palcem na telefonie, zbalansowania Tough Guya, jakości wycinka twarzy na prawdziwych zdjęciach oraz misji 38, 44, 58, 72, 74 i 78, które mają najmniejsze zmierzone okno tolerancji (±5–6). Płatności, reklamy, chmura i multiplayer pozostają poza zakresem.
+Najpierw playtest dwóch manewrów w locie palcem na telefonie, czytelności śladu poprzedniej próby na małym ekranie, jakości wycinka twarzy na prawdziwych zdjęciach oraz misji 38, 44, 58, 72, 74 i 78, które mają najmniejsze zmierzone okno tolerancji (±5–6). Płatności, reklamy, chmura i multiplayer pozostają poza zakresem.

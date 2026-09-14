@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.17.0 — Widzisz, gdzie poleciał poprzedni strzał
+
+- **ślad poprzedniej próby** zostaje na planszy podczas celowania: kropkowany tor i znacznik w miejscu, w którym lot się skończył; wcześniej ślad żył 0,75 s i znikał, więc każda powtórka była zgadywaniem na ślepo,
+- ślad znika przy zmianie misji, trybu i przy świeżym wejściu na poziom, ale przeżywa retry — czyli dokładnie wtedy, kiedy jest potrzebny,
+- **komunikat po pudle mówi, w którą stronę poprawić**: „Za krótko. Naciągnij wyraźnie mocniej", „Przeszedłeś tuż nad celem. Celuj odrobinę płasko" — zamiast trzech uniwersalnych zdań w stylu „spróbuj innego kąta",
+- kierunek jest liczony z rzeczywistego punktu najbliższego zbliżenia do celu, a nie z miejsca, w którym lot się urwał,
+- niespełniony warunek misji nadal ma pierwszeństwo nad poradą o celowaniu — najpierw dowiadujesz się, że trzeba przebić paczkę, a dopiero potem o naciągu.
+
 ## 0.16.1 — Nic nie wychodzi poza ekran, nic nie udaje przeszkody
 
 - naprawiono przycinanie dolnej części strony: `.stage` miał sztywne `aspect-ratio: 2/1`, więc wysokość karty gry wynikała z szerokości okna i na laptopie przekraczała ekran — w pełnym ekranie na MacBooku Air ginęło 95 px, a w zwykłym oknie nawet 231 px,

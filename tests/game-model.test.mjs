@@ -2,13 +2,13 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
 import { DEFAULT_LEVEL, FLIGHT_STYLES, GameModel, GameMode, GamePhase, LEVELS, Modifier, Personality } from "../src/game.js";
-import { FIXED_STEP, magnitude, movedBody, rectContact, resolveContact, stepPhysics } from "../src/physics.js";
+import { FIXED_STEP, describeMiss, magnitude, movedBody, rectContact, resolveContact, stepPhysics } from "../src/physics.js";
 
 // The authoring tool measures how far each hint route may be nudged and still
 // win. Guarding the shipped number keeps a layout edit from silently widening
 // or breaking the difficulty curve.
 const MEASURED_MARGINS = new Map(
-  JSON.parse(readFileSync(new URL("../docs/campaign-balance-0.16.1.json", import.meta.url), "utf8"))
+  JSON.parse(readFileSync(new URL("../docs/campaign-balance.json", import.meta.url), "utf8"))
     .map((entry) => [entry.number, entry.margin]),
 );
 const routeMargin = (level) => MEASURED_MARGINS.get(level.number) ?? 8;
@@ -440,4 +440,45 @@ test("KAMIEŃ is a commitment during the climb, not a rescue on the way down", (
   assert.equal(model.useDiveMove(), false);
   assert.equal(model.diveMoveUsed, false, "a refused move never spends a charge");
   assert.ok(model.airMovesLeft > 0, "FIK stays available for the fall");
+});
+
+test("a miss names the direction to correct instead of shrugging", () => {
+  const model = new GameModel(() => {}, LEVELS[9]);
+  const goal = model.goalCentre;
+  const advice = (point, gap) => {
+    model.closestGoalPoint = point;
+    model.closestGoal = gap;
+    return describeMiss(model);
+  };
+
+  assert.match(advice({ x: goal.x - 300, y: goal.y }, 260), /Za krótko/);
+  assert.match(advice({ x: goal.x + 300, y: goal.y }, 260), /Za daleko/);
+  assert.match(advice({ x: goal.x, y: goal.y - 300 }, 260), /Za wysoko/);
+  assert.match(advice({ x: goal.x, y: goal.y + 300 }, 260), /Za nisko/);
+  // A near miss asks for a nudge, not a rethink.
+  assert.match(advice({ x: goal.x - 40, y: goal.y }, 30), /odrobinę/);
+  assert.match(advice({ x: goal.x + 40, y: goal.y }, 30), /odrobinę/);
+
+  model.closestGoalPoint = null;
+  assert.match(describeMiss(model), /daleko od celu/);
+});
+
+test("an unmet objective still outranks any aiming advice", () => {
+  const model = new GameModel(() => {}, LEVELS[9]);
+  model.closestGoalPoint = { x: model.goalCentre.x - 400, y: model.goalCentre.y };
+  model.closestGoal = 20;
+  assert.equal(model.objectiveMet, false);
+  assert.equal(describeMiss(model), model.level.requirement);
+});
+
+test("the closest approach is recorded where the shot actually came nearest", () => {
+  const model = new GameModel(() => {}, LEVELS[9]);
+  launch(model, { x: 120, y: 500 });
+  finish(model);
+  assert.equal(model.phase, GamePhase.FAILED);
+  assert.ok(model.closestGoalPoint, "a finished flight always has a nearest point");
+  assert.ok(model.closestGoal < Infinity);
+  assert.match(model.failureReason, /Za krótko|Za daleko|Za wysoko|Za nisko|odrobinę|Najpierw/);
+  model.resetLevel(false);
+  assert.equal(model.closestGoalPoint, null, "a retry starts measuring again");
 });

@@ -1,4 +1,4 @@
-# SlingToon Web 0.16.1 — 80 misji kontrolowanego chaosu
+# SlingToon Web 0.17.0 — 80 misji kontrolowanego chaosu
 
 Samodzielna gra webowa przygotowana w tym samym modelu publikacji co Castle Conflict. Do uruchomienia i wdrożenia nie potrzeba JUCE, Projucera ani Xcode.
 
@@ -64,6 +64,8 @@ Na współczesnym iPhonie SlingToon pokazuje jednorazowy przycisk `Graj pełny e
 - Podpowiedzi mają trzy poziomy: żartobliwa wskazówka, kierunek oraz pełny duch toru. Pierwsze misje uczą za darmo, późniejsze zużywają żetony zdobywane za Punkty Sprytu.
 - Odkrycia są zapamiętywane; pełny tor można pokazać lub ukryć bez ponownego płacenia. Darmowa pomoc ratunkowa wchodzi po 5 próbach w pierwszych rozdziałach i po 7 w końcowych — weteran ma więcej miejsca na własne rozwiązanie. Co 200 nowych punktów otrzymujesz żeton; powtórzenie tego samego rekordu nie daje kolejnych punktów.
 - Wynik wcześniejszej wersji, żetony i odblokowane misje są zachowane. Nowe zagadki mają nowe rekordy. Przycisk „Zdobądź gwiazdkę / Popraw styl” lub wybranie misji na mapie rozpoczyna nowe podejście do rekordu.
+- Po nieudanej próbie tor poprzedniego strzału zostaje na planszy jako kropkowany ślad ze znacznikiem w miejscu, w którym lot się skończył. Znika przy zmianie misji i trybu, ale przeżywa retry — poprawiasz strzał, który wciąż widzisz.
+- Komunikat po pudle mówi, w którą stronę poprawić („Za krótko", „Przeszedłeś tuż nad celem"), licząc kierunek z rzeczywistego punktu najbliższego zbliżenia do celu. Niespełniony warunek misji nadal ma pierwszeństwo przed poradą o celowaniu.
 - Po porażce `What If?` automatycznie powtarza ten sam zapisany strzał z jednym zmienionym prawem fizyki.
 - Powtórka zachowuje także moment użycia FIK-a. Podgląd i rozgrywka korzystają z tego samego solvera 120 Hz, niezależnego od częstotliwości rysowania.
 - Przycisk z sylwetką głowy w ramce otwiera Face Studio. Po ustawieniu twarzy przycisk pokazuje Twoją własną głowę, więc od razu widać, co jest wybrane.

@@ -1,7 +1,7 @@
-import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.16.1";
-import { clientPointToWorld, createCropFreeViewport } from "./viewport.js?v=0.16.1";
-import { drawInteractions, drawObjective } from "./interactions-renderer.js?v=0.16.1";
-import { drawCampaignGoal, drawCampaignScene, drawWorldCompanion } from "./world-renderer.js?v=0.16.1";
+import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.17.0";
+import { clientPointToWorld, createCropFreeViewport } from "./viewport.js?v=0.17.0";
+import { drawInteractions, drawObjective } from "./interactions-renderer.js?v=0.17.0";
+import { drawCampaignGoal, drawCampaignScene, drawWorldCompanion } from "./world-renderer.js?v=0.17.0";
 
 const PALETTE = Object.freeze({
   ink: "#19142d",
@@ -69,6 +69,10 @@ export class GameRenderer {
     this.callouts = [];
     this.trail = [];
     this.lastTrailPoint = null;
+    // The path of the last finished attempt, kept so a retry corrects a shot
+    // the player can still see instead of guessing blind.
+    this.flightPath = [];
+    this.ghost = null;
     this.shake = 0;
     this.clockWobble = 0;
     this.successPulse = 0;
@@ -119,9 +123,11 @@ export class GameRenderer {
       this.trail.length = 0;
       this.lastTrailPoint = null;
       this.successPulse = 0;
+      if (event.resetAttempts || event.type === "mode") this.ghost = null;
     }
 
     if (event.type === "level") {
+      this.ghost = null;
       this.background = null;
       this.backgroundSource = null;
       this.load().catch(() => {});
@@ -130,6 +136,7 @@ export class GameRenderer {
     if (event.type === "launch" || event.type === "what-if") {
       this.trail.length = 0;
       this.lastTrailPoint = null;
+      this.flightPath = [{ x: this.model.avatarPosition.x, y: this.model.avatarPosition.y }];
       this.spawnDust(event.position?.x ?? this.model.avatarPosition.x, event.position?.y ?? this.model.avatarPosition.y, 10);
     }
 
@@ -157,6 +164,11 @@ export class GameRenderer {
       this.callouts.push({ x: goal.x, y: goal.y - 100, text: this.model.level.result.successTag, age: 0, life: 1.6, angle: -0.08 });
     }
 
+    if (event.type === "success" || event.type === "failure") {
+      this.ghost = this.flightPath.length > 2
+        ? { path: this.flightPath.slice(), end: { ...this.model.avatarPosition }, won: event.type === "success" }
+        : null;
+    }
     if (event.type === "failure") {
       this.callouts.push({
         x: event.position.x,
@@ -198,6 +210,7 @@ export class GameRenderer {
       if (!this.lastTrailPoint || Math.hypot(point.x - this.lastTrailPoint.x, point.y - this.lastTrailPoint.y) > 14) {
         this.trail.push({ x: point.x, y: point.y, age: 0 });
         this.lastTrailPoint = { x: point.x, y: point.y };
+        if (this.flightPath.length < 400) this.flightPath.push({ x: point.x, y: point.y });
       }
     }
 
@@ -234,6 +247,7 @@ export class GameRenderer {
     this.drawBackground(ctx);
     drawObjective(ctx, this.model, this.time);
     this.drawModifierAtmosphere(ctx);
+    this.drawGhostPath(ctx);
     this.drawSpeedTrail(ctx);
     this.drawSlingBack(ctx);
     this.drawTrajectory(ctx);
@@ -1331,6 +1345,36 @@ export class GameRenderer {
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(text, x + width * 0.5, y + 20);
+    ctx.restore();
+  }
+
+  // Shown only while the next shot is being prepared: during flight it would
+  // just clutter the screen the player is reading.
+  drawGhostPath(ctx) {
+    const aiming = this.model.phase === GamePhase.READY || this.model.phase === GamePhase.AIMING;
+    if (!this.ghost || !aiming) return;
+    const { path, end, won } = this.ghost;
+    ctx.save();
+    ctx.setLineDash([3, 13]);
+    ctx.lineCap = "round";
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = won ? "rgba(92, 225, 189, 0.5)" : "rgba(255, 245, 217, 0.42)";
+    ctx.beginPath();
+    ctx.moveTo(path[0].x, path[0].y);
+    for (let index = 1; index < path.length; index += 1) ctx.lineTo(path[index].x, path[index].y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.strokeStyle = won ? "rgba(92, 225, 189, 0.75)" : "rgba(255, 96, 120, 0.75)";
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(end.x, end.y, 13, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(end.x - 7, end.y - 7);
+    ctx.lineTo(end.x + 7, end.y + 7);
+    ctx.moveTo(end.x + 7, end.y - 7);
+    ctx.lineTo(end.x - 7, end.y + 7);
+    ctx.stroke();
     ctx.restore();
   }
 
