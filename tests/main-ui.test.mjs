@@ -46,7 +46,7 @@ test("real main module: campaign navigation, touch shots, hints, medals, FIK and
   doc.createElement = (tag) => new Element(tag);
   const win = new Element("window");
   const saved = new Map();
-  win.localStorage = { getItem: (key) => saved.get(key) ?? null, setItem: (key, value) => saved.set(key, value) };
+  win.localStorage = { getItem: (key) => saved.get(key) ?? null, setItem: (key, value) => saved.set(key, value), removeItem: (key) => saved.delete(key) };
   win.sessionStorage = win.localStorage;
   win.navigator = { userAgent: "Test", platform: "Test", maxTouchPoints: 0 };
   win.matchMedia = () => ({ matches: false, addEventListener() {} });
@@ -122,5 +122,27 @@ test("real main module: campaign navigation, touch shots, hints, medals, FIK and
   elements.againButton.click();
   assert.equal(elements.resultPanel.hidden, true);
   assert.equal(elements.hintButton.disabled, false);
+
+  // Wiping the campaign asks first, can be backed out of, and really forgets.
+  elements.levelIndicator.click();
+  assert.equal(elements.resetConfirm.hidden, true, "the map opens without the warning showing");
+  elements.resetProgress.click();
+  assert.equal(elements.resetConfirm.hidden, false);
+  assert.equal(elements.resetProgress.hidden, true);
+  elements.resetCancel.click();
+  assert.equal(elements.resetConfirm.hidden, true, "backing out changes nothing");
+  assert.ok(saved.get("slingtoon-progress-v3"), "a cancelled wipe keeps the save");
+
+  elements.resetProgress.click();
+  elements.resetConfirmYes.click();
+  assert.equal(elements.missionMap.open, false, "the map closes once the campaign restarts");
+  assert.equal(elements.missionTitle.textContent, LEVELS[0].mission.title, "back on mission 1");
+  assert.equal(elements.nextLevel.disabled, true, "every later mission is locked again");
+  assert.equal(elements.scoreBadge.textContent, "★ 0");
+  const fresh = JSON.parse(saved.get("slingtoon-progress-v3"));
+  assert.equal(fresh.highestUnlockedLevel, 0);
+  assert.equal(fresh.score, 0);
+  assert.deepEqual(fresh.medals, {});
+  assert.equal(fresh.resumeLevelId, LEVELS[0].id);
   globalThis.clearTimeout = nativeClearTimeout;
 });

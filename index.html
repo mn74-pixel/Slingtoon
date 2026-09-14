@@ -10,10 +10,10 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="SlingToon">
   <title>SlingToon — 80 misji kontrolowanego chaosu</title>
-  <link rel="manifest" href="manifest.webmanifest?v=0.17.0">
+  <link rel="manifest" href="manifest.webmanifest?v=0.18.0">
   <link rel="icon" href="assets/icon-192.png" sizes="192x192">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="styles.css?v=0.17.0">
+  <link rel="stylesheet" href="styles.css?v=0.18.0">
 </head>
 <body>
   <div class="ambient ambient--one" aria-hidden="true"></div>
@@ -124,7 +124,7 @@
     </main>
 
     <footer>
-      <span>SLINGTOON WEB 0.17.0</span>
+      <span>SLINGTOON WEB 0.18.0</span>
       <span>Offline PWA · GitHub Pages Ready</span>
     </footer>
     <p id="keyboardHelp" class="keyboard-help">Dotyk: pociągnij bohatera i puść. Klawiatura: spacja rozpoczyna celowanie, strzałki zmieniają naciąg, spacja wystrzeliwuje. W locie: spacja = FIK w górę (od misji 5), strzałka w dół = KAMIEŃ w dół (od misji 17). R = ponów.</p>
@@ -140,6 +140,17 @@
     <p id="chapterSummary"></p>
     <p class="map-note">Przejście otwiera kolejną misję. Gwiazdki są opcjonalne. Co 200 punktów dostajesz żeton podpowiedzi.</p>
     <div id="missionList" class="mission-list"></div>
+    <div class="map-danger">
+      <button id="resetProgress" class="map-danger__open" type="button">↺ Zacznij całą przygodę od nowa</button>
+      <div id="resetConfirm" class="map-danger__confirm" hidden>
+        <strong>Na pewno skasować cały postęp?</strong>
+        <span>Znikną odblokowane misje, Punkty Sprytu, żetony, medale i odkryte podpowiedzi. Wrócisz na misję 1. Tego nie da się cofnąć.</span>
+        <div class="map-danger__actions">
+          <button id="resetCancel" class="map-danger__cancel" type="button">Nie, zostaw</button>
+          <button id="resetConfirmYes" class="map-danger__yes" type="button">Tak, kasuj postęp</button>
+        </div>
+      </div>
+    </div>
   </dialog>
 
   <section id="faceStudio" class="face-studio" role="dialog" aria-modal="true" aria-labelledby="faceStudioTitle" hidden>
@@ -230,6 +241,6 @@
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
   <noscript>Do uruchomienia SlingToon potrzebna jest obsługa JavaScript.</noscript>
-  <script type="module" src="src/main.js?v=0.17.0"></script>
+  <script type="module" src="src/main.js?v=0.18.0"></script>
 </body>
 </html>

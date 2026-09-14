@@ -1,6 +1,6 @@
 // Visual language: mint = active/entry, coral = obstacle, gold = optional reward,
 // crimson + spikes = the one thing that ends the flight on touch.
-import { movedBody } from "./physics.js?v=0.17.0";
+import { movedBody } from "./physics.js?v=0.18.0";
 const ink = "#19142d", cream = "#fff5d9", mint = "#5ce1bd", coral = "#ff6078", gold = "#ffd35f", violet = "#a28bff", danger = "#d6002f";
 function box(ctx, x, y, w, h, color, radius = 12) {
   ctx.beginPath(); ctx.roundRect(x, y, w, h, radius);

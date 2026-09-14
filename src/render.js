@@ -1,7 +1,7 @@
-import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.17.0";
-import { clientPointToWorld, createCropFreeViewport } from "./viewport.js?v=0.17.0";
-import { drawInteractions, drawObjective } from "./interactions-renderer.js?v=0.17.0";
-import { drawCampaignGoal, drawCampaignScene, drawWorldCompanion } from "./world-renderer.js?v=0.17.0";
+import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.18.0";
+import { clientPointToWorld, createCropFreeViewport } from "./viewport.js?v=0.18.0";
+import { drawInteractions, drawObjective } from "./interactions-renderer.js?v=0.18.0";
+import { drawCampaignGoal, drawCampaignScene, drawWorldCompanion } from "./world-renderer.js?v=0.18.0";
 
 const PALETTE = Object.freeze({
   ink: "#19142d",
@@ -55,8 +55,20 @@ function loadImage(source) {
   });
 }
 
+// An offscreen surface for the stretched scene backdrop. The browser has two
+// ways to make one; the offline QA renderer passes its own.
+function defaultSurface(width, height) {
+  if (typeof OffscreenCanvas === "function") return new OffscreenCanvas(width, height);
+  if (typeof document === "undefined") return null;
+  const surface = document.createElement("canvas");
+  surface.width = width;
+  surface.height = height;
+  return surface;
+}
+
 export class GameRenderer {
-  constructor(canvas, model) {
+  constructor(canvas, model, createSurface = defaultSurface) {
+    this.createSurface = createSurface;
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d", { alpha: false, desynchronized: true });
     this.model = model;
@@ -263,7 +275,35 @@ export class GameRenderer {
     ctx.restore();
   }
 
+  // A screen wider than 2:1 reveals world beyond the 1280x640 the scenes paint,
+  // and that margin used to be a flat purple band framing the board. Filling it
+  // with a stretched, pushed-back copy of the scene makes the room read as if it
+  // simply continues past the edges.
+  sceneBackdrop() {
+    if (this.viewport.offsetX < 2 && this.viewport.offsetY < 2) return null;
+    const key = `${this.model.level.id}:${this.background ? 1 : 0}`;
+    if (this.backdrop?.key !== key) {
+      // Cached small on purpose: stretching a low-resolution copy back up blurs
+      // it for free, so the margin reads as ambience instead of a mirrored
+      // duplicate of the room, and costs one cheap draw per mission.
+      const surface = this.createSurface(WORLD.width / 8, WORLD.height / 8);
+      if (!surface) return null;
+      const context = surface.getContext("2d");
+      context.scale(1 / 8, 1 / 8);
+      this.drawBackground(context);
+      this.backdrop = { key, surface };
+    }
+    return this.backdrop.surface;
+  }
+
   drawViewportBackdrop(ctx) {
+    const scene = this.sceneBackdrop();
+    if (scene) {
+      ctx.drawImage(scene, 0, 0, scene.width, scene.height, 0, 0, this.canvas.width, this.canvas.height);
+      ctx.fillStyle = "rgba(18, 11, 30, 0.58)";
+      ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+      return;
+    }
     const gradient = ctx.createLinearGradient(0, 0, this.canvas.width, this.canvas.height);
     gradient.addColorStop(0, "#302451");
     gradient.addColorStop(0.5, "#655185");

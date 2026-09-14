@@ -10,12 +10,13 @@ const modulePath = process.env.CANVAS_QA_MODULE ?? require.resolve("@napi-rs/can
   paths: [process.cwd(), process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES].filter(Boolean),
 });
 const { createCanvas, Image } = require(modulePath);
+const surface = (width, height) => createCanvas(width, height);
 globalThis.Image = Image;
 const output = resolve(process.argv[2] ?? "/tmp/slingtoon-qa");
 await mkdir(output, { recursive: true });
 const sheet = createCanvas(1280, 1800), ctx = sheet.getContext("2d");
 for (const [index, level] of LEVELS.entries()) {
-  const canvas = createCanvas(1280, 640), model = new GameModel(() => {}, level), renderer = new GameRenderer(canvas, model);
+  const canvas = createCanvas(1280, 640), model = new GameModel(() => {}, level), renderer = new GameRenderer(canvas, model, surface);
   model.onEvent = (event) => renderer.handleGameEvent(event);
   await renderer.load();
   renderer.render();
@@ -38,7 +39,7 @@ for (const [index, level] of LEVELS.entries()) {
 await writeFile(resolve(output, "campaign.png"), sheet.toBuffer("image/png"));
 // Crop-free mobile aspect ratio: actual canvas surface, not a fake browser screenshot.
 for (const [index, width, height] of [[8, 844, 390], [16, 740, 360], [64, 568, 320]]) {
-  const canvas = createCanvas(1280, 640), model = new GameModel(() => {}, LEVELS[index]), renderer = new GameRenderer(canvas, model);
+  const canvas = createCanvas(1280, 640), model = new GameModel(() => {}, LEVELS[index]), renderer = new GameRenderer(canvas, model, surface);
   await renderer.load(); renderer.resizeView(width, height); renderer.render();
   const mobile = createCanvas(width, height);
   mobile.getContext("2d").drawImage(canvas, 0, 0, width, height);
