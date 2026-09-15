@@ -1,4 +1,4 @@
-# SlingToon Web 0.22.0 — 80 misji kontrolowanego chaosu
+# SlingToon Web 0.22.1 — 80 misji kontrolowanego chaosu
 
 Samodzielna gra webowa przygotowana w tym samym modelu publikacji co Castle Conflict. Do uruchomienia i wdrożenia nie potrzeba JUCE, Projucera ani Xcode.
 
@@ -58,7 +58,7 @@ Na współczesnym iPhonie SlingToon pokazuje jednorazowy przycisk `Graj pełny e
 - Dwie reguły dochodzą w trakcie podróży. **Ruchoma przeszkoda** (od misji 37) jeździ po zaznaczonej linii i startuje z pozycji, którą widzisz przed strzałem, więc trasa pozostaje do wyliczenia. **Strefa zakazana** (od misji 41) jest jedynym obiektem, który kończy lot od samego dotknięcia — ma własny kolor, kolce i podpis.
 - Trudność rośnie przez precyzję i układ, nie przez większą liczbę przeciwników. Cel zaczyna z zapasem, a od misji 48 jego pole trafienia odpowiada temu, co widać na ekranie: trzeba faktycznie dolecieć do obiektu. Pierwsza misja rozdziału i misja oddechu zawsze mają szerszy cel.
 - Od piątej misji: `FIK!` w locie (przycisk, dotknięcie planszy lub spacja) podbija do góry i lekko do przodu. Od misji 17 dochodzi `KAMIEŃ!` (przycisk lub strzałka w dół), który ścina tor w dół i hamuje część pędu — działa tylko dopóki jeszcze się wznosisz, więc jest decyzją na czas, a nie przyciskiem naprawiającym każdy błąd. Wszystkie misje da się przejść także bez obu manewrów.
-- Po trafieniu bohater ląduje w celu: przesuwa się na jego środek, prostuje i zapada po klatkę piersiową, tak że nad krawędzią zostaje głowa i ramiona.
+- Po trafieniu bohater ląduje w celu: wlatuje łukiem ponad krawędź, wpada za nią, ugina się pod własnym ciężarem i osiada po klatkę piersiową, tak że nad krawędzią zostaje głowa i ramiona. Potem oddycha i lekko się kołysze — nie zastyga.
 - Głowa ze zdjęcia nigdy nie dostaje akcentu na wysokości twarzy. Gwiazdki, iskierki i krople rysują się poza kadrem portretu; charakter niosą peleryna, odznaka na torsie i kok.
 - Seria to bieg o rekord: losowe misje, które już przeszedłeś, ze wspólnym budżetem strzałów na cały bieg. Strzał kosztuje jeden, trafienie zwraca dwa, a bieg kończy się, gdy budżet się wyczerpie. Seria nie zmienia postępu kampanii — zapisuje tylko własny rekord.
 - Bohater reaguje na to, co dzieje się w locie: zaciska oczy przy strefie zakazanej, rozjaśnia się, gdy cel jest w zasięgu, i kręci mu się w głowie po serii odbić. Charakter zabarwia miny spokojne, ale nigdy nie wycisza reakcji na zdarzenie.

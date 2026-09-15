@@ -1,7 +1,7 @@
-import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.22.0";
-import { clientPointToWorld, createCropFreeViewport } from "./viewport.js?v=0.22.0";
-import { drawInteractions, drawObjective } from "./interactions-renderer.js?v=0.22.0";
-import { drawCampaignGoal, drawCampaignScene, drawWorldCompanion } from "./world-renderer.js?v=0.22.0";
+import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.22.1";
+import { clientPointToWorld, createCropFreeViewport } from "./viewport.js?v=0.22.1";
+import { drawInteractions, drawObjective } from "./interactions-renderer.js?v=0.22.1";
+import { drawCampaignGoal, drawCampaignScene, drawWorldCompanion } from "./world-renderer.js?v=0.22.1";
 
 const PALETTE = Object.freeze({
   ink: "#19142d",
@@ -226,6 +226,12 @@ export class GameRenderer {
   update(deltaSeconds) {
     const dt = Math.min(deltaSeconds, .1);
     this.time += dt;
+    // A puff at the rim on touchdown. Without it the hero drops in silently and
+    // the landing has no point of contact.
+    if (this.landing && !this.landing.puffed && this.time - this.landing.at >= LANDING_SECONDS * 0.82) {
+      this.landing.puffed = true;
+      this.spawnLandingPuff(this.landing.goal.x, this.landing.goal.y - this.landing.radius * 0.15, 10);
+    }
     this.fanAngle += dt * (this.model.modifier === Modifier.STRONGER_FAN ? 15 : 7.5);
     this.shake = Math.max(0, this.shake - dt * 42);
     this.clockWobble = Math.max(0, this.clockWobble - dt * 3.1);
@@ -1014,17 +1020,41 @@ export class GameRenderer {
   landingPose() {
     if (!this.landing || this.model.phase !== GamePhase.SUCCEEDED) return null;
     const { from, at, goal, radius } = this.landing;
-    const raw = clamp((this.time - at) / LANDING_SECONDS, 0, 1);
-    const eased = 1 - (1 - raw) ** 3;
+    const elapsed = this.time - at;
+    const travel = clamp(elapsed / LANDING_SECONDS, 0, 1);
+    const eased = 1 - (1 - travel) ** 3;
     const rimY = goal.y - radius * 0.15;
-    const target = { x: goal.x, y: rimY - 8 };
+    // Dead centre every single time is the other thing that reads as canned, so
+    // the hero keeps a little of the direction they arrived from.
+    const lean = clamp((from.x - goal.x) * 0.07, -11, 11);
+    const target = { x: goal.x + lean, y: rimY - 8 };
+
+    // Three things made the first version read as a UI tween rather than a body
+    // arriving: it slid along a straight diagonal, it hit the mark and stopped
+    // dead, and it ended perfectly upright and perfectly still.
+    //
+    // 1. The path arcs. Horizontal and vertical no longer share an easing, so
+    //    the hero rises over the rim and drops in behind it.
+    const hop = Math.sin(travel * Math.PI) * 20;
+    // 2. Arrival has weight. A damped bounce keeps them moving for a beat after
+    //    they touch down, the way anything with mass does.
+    const since = Math.max(0, elapsed - LANDING_SECONDS);
+    const settling = Math.exp(-since * 7);
+    const bounce = Math.sin(since * 24) * 12 * settling;
+    // 3. Nothing ever comes fully to rest. Breathing and a slow sway fade in as
+    //    the bounce fades out, so the hero is never a statue sitting in a cup.
+    const alive = clamp(since / 0.45, 0, 1);
+    const breath = Math.sin(this.time * 2.1) * 1.9 * alive;
+
     return {
-      progress: raw,
+      progress: travel,
+      settled: alive,
       rimY,
-      x: from.x + (target.x - from.x) * eased,
-      y: from.y + (target.y - from.y) * eased,
-      // A little give as they drop in, gone by the time they have settled.
-      squash: Math.sin(Math.min(1, raw / 0.65) * Math.PI) * 0.16 * (1 - raw * 0.5),
+      x: from.x + (target.x - from.x) * eased + Math.sin(this.time * 1.1) * 1.4 * alive,
+      y: from.y + (target.y - from.y) * eased - hop + bounce + breath,
+      tilt: Math.sin(this.time * 1.3 + 0.7) * 0.045 * alive,
+      squash: Math.sin(Math.min(1, travel / 0.65) * Math.PI) * 0.16 * (1 - travel * 0.5)
+        - bounce * 0.012,
     };
   }
 
@@ -1054,7 +1084,7 @@ export class GameRenderer {
     // A landing straightens the hero out: keeping the flight angle is what made
     // them look stuck to the object at whatever angle they arrived.
     ctx.rotate(landed
-      ? model.rotation * (1 - landed.progress)
+      ? model.rotation * (1 - landed.progress) + landed.tilt
       : model.phase === GamePhase.FLYING ? model.rotation : Math.sin(this.time * 2.1) * 0.018);
     ctx.scale(baseScale * (stretchX + (landed?.squash ?? 0)), baseScale * (stretchY - (landed?.squash ?? 0)));
     ctx.lineJoin = "round";
@@ -1598,6 +1628,25 @@ export class GameRenderer {
       ctx.stroke();
     }
     ctx.restore();
+  }
+
+  spawnLandingPuff(x, y, count) {
+    for (let index = 0; index < count; index += 1) {
+      const side = index % 2 === 0 ? 1 : -1;
+      this.particles.push({
+        kind: "circle",
+        x: x + side * (6 + Math.random() * 16),
+        y: y + (Math.random() - 0.5) * 10,
+        velocity: { x: side * (40 + Math.random() * 70), y: -30 - Math.random() * 45 },
+        gravity: 120,
+        size: 4 + Math.random() * 6,
+        color: PALETTE.cream,
+        age: 0,
+        life: 0.34 + Math.random() * 0.2,
+        rotation: 0,
+        spin: 0,
+      });
+    }
   }
 
   spawnDust(x, y, count) {
