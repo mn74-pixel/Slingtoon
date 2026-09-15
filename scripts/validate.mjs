@@ -172,7 +172,6 @@ assert.match(html, /id="resetConfirmYes"/);
 assert.match(main, /localStorage\.removeItem/);
 assert.match(main, /function wipeProgress/);
 // A screen wider than 2:1 must not frame the board with a flat purple band.
-assert.match(render, /sceneBackdrop\(\)/);
 assert.match(render, /this\.ghost = this\.flightPath\.length > 2/);
 const physics = await readFile(resolve(root, "src/physics.js"), "utf8");
 assert.match(physics, /export function describeMiss/);
@@ -220,19 +219,32 @@ assert.match(viewport, /viewWidth = Math\.ceil\(safeWorldHeight \* stageAspect\)
 assert.match(viewport, /viewHeight = Math\.ceil\(safeWorldWidth \/ stageAspect\)/);
 assert.match(viewport, /clientPointToWorld/);
 
-// A screen wider than 2:1 reveals world the scenes do not paint. That margin is
-// 26% of the width on a MacBook Air and 33% on a wide desktop, and it used to be
-// the scene stretched flat and dimmed 58% — two dark bands where nothing
-// happens. Scale-to-cover carries real scenery out there instead.
-assert.ok(/Math\.max\(cw \/ WORLD\.width, ch \/ WORLD\.height\)/.test(render),
-  "the margin backdrop must scale to cover, not stretch the scene flat across the canvas");
-const dim = render.match(/rgba\(18, 11, 30, (0\.\d+)\)/);
-assert.ok(dim && Number(dim[1]) <= 0.12,
-  `the margin may only be pushed back gently; ${dim?.[1] ?? "?"} re-creates the dark band`);
 // The vignette used to stop at the world edge, putting a hard seam exactly on
 // the boundary — the frame around the board that this removes.
 assert.ok(/ctx\.fillRect\(-ox, -oy, WORLD\.width \+ ox \* 2, WORLD\.height \+ oy \* 2\)/.test(render),
   "the vignette must span the whole visible viewport, not just the authored world");
+
+// Scenery spans the whole screen now. A screen wider than 2:1 reveals world the
+// authored 1280x640 never painted, and the old answer was a second, zoomed,
+// blurred copy of the scene in the margin. Measuring its brightness said 9%,
+// which sounded fine, but the band people saw came from the break in SCALE and
+// SHARPNESS at the world edge, not from tone. The scenes paint their own bands
+// across everything visible instead, so there is no second image to break.
+assert.ok(/export function setSceneBleed/.test(world), "scenes must be told how much screen they actually have");
+assert.ok(/function band\(ctx, y, height, fill\)/.test(world) && /function ground\(ctx, points, fill\)/.test(world),
+  "bands and ground silhouettes need primitives that reach past the authored width");
+assert.ok(!/fillRect\(0, \w+, 1280,/.test(world), "no scenery band may be nailed to the authored 1280 width");
+assert.ok(render.includes("setSceneBleed(this.viewport.offsetX"), "the renderer must hand the viewport margin to the scene");
+assert.ok(!render.includes("sceneBackdrop"), "the zoomed margin copy is gone; a scene that paints itself needs no stand-in");
+assert.ok(render.includes("sceneBand(ctx"), "the renderer's own scenes must bleed too, not just the campaign ones");
+
+// Audio: nothing heard repeatedly may be byte-identical, but the win is a chord
+// and must transpose as a whole rather than detune against itself.
+const audio = await readFile(resolve(root, "src/audio.js"), "utf8");
+assert.ok(/const TONE_JITTER_CENTS = ([1-9]\d?)\b/.test(audio), "every synthesised tone needs pitch jitter");
+const jitter = Number(audio.match(/const TONE_JITTER_CENTS = (\d+)/)?.[1]);
+assert.ok(jitter >= 10 && jitter <= 80, `${jitter} cents is either inaudible or out of tune`);
+assert.ok(/SUCCESS_KEYS/.test(audio) && /detune: 0/.test(audio), "the victory arpeggio transposes as a whole, with per-note jitter off");
 
 // Nothing is drawn at head level on a photograph of a real person. The star on
 // an eye, then the same star parked beside the head, then victory sparkles on

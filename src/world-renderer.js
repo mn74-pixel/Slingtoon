@@ -7,6 +7,28 @@ const TAU = Math.PI * 2;
 // goals and colliders keep full ink — the outline itself says what is real.
 const DECOR_STROKE = "rgba(25, 20, 45, 0.34)";
 let outline = C.ink;
+
+// How far past the authored 1280x640 the scenery must reach. A screen wider than
+// 2:1 reveals world the scenes never painted; the old answer was a second,
+// zoomed, blurred copy of the scene in the margin, which read as a band because
+// the SCALE and SHARPNESS broke at the world edge — not because it was darker.
+// Bands, gradients and horizons now simply extend, so the picture is one drawing
+// from edge to edge. Props stay inside 0..1280: they carry the gameplay reading,
+// and the margin does not exist at 2:1 or on an iPad.
+let bleed = { left: 0, right: 0, top: 0, bottom: 0 };
+export function setSceneBleed(left = 0, right = 0, top = 0, bottom = 0) {
+  bleed = { left: Math.max(0, left), right: Math.max(0, right), top: Math.max(0, top), bottom: Math.max(0, bottom) };
+}
+const spanX = () => -bleed.left;
+const spanW = () => 1280 + bleed.left + bleed.right;
+// A horizontal band of scenery (sea, quay, floor) drawn across everything visible.
+function band(ctx, y, height, fill) { ctx.fillStyle = fill; ctx.fillRect(spanX(), y, spanW(), height); }
+// A ground silhouette: the authored profile, carried out flat to both edges and
+// closed below the bottom of the screen.
+function ground(ctx, points, fill) {
+  const first = points[0], last = points[points.length - 1];
+  path(ctx, [[spanX(), first[1]], ...points, [spanX() + spanW(), last[1]], [spanX() + spanW(), 640 + bleed.bottom], [spanX(), 640 + bleed.bottom]], fill, 0);
+}
 function finish(ctx, fill, width = 5, stroke = outline) { ctx.fillStyle = fill; ctx.fill(); ctx.strokeStyle = stroke; ctx.lineWidth = width; if (width) ctx.stroke(); }
 function box(ctx, x, y, w, h, fill, r = 12, width = 5) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); finish(ctx, fill, width); }
 function oval(ctx, x, y, rx, ry, fill, width = 5) { ctx.beginPath(); ctx.ellipse(x, y, rx, ry, 0, 0, TAU); finish(ctx, fill, width); }
@@ -20,12 +42,13 @@ function eyes(ctx, x = 0, y = 0, happy = false, size = 5) {
   } else { oval(ctx, x - 11, y, size, size + 1, C.ink, 0); oval(ctx, x + 11, y, size, size + 1, C.ink, 0); }
   ctx.beginPath(); ctx.arc(x, y + 9, 10, .1, Math.PI - .1); ctx.strokeStyle = C.ink; ctx.lineWidth = 3; ctx.stroke();
 }
-function gradient(ctx, top, bottom, height = 586) { const g = ctx.createLinearGradient(0, 0, 0, height); g.addColorStop(0, top); g.addColorStop(1, bottom); ctx.fillStyle = g; ctx.fillRect(0, 0, 1280, 640); }
-function clouds(ctx, tint = "#fff5d9") { for (const [x, y, r] of [[190, 100, 30], [535, 120, 24], [1050, 105, 35]]) { oval(ctx, x, y, r * 2, r, tint, 0); oval(ctx, x + 28, y - 12, r, r, tint, 0); } }
+function gradient(ctx, top, bottom, height = 586) { const g = ctx.createLinearGradient(0, 0, 0, height); g.addColorStop(0, top); g.addColorStop(1, bottom); ctx.fillStyle = g; ctx.fillRect(spanX(), -bleed.top, spanW(), 640 + bleed.top + bleed.bottom); }
+function clouds(ctx, tint = "#fff5d9") { for (const [x, y, r] of [[190, 100, 30], [535, 120, 24], [1050, 105, 35], [-150, 132, 27], [1430, 118, 31]]) { if (x < spanX() - r * 2 || x > spanX() + spanW() + r * 2) continue; oval(ctx, x, y, r * 2, r, tint, 0); oval(ctx, x + 28, y - 12, r, r, tint, 0); } }
 function stars(ctx, variant = 0) {
   const seed = 41 + variant * 173, step = 197 + variant * 31;
-  for (let i = 0; i < 48 + variant * 3; i++) {
-    const x = (i * step + seed) % 1280, y = (i * (89 + variant * 7) + 33 + variant * 19) % 460;
+  const count = Math.round((48 + variant * 3) * (spanW() / 1280));
+  for (let i = 0; i < count; i++) {
+    const x = spanX() + (i * step + seed) % spanW(), y = -bleed.top + (i * (89 + variant * 7) + 33 + variant * 19) % (460 + bleed.top);
     oval(ctx, x, y, i % 5 ? 1.5 : 3, i % 5 ? 1.5 : 3, "#e3d7ed", 0);
   }
 }
@@ -33,7 +56,7 @@ function stars(ctx, variant = 0) {
 // its own arrangement of scenery. Without this the whole chapter reads as one
 // level replayed eight times.
 const pick = (variant, list) => list[variant % list.length];
-function waves(ctx, y, tint = "#b2eddf") { for (let i = 0; i < 15; i++) { ctx.beginPath(); ctx.moveTo(i * 95, y + i % 2 * 14); ctx.quadraticCurveTo(i * 95 + 22, y - 8, i * 95 + 48, y + 7); ctx.strokeStyle = tint; ctx.lineWidth = 3; ctx.stroke(); } }
+function waves(ctx, y, tint = "#b2eddf") { const from = Math.floor(spanX() / 95), to = Math.ceil((spanX() + spanW()) / 95); for (let i = from; i < to; i++) { ctx.beginPath(); ctx.moveTo(i * 95, y + i % 2 * 14); ctx.quadraticCurveTo(i * 95 + 22, y - 8, i * 95 + 48, y + 7); ctx.strokeStyle = tint; ctx.lineWidth = 3; ctx.stroke(); } }
 function palm(ctx, x, y, lean) {
   line(ctx, [[x, y], [x + lean, y - 120], [x + lean * .8, y - 235]], "#8f6371", 20);
   const px = x + lean * .8, py = y - 235;
@@ -66,7 +89,7 @@ export function drawCampaignScene(ctx, level) {
     const sunX = pick(variant, [1140, 960, 240, 1210]), sunY = pick(variant, [135, 96, 168, 118]);
     oval(ctx, sunX, sunY, 55, 55, "#ffe4a0", 0);
     const seaTop = 325 + pick(variant, [0, 16, -12, 8]);
-    ctx.fillStyle = "#499fab"; ctx.fillRect(0, seaTop, 1280, 555 - seaTop); waves(ctx, seaTop + 35); waves(ctx, seaTop + 84);
+    band(ctx, seaTop, 555 - seaTop, "#499fab"); waves(ctx, seaTop + 35); waves(ctx, seaTop + 84);
     path(ctx, [[0, 480], [260, 452], [560, 486], [830, 470], [1280, 480], [1280, 640], [0, 640]], sand, 0);
     for (const [x, y, lean] of pick(variant, [
       [[1200, 480, -40], [72, 400, 25]], [[1160, 492, -26], [118, 414, 18], [995, 470, -14]],
@@ -89,7 +112,7 @@ export function drawCampaignScene(ctx, level) {
     const shaftLean = pick(variant, [195, 150, 245, 120]);
     for (let i = 0; i < 5; i++) path(ctx, [[i * 310 - variant * 18, 0], [i * 310 + 95 - variant * 18, 0], [i * 310 + shaftLean + 95, 586], [i * 310 + shaftLean, 586]], C.cream, 0);
     ctx.globalAlpha = 1;
-    path(ctx, [[0, 552], [200, 535], [425, 568], [765, 544], [1030, 556], [1280, 536], [1280, 640], [0, 640]], "#9b9190", 0);
+    ground(ctx, [[200, 535], [425, 568], [765, 544], [1030, 556]], "#9b9190");
     for (const [x, y, tint, size] of pick(variant, [
       [[80, 555, "#9f688c", 1.3], [1180, 550, "#bc867e", 1.55], [930, 576, "#5d9b99", .8]],
       [[145, 560, "#bc867e", 1.1], [1215, 545, "#9f688c", 1.4]],
@@ -112,13 +135,13 @@ export function drawCampaignScene(ctx, level) {
     const [skyTop, skyBottom] = pick(variant, [["#a69ac6", "#efc0ac"], ["#9a8fc0", "#e8b6a4"], ["#b3a4cd", "#f5d0b6"], ["#8d84b6", "#dfa896"]]);
     gradient(ctx, skyTop, skyBottom); clouds(ctx, "#e6d2db");
     const quay = 397 + pick(variant, [0, 14, -10, 6]);
-    ctx.fillStyle = "#6d9cac"; ctx.fillRect(0, quay, 1280, 586 - quay); waves(ctx, quay + 28); waves(ctx, quay + 68);
+    band(ctx, quay, 586 - quay, "#6d9cac"); waves(ctx, quay + 28); waves(ctx, quay + 68);
     const stackBase = pick(variant, [650, 590, 700, 630]);
     for (let i = 0; i < pick(variant, [3, 4, 2, 3]); i++) { box(ctx, stackBase + i * 165, 350 - i % 2 * 82, 153, 145, ["#9689ae", "#b88f91", "#819da6", "#a08fa6"][i % 4], 3, 3); for (let x = stackBase + 15 + i * 165; x < stackBase + 140 + i * 165; x += 23) line(ctx, [[x, 360 - i % 2 * 82], [x, 480 - i % 2 * 82]], "#6a6287", 2); }
     const craneX = pick(variant, [320, 245, 395, 290]);
     line(ctx, [[craneX, 505], [craneX, 125], [craneX + 410, 125]], "#99848e", 20); line(ctx, [[craneX + 2, 150], [craneX + 190, 126]], "#665974", 5);
     line(ctx, [[craneX + 330, 125], [craneX + 330, 250]], "#625770", 4); box(ctx, craneX + 315, 245, 30, 40, "#b99b8b", 7, 3);
-    ctx.fillStyle = "#b08f89"; ctx.fillRect(0, 542, 1280, 98);
+    band(ctx, 542, 98, "#b08f89");
     for (let i = 0; i < 16; i++) line(ctx, [[i * 90, 545], [i * 90 - 25, 640]], "#8b727e", 3);
   } else if (scene === "fairground") {
     const [skyTop, skyBottom] = pick(variant, [["#70659d", "#d194a7"], ["#655b93", "#c489a0"], ["#7d71a8", "#dba0ad"], ["#5c5389", "#b87e98"]]);
@@ -132,9 +155,9 @@ export function drawCampaignScene(ctx, level) {
     path(ctx, [[tentX, 345], [tentX + 180, 165], [tentX + 375, 345]], "#ba9ab2", 4);
     path(ctx, [[tentX + 130, 340], [tentX + 180, 180], [tentX + 235, 340]], "#c6b0a1", 0);
     box(ctx, tentX + 135, 413, 85, 102, "#665375", 35, 3);
-    line(ctx, [[0, 115], [1280, 140]], "#81748f", 3);
+    line(ctx, [[spanX(), 115], [spanX() + spanW(), 140]], "#81748f", 3);
     for (let i = 0; i < 18; i++) path(ctx, [[i * 78 - variant * 9, 116 + i], [i * 78 + 50 - variant * 9, 117 + i], [i * 78 + 23 - variant * 9, 150 + i]], (i + variant) % 2 ? "#bea290" : "#a883a4", 0);
-    ctx.fillStyle = "#80657e"; ctx.fillRect(0, 552, 1280, 88);
+    band(ctx, 552, 88, "#80657e");
   } else if (["spaceport", "moon", "station", "comet"].includes(scene)) {
     gradient(ctx, scene === "spaceport" ? pick(variant, ["#78669b", "#6d5c92", "#8271a4", "#63548a"]) : pick(variant, ["#30284e", "#2a2346", "#372e57", "#251f40"]), scene === "moon" ? "#635576" : "#605281");
     stars(ctx, variant);
@@ -148,16 +171,16 @@ export function drawCampaignScene(ctx, level) {
       const gantryX = pick(variant, [430, 360, 475, 405]);
       line(ctx, [[gantryX, 540], [gantryX, 155], [gantryX + 150, 155], [gantryX + 150, 540]], "#8f819c", 12);
       for (let y = 175; y < 515; y += 65) line(ctx, [[gantryX, y], [gantryX + 150, y + 65], [gantryX, y + 65]], "#8f819c", 4);
-      ctx.fillStyle = "#968396"; ctx.fillRect(0, 542, 1280, 98);
+      band(ctx, 542, 98, "#968396");
     } else if (scene === "station") {
       const hullTop = pick(variant, [125, 108, 142, 118]);
       box(ctx, 35, hullTop, 1210, 395, "#51466c", 45, 5);
       for (let i = 0; i < 4; i++) { box(ctx, 85 + i * 302 - variant * 7, hullTop + 33, 234, 202, "#352e54", 28, 6); oval(ctx, 150 + i * 302 - variant * 7, hullTop + 110, 30, 30, pick(variant, ["#827099", "#8d7ba3", "#7a698f", "#93809f"]), 0); }
       box(ctx, pick(variant, [340, 275, 400, 315]), 425, 575, 89, "#716582", 15, 4);
       for (let i = 0; i < 7; i++) { oval(ctx, 380 + i * 80, 452, 7, 7, (i + variant) % 2 ? "#a09487" : "#839c98", 0); line(ctx, [[370 + i * 80, 480], [400 + i * 80, 480]], "#9b8c9c", 4); }
-      ctx.fillStyle = "#675774"; ctx.fillRect(0, 553, 1280, 87);
+      band(ctx, 553, 87, "#675774");
     } else {
-      path(ctx, [[0, 544], [165, 515], [380, 550], [545, 530], [840, 560], [1100, 535], [1280, 548], [1280, 640], [0, 640]], "#928198", 0);
+      ground(ctx, [[165, 515], [380, 550], [545, 530], [840, 560], [1100, 535]], "#928198");
       for (let i = 0; i < 8; i++) oval(ctx, 80 + i * 170 - variant * 14, 573 + i % 2 * 30, 48 - variant * 2, 11, "#75617f", 2);
       if (scene === "comet") {
         const cometX = pick(variant, [505, 415, 590, 460]), cometY = pick(variant, [140, 108, 172, 124]);
