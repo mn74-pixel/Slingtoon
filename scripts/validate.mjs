@@ -224,6 +224,20 @@ assert.match(viewport, /clientPointToWorld/);
 assert.ok(/ctx\.fillRect\(-ox, -oy, WORLD\.width \+ ox \* 2, WORLD\.height \+ oy \* 2\)/.test(render),
   "the vignette must span the whole visible viewport, not just the authored world");
 
+// Shot shape is the campaign's main variable now. The tolerance grid must also
+// sample its own centre: an odd step count straddled zero, so a mission could
+// ship a margin whose own axes fail.
+const campaign = await readFile(resolve(root, "src/campaign.js"), "utf8");
+const balance = await readFile(resolve(root, "scripts/balance-campaign.mjs"), "utf8");
+assert.ok(/const steps = 2 \* Math\.max/.test(balance), "the tolerance grid needs an even step count or it never samples the centre");
+assert.ok(/const REACH = \{/.test(campaign) && /const HEIGHT = \{/.test(campaign),
+  "distance and height must be chosen separately; tying difficulty to distance pulled the campaign into the left half of the screen");
+assert.ok(!/long: \[[^\]]*"high"/.test(campaign), "a long shot cannot also be a high one: no trajectory reaches there");
+assert.ok(/function scaleItem/.test(campaign), "moving a goal must carry its obstacles with it");
+for (const field of ["out.entry", "out.exit", "out.a", "out.b", "out.width"]) {
+  assert.ok(campaign.includes(field), `scaleItem must rescale ${field}, or portals and ramps detach from the flight`);
+}
+
 // Scenery spans the whole screen now. A screen wider than 2:1 reveals world the
 // authored 1280x640 never painted, and the old answer was a second, zoomed,
 // blurred copy of the scene in the margin. Measuring its brightness said 9%,

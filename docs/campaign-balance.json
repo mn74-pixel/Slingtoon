@@ -3,7 +3,7 @@
     "number": 9,
     "id": "beach-09",
     "margin": 20,
-    "winningGridShots": 179,
+    "winningGridShots": 154,
     "gridShots": 620,
     "required": 1
   },
@@ -11,23 +11,23 @@
     "number": 10,
     "id": "beach-10",
     "margin": 20,
-    "winningGridShots": 157,
+    "winningGridShots": 120,
     "gridShots": 620,
     "required": 1
   },
   {
     "number": 11,
     "id": "beach-11",
-    "margin": 16,
-    "winningGridShots": 176,
+    "margin": 6,
+    "winningGridShots": 93,
     "gridShots": 620,
     "required": 1
   },
   {
     "number": 12,
     "id": "beach-12",
-    "margin": 12,
-    "winningGridShots": 123,
+    "margin": 8,
+    "winningGridShots": 44,
     "gridShots": 620,
     "required": 1
   },
@@ -35,47 +35,47 @@
     "number": 13,
     "id": "beach-13",
     "margin": 8,
-    "winningGridShots": 72,
+    "winningGridShots": 57,
     "gridShots": 620,
     "required": 1
   },
   {
     "number": 14,
     "id": "beach-14",
-    "margin": 12,
-    "winningGridShots": 142,
+    "margin": 16,
+    "winningGridShots": 135,
     "gridShots": 620,
     "required": 2
   },
   {
     "number": 15,
     "id": "beach-15",
-    "margin": 16,
-    "winningGridShots": 189,
+    "margin": 20,
+    "winningGridShots": 190,
     "gridShots": 620,
     "required": 2
   },
   {
     "number": 16,
     "id": "beach-16",
-    "margin": 12,
-    "winningGridShots": 157,
+    "margin": 20,
+    "winningGridShots": 323,
     "gridShots": 620,
     "required": 2
   },
   {
     "number": 17,
     "id": "reef-17",
-    "margin": 16,
-    "winningGridShots": 161,
+    "margin": 20,
+    "winningGridShots": 290,
     "gridShots": 620,
     "required": 1
   },
   {
     "number": 18,
     "id": "reef-18",
-    "margin": 16,
-    "winningGridShots": 137,
+    "margin": 12,
+    "winningGridShots": 115,
     "gridShots": 620,
     "required": 1
   },
@@ -83,7 +83,7 @@
     "number": 19,
     "id": "reef-19",
     "margin": 16,
-    "winningGridShots": 152,
+    "winningGridShots": 171,
     "gridShots": 620,
     "required": 2
   },
@@ -91,39 +91,39 @@
     "number": 20,
     "id": "reef-20",
     "margin": 20,
-    "winningGridShots": 284,
+    "winningGridShots": 226,
     "gridShots": 620,
     "required": 2
   },
   {
     "number": 21,
     "id": "reef-21",
-    "margin": 16,
-    "winningGridShots": 157,
+    "margin": 20,
+    "winningGridShots": 236,
     "gridShots": 620,
     "required": 1
   },
   {
     "number": 22,
     "id": "reef-22",
-    "margin": 10,
-    "winningGridShots": 82,
+    "margin": 6,
+    "winningGridShots": 51,
     "gridShots": 620,
     "required": 2
   },
   {
     "number": 23,
     "id": "reef-23",
-    "margin": 16,
-    "winningGridShots": 158,
+    "margin": 20,
+    "winningGridShots": 220,
     "gridShots": 620,
     "required": 2
   },
   {
     "number": 24,
     "id": "reef-24",
-    "margin": 16,
-    "winningGridShots": 154,
+    "margin": 20,
+    "winningGridShots": 254,
     "gridShots": 620,
     "required": 2
   },
@@ -131,7 +131,7 @@
     "number": 25,
     "id": "wreck-25",
     "margin": 16,
-    "winningGridShots": 164,
+    "winningGridShots": 212,
     "gridShots": 620,
     "required": 1
   },
@@ -139,31 +139,31 @@
     "number": 26,
     "id": "wreck-26",
     "margin": 12,
-    "winningGridShots": 73,
+    "winningGridShots": 57,
     "gridShots": 620,
     "required": 2
   },
   {
     "number": 27,
     "id": "wreck-27",
-    "margin": 12,
-    "winningGridShots": 134,
+    "margin": 20,
+    "winningGridShots": 444,
     "gridShots": 620,
     "required": 2
   },
   {
     "number": 28,
     "id": "wreck-28",
-    "margin": 16,
-    "winningGridShots": 143,
+    "margin": 8,
+    "winningGridShots": 82,
     "gridShots": 620,
     "required": 2
   },
   {
     "number": 29,
     "id": "wreck-29",
-    "margin": 20,
-    "winningGridShots": 283,
+    "margin": 16,
+    "winningGridShots": 120,
     "gridShots": 620,
     "required": 1
   },
@@ -171,23 +171,23 @@
     "number": 30,
     "id": "wreck-30",
     "margin": 20,
-    "winningGridShots": 168,
+    "winningGridShots": 169,
     "gridShots": 620,
     "required": 2
   },
   {
     "number": 31,
     "id": "wreck-31",
-    "margin": 12,
-    "winningGridShots": 83,
+    "margin": 16,
+    "winningGridShots": 119,
     "gridShots": 620,
     "required": 2
   },
   {
     "number": 32,
     "id": "wreck-32",
-    "margin": 10,
-    "winningGridShots": 82,
+    "margin": 20,
+    "winningGridShots": 190,
     "gridShots": 620,
     "required": 2
   },
@@ -195,7 +195,7 @@
     "number": 33,
     "id": "harbour-33",
     "margin": 20,
-    "winningGridShots": 284,
+    "winningGridShots": 75,
     "gridShots": 620,
     "required": 0
   },
@@ -203,23 +203,23 @@
     "number": 34,
     "id": "harbour-34",
     "margin": 20,
-    "winningGridShots": 96,
+    "winningGridShots": 195,
     "gridShots": 620,
     "required": 2
   },
   {
     "number": 35,
     "id": "harbour-35",
-    "margin": 16,
-    "winningGridShots": 158,
+    "margin": 5,
+    "winningGridShots": 29,
     "gridShots": 620,
     "required": 1
   },
   {
     "number": 36,
     "id": "harbour-36",
-    "margin": 12,
-    "winningGridShots": 101,
+    "margin": 20,
+    "winningGridShots": 211,
     "gridShots": 620,
     "required": 2
   },
@@ -227,47 +227,47 @@
     "number": 37,
     "id": "harbour-37",
     "margin": 20,
-    "winningGridShots": 139,
+    "winningGridShots": 94,
     "gridShots": 620,
     "required": 0
   },
   {
     "number": 38,
     "id": "harbour-38",
-    "margin": 6,
-    "winningGridShots": 52,
+    "margin": 8,
+    "winningGridShots": 98,
     "gridShots": 620,
     "required": 2
   },
   {
     "number": 39,
     "id": "harbour-39",
-    "margin": 12,
-    "winningGridShots": 167,
+    "margin": 8,
+    "winningGridShots": 40,
     "gridShots": 620,
     "required": 2
   },
   {
     "number": 40,
     "id": "harbour-40",
-    "margin": 12,
-    "winningGridShots": 118,
+    "margin": 10,
+    "winningGridShots": 97,
     "gridShots": 620,
     "required": 2
   },
   {
     "number": 41,
     "id": "fairground-41",
-    "margin": 12,
-    "winningGridShots": 117,
+    "margin": 20,
+    "winningGridShots": 98,
     "gridShots": 620,
     "required": 0
   },
   {
     "number": 42,
     "id": "fairground-42",
-    "margin": 12,
-    "winningGridShots": 127,
+    "margin": 16,
+    "winningGridShots": 146,
     "gridShots": 620,
     "required": 2
   },
@@ -275,15 +275,15 @@
     "number": 43,
     "id": "fairground-43",
     "margin": 10,
-    "winningGridShots": 131,
+    "winningGridShots": 86,
     "gridShots": 620,
     "required": 1
   },
   {
     "number": 44,
     "id": "fairground-44",
-    "margin": 6,
-    "winningGridShots": 37,
+    "margin": 10,
+    "winningGridShots": 73,
     "gridShots": 620,
     "required": 2
   },
@@ -291,7 +291,7 @@
     "number": 45,
     "id": "fairground-45",
     "margin": 16,
-    "winningGridShots": 188,
+    "winningGridShots": 174,
     "gridShots": 620,
     "required": 1
   },
@@ -299,7 +299,7 @@
     "number": 46,
     "id": "fairground-46",
     "margin": 16,
-    "winningGridShots": 84,
+    "winningGridShots": 119,
     "gridShots": 620,
     "required": 2
   },
@@ -307,15 +307,15 @@
     "number": 47,
     "id": "fairground-47",
     "margin": 20,
-    "winningGridShots": 172,
+    "winningGridShots": 125,
     "gridShots": 620,
     "required": 2
   },
   {
     "number": 48,
     "id": "fairground-48",
-    "margin": 20,
-    "winningGridShots": 107,
+    "margin": 8,
+    "winningGridShots": 88,
     "gridShots": 620,
     "required": 2
   },
@@ -323,7 +323,7 @@
     "number": 49,
     "id": "spaceport-49",
     "margin": 16,
-    "winningGridShots": 175,
+    "winningGridShots": 195,
     "gridShots": 620,
     "required": 1
   },
@@ -331,7 +331,7 @@
     "number": 50,
     "id": "spaceport-50",
     "margin": 20,
-    "winningGridShots": 114,
+    "winningGridShots": 210,
     "gridShots": 620,
     "required": 2
   },
@@ -339,71 +339,71 @@
     "number": 51,
     "id": "spaceport-51",
     "margin": 12,
-    "winningGridShots": 141,
+    "winningGridShots": 117,
     "gridShots": 620,
     "required": 2
   },
   {
     "number": 52,
     "id": "spaceport-52",
-    "margin": 12,
-    "winningGridShots": 179,
+    "margin": 20,
+    "winningGridShots": 220,
     "gridShots": 620,
     "required": 2
   },
   {
     "number": 53,
     "id": "spaceport-53",
-    "margin": 10,
-    "winningGridShots": 77,
+    "margin": 8,
+    "winningGridShots": 36,
     "gridShots": 620,
     "required": 1
   },
   {
     "number": 54,
     "id": "spaceport-54",
-    "margin": 12,
-    "winningGridShots": 110,
+    "margin": 10,
+    "winningGridShots": 126,
     "gridShots": 620,
     "required": 2
   },
   {
     "number": 55,
     "id": "spaceport-55",
-    "margin": 12,
-    "winningGridShots": 122,
+    "margin": 20,
+    "winningGridShots": 339,
     "gridShots": 620,
     "required": 3
   },
   {
     "number": 56,
     "id": "spaceport-56",
-    "margin": 10,
-    "winningGridShots": 149,
+    "margin": 8,
+    "winningGridShots": 77,
     "gridShots": 620,
     "required": 2
   },
   {
     "number": 57,
     "id": "moon-57",
-    "margin": 12,
-    "winningGridShots": 99,
+    "margin": 10,
+    "winningGridShots": 84,
     "gridShots": 620,
     "required": 0
   },
   {
     "number": 58,
     "id": "moon-58",
-    "margin": 5,
-    "winningGridShots": 47,
+    "margin": 8,
+    "winningGridShots": 77,
     "gridShots": 620,
     "required": 1
   },
   {
     "number": 59,
     "id": "moon-59",
-    "margin": 8,
-    "winningGridShots": 78,
+    "margin": 12,
+    "winningGridShots": 92,
     "gridShots": 620,
     "required": 1
   },
@@ -411,15 +411,15 @@
     "number": 60,
     "id": "moon-60",
     "margin": 20,
-    "winningGridShots": 177,
+    "winningGridShots": 139,
     "gridShots": 620,
     "required": 2
   },
   {
     "number": 61,
     "id": "moon-61",
-    "margin": 12,
-    "winningGridShots": 119,
+    "margin": 20,
+    "winningGridShots": 215,
     "gridShots": 620,
     "required": 1
   },
@@ -427,23 +427,23 @@
     "number": 62,
     "id": "moon-62",
     "margin": 8,
-    "winningGridShots": 51,
+    "winningGridShots": 58,
     "gridShots": 620,
     "required": 2
   },
   {
     "number": 63,
     "id": "moon-63",
-    "margin": 12,
-    "winningGridShots": 117,
+    "margin": 6,
+    "winningGridShots": 58,
     "gridShots": 620,
     "required": 2
   },
   {
     "number": 64,
     "id": "moon-64",
-    "margin": 10,
-    "winningGridShots": 85,
+    "margin": 20,
+    "winningGridShots": 151,
     "gridShots": 620,
     "required": 2
   },
@@ -451,7 +451,7 @@
     "number": 65,
     "id": "station-65",
     "margin": 12,
-    "winningGridShots": 96,
+    "winningGridShots": 88,
     "gridShots": 620,
     "required": 0
   },
@@ -459,23 +459,23 @@
     "number": 66,
     "id": "station-66",
     "margin": 10,
-    "winningGridShots": 111,
+    "winningGridShots": 98,
     "gridShots": 620,
     "required": 1
   },
   {
     "number": 67,
     "id": "station-67",
-    "margin": 10,
-    "winningGridShots": 72,
+    "margin": 8,
+    "winningGridShots": 62,
     "gridShots": 620,
     "required": 2
   },
   {
     "number": 68,
     "id": "station-68",
-    "margin": 8,
-    "winningGridShots": 62,
+    "margin": 12,
+    "winningGridShots": 128,
     "gridShots": 620,
     "required": 2
   },
@@ -483,15 +483,15 @@
     "number": 69,
     "id": "station-69",
     "margin": 16,
-    "winningGridShots": 127,
+    "winningGridShots": 142,
     "gridShots": 620,
     "required": 1
   },
   {
     "number": 70,
     "id": "station-70",
-    "margin": 12,
-    "winningGridShots": 104,
+    "margin": 5,
+    "winningGridShots": 63,
     "gridShots": 620,
     "required": 2
   },
@@ -499,31 +499,31 @@
     "number": 71,
     "id": "station-71",
     "margin": 8,
-    "winningGridShots": 53,
+    "winningGridShots": 72,
     "gridShots": 620,
     "required": 2
   },
   {
     "number": 72,
     "id": "station-72",
-    "margin": 5,
-    "winningGridShots": 61,
+    "margin": 20,
+    "winningGridShots": 153,
     "gridShots": 620,
     "required": 2
   },
   {
     "number": 73,
     "id": "homebound-73",
-    "margin": 12,
-    "winningGridShots": 128,
+    "margin": 16,
+    "winningGridShots": 154,
     "gridShots": 620,
     "required": 1
   },
   {
     "number": 74,
     "id": "homebound-74",
-    "margin": 6,
-    "winningGridShots": 61,
+    "margin": 8,
+    "winningGridShots": 90,
     "gridShots": 620,
     "required": 2
   },
@@ -531,15 +531,15 @@
     "number": 75,
     "id": "homebound-75",
     "margin": 8,
-    "winningGridShots": 56,
+    "winningGridShots": 74,
     "gridShots": 620,
     "required": 2
   },
   {
     "number": 76,
     "id": "homebound-76",
-    "margin": 12,
-    "winningGridShots": 118,
+    "margin": 5,
+    "winningGridShots": 48,
     "gridShots": 620,
     "required": 1
   },
@@ -547,7 +547,7 @@
     "number": 77,
     "id": "homebound-77",
     "margin": 12,
-    "winningGridShots": 167,
+    "winningGridShots": 134,
     "gridShots": 620,
     "required": 1
   },
@@ -555,15 +555,15 @@
     "number": 78,
     "id": "homebound-78",
     "margin": 6,
-    "winningGridShots": 59,
+    "winningGridShots": 41,
     "gridShots": 620,
     "required": 2
   },
   {
     "number": 79,
     "id": "homebound-79",
-    "margin": 10,
-    "winningGridShots": 118,
+    "margin": 8,
+    "winningGridShots": 109,
     "gridShots": 620,
     "required": 2
   },
@@ -571,7 +571,7 @@
     "number": 80,
     "id": "homebound-80",
     "margin": 10,
-    "winningGridShots": 68,
+    "winningGridShots": 48,
     "gridShots": 620,
     "required": 2
   }

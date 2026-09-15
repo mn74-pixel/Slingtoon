@@ -1,10 +1,10 @@
-# SlingToon Web 0.24.0 — 80 misji kontrolowanego chaosu
+# SlingToon Web 0.25.0 — 80 misji kontrolowanego chaosu
 
 Samodzielna gra webowa przygotowana w tym samym modelu publikacji co Castle Conflict. Do uruchomienia i wdrożenia nie potrzeba JUCE, Projucera ani Xcode.
 
 Kampania prowadzi przez 80 krótkich misji w 10 rozdziałach. Zaczyna się od domowego chaosu, a potem odwiedza plażę, rafę, zatopiony hotel, port, lunapark, kosmodrom, Księżyc i stację orbitalną. Finał wraca do budzika z pierwszej misji. Kolory, bohater i lokalne Face Studio pozostają.
 
-Pierwszych osiem misji pozostaje bez zmian. Dalsze etapy wprowadzają m.in. prądy, bąble wypornościowe, pola przyciągania, wielostopniowe bramki i różne wartości grawitacji. Każdy etap ma łatwą drogę do ukończenia i opcjonalną gwiazdkę.
+Każda misja ma własny kształt strzału: dystans od 427 do 1010 px i wysokość celu od 174 do 504, dobierane osobno, więc krótki wysoki lob i długi płaski ślizg to zupełnie inne zadania. Pierwszych osiem misji pozostaje bez zmian. Dalsze etapy wprowadzają m.in. prądy, bąble wypornościowe, pola przyciągania, wielostopniowe bramki i różne wartości grawitacji. Każdy etap ma łatwą drogę do ukończenia i opcjonalną gwiazdkę.
 
 ![Kampania 80 misji — stan początkowy i zwycięstwo](docs/campaign-0.14.png)
 

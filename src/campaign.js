@@ -1,6 +1,6 @@
 // Authored campaign layouts. Coordinates describe actual colliders, not decoration.
 // Routes are measured offline with the same solver used by the game.
-import { CAMPAIGN_ROUTES } from "./campaign-routes.js?v=0.24.0";
+import { CAMPAIGN_ROUTES } from "./campaign-routes.js?v=0.25.0";
 
 export const CHAPTERS = Object.freeze([
   { id: "home", name: "Domowy chaos", subtitle: "Od drzemki do pierwszej kaczki", scene: "bedroom" },
@@ -37,6 +37,96 @@ const moving = (item, axis, amplitude, speed) => ({ ...item, motion: move(axis, 
 // it shrinks away by mission 48; after that difficulty comes from layout and
 // new rules, never from a smaller target. Openers and breathers keep a wider
 // mouth so a rule is never taught through a pixel-perfect shot.
+// Every one of the 80 goals used to sit in the tightest part of the space the
+// sling can actually reach. Measured mid-air interception windows on a flat
+// level (no obstacles), which is where a goal may be placed and still be hit:
+//
+//   x=700 -> 508 px tall    x=900 -> 153    x=1000 -> 118
+//   x=1100 -> 227           x=1200 -> 165   x=1300 -> 71    x=1400 -> 25
+//
+// The shipped campaign put goals at x 890..1100 with a median of 1070, and 77%
+// of missions flew 850-950 px. Eighty missions, one shot repeated. The room is
+// not further right — past 1250 the window collapses to a line — it is CLOSER
+// and VERTICAL, where a short high lob and a short flat skim are different
+// problems with the same tools.
+//
+// A shot shape moves the goal; the mission's whole layout scales with it, so a
+// crate sitting a third of the way along the old flight still sits a third of
+// the way along the new one. The authored numbers keep describing the layout,
+// not absolute pixels.
+const ANCHOR_X = 173;
+
+// Distance and height are chosen separately, because tying difficulty to
+// distance alone pulled the whole campaign into the left half of the screen —
+// visible immediately on a contact sheet, invisible in the tolerance numbers.
+//
+// Distance rotates evenly so every third mission is long, and the play area
+// keeps using the full width. Height carries the difficulty, which the measured
+// win-share supports: a low target is hard at any distance (mid-low 17.4%,
+// long-low 19.2%) while a high one is forgiving (short-high 31.1%).
+const REACH = { short: 655, mid: 890, long: 1130 };
+const HEIGHT = { high: 205, mid: 340, low: 470 };
+// The measured mid-air window at x=1130 runs y 303..529, so a long shot cannot
+// also be a high one. Every other pairing is reachable.
+const SHOT_GRID = Object.freeze({
+  short: ["high", "mid", "low"],
+  mid: ["high", "mid", "low"],
+  long: ["mid", "low"],
+});
+// The distance mix shifts with the campaign as well as the height. A single
+// shared cycle gave chapter 10 as many forgiving short lobs as chapter 1, which
+// flattened the curve even though every late target sat low. Early chapters lean
+// short, late chapters lean long, and every chapter still serves all three so no
+// stretch of the game becomes one shot repeated.
+const REACH_CYCLES = [
+  ["short", "mid", "short", "long", "mid", "short", "mid", "long"],   // chapters 1-3
+  ["mid", "long", "short", "mid", "long", "short", "long", "mid"],    // chapters 4-6
+  ["long", "mid", "long", "short", "mid", "long", "mid", "long"],     // chapters 7-10
+];
+
+// Seven shapes shared by eighty missions would read as seven target spots, so
+// each mission nudges its own within the shape. Deterministic: the same mission
+// is always in the same place, run to run and device to device.
+function jitter(number, span) {
+  const noise = Math.sin(number * 12.9898) * 43758.5453;
+  return (noise - Math.floor(noise) - 0.5) * 2 * span;
+}
+
+// Opener and breather sit below their chapter's baseline, the finale above it.
+const LOCAL_STEP = [-1.1, 0, 0.4, 0.3, -1.3, 0.6, 0.9, 1.2];
+function shotFor(number, override) {
+  const chapter = Math.floor((number - 1) / 8), local = (number - 1) % 8;
+  const cycle = REACH_CYCLES[chapter < 3 ? 0 : chapter < 5 ? 1 : 2];
+  const reach = override?.reach ?? cycle[(local + chapter) % cycle.length];
+  const options = SHOT_GRID[reach];
+  // Height climbs from forgiving to demanding across the campaign; a chapter's
+  // opener and breather step back down it.
+  const rank = Math.round((chapter / 9) * (options.length - 1) + LOCAL_STEP[local] * 0.6);
+  const height = override?.height ?? options[Math.max(0, Math.min(options.length - 1, rank))];
+  return {
+    x: Math.round(REACH[reach] + jitter(number, 55)),
+    y: Math.round(HEIGHT[height] + jitter(number + 91, 34)),
+  };
+}
+
+// Horizontal rescale of an authored layout around the sling.
+const scaleX = (value, factor) => ANCHOR_X + (value - ANCHOR_X) * factor;
+function scaleItem(item, factor) {
+  const out = { ...item };
+  if (typeof out.x === "number") out.x = scaleX(out.x, factor);
+  if (typeof out.width === "number") out.width *= factor;
+  if (out.entry) out.entry = { ...out.entry, x: scaleX(out.entry.x, factor) };
+  if (out.exit) out.exit = { ...out.exit, x: scaleX(out.exit.x, factor) };
+  if (out.a) out.a = { ...out.a, x: scaleX(out.a.x, factor) };
+  if (out.b) out.b = { ...out.b, x: scaleX(out.b.x, factor) };
+  if (out.force && out.motion?.axis === "x") out.motion = { ...out.motion, amplitude: out.motion.amplitude * factor };
+  return out;
+}
+
+// Missions whose layout does not survive the rotation's shape. Each entry was
+// chosen by running the offline balance tool over every shape and keeping the
+// one with the most forgiving measured route, not by guessing.
+const SHOT_OVERRIDES = Object.freeze({ 12: { reach: "short", height: "low" }, 13: { reach: "mid", height: "mid" }, 20: { reach: "long", height: "mid" }, 30: { reach: "long", height: "mid" }, 39: { reach: "mid", height: "mid" }, 45: { reach: "short", height: "low" }, 47: { reach: "long", height: "mid" }, 56: { reach: "short", height: "low" }, 58: { reach: "mid", height: "mid" }, 59: { reach: "long", height: "mid" }, 62: { reach: "mid", height: "high" }, 66: { reach: "long", height: "mid" }, 72: { reach: "mid", height: "high" }, 74: { reach: "long", height: "mid" }, 75: { reach: "short", height: "high" } });
 const HONEST_GOAL_RADIUS = 56;
 function goalRadius(number, local) {
   const base = Math.max(HONEST_GOAL_RADIUS, Math.round(84 - (number - 9) * 0.72));
@@ -46,9 +136,16 @@ function goalRadius(number, local) {
   return base;
 }
 
-function mission(number, name, kind, x, y, mechanic, clue, win, interactions, options = {}) {
+function mission(number, name, kind, authoredX, authoredY, mechanic, clue, win, authoredInteractions, options = {}) {
   const chapter = CHAPTERS[Math.floor((number - 1) / 8)];
   const local = (number - 1) % 8;
+  // The authored goal position describes the layout's proportions; the shot
+  // shape decides where the mission actually sits in the sling's reach, and the
+  // obstacles ride along so their place in the flight is unchanged.
+  const shot = shotFor(number, SHOT_OVERRIDES[number]);
+  const x = shot.x, y = shot.y;
+  const factor = (x - ANCHOR_X) / (authoredX - ANCHOR_X);
+  const interactions = authoredInteractions.map((item) => scaleItem(item, factor));
   const route = CAMPAIGN_ROUTES[number];
   const required = options.required ?? interactions.filter((item) => !["solid", "gate", "hazard"].includes(item.type)).map((item) => item.id);
   const surface = interactions.find((item) => item.type === "water");
@@ -63,7 +160,7 @@ function mission(number, name, kind, x, y, mechanic, clue, win, interactions, op
     environment: options.environment ?? chapter.environment, background: options.background ?? null,
     mechanic, title: name, clue, direction, pull,
     goal: { kind, shape: "circle", x, y, radius: options.radius ?? goalRadius(number, local), scale: 1, motion: options.motion },
-    star: route?.star ?? p(740, 280), starPull: route?.starPull,
+    star: route?.star ?? p(scaleX(740, factor), 280), starPull: route?.starPull,
     interactions, required, requirement: options.requirement ?? "Najpierw odwiedź oznaczone obiekty. Cel czeka na zakończenie Twojej misji.",
     water: surface ? { ...surface, enabled: true } : { enabled: false },
     visual: { accent: ["#ffd35f", "#5ce1bd", "#ff6078", "#a28bff"][Math.floor((number - 1) / 8) % 4], gag: options.gag, gagX: options.gagX, gagY: options.gagY, wash: "rgba(92,225,189,.015)", variant: local, companion: options.companion ?? chapter.id },
