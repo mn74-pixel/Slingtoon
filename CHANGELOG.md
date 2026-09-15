@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.19.0 — Gwiazdki wreszcie coś kupują
+
+- **gwiazdki odblokowują charaktery**: Zen za 3, Panic za 9, Tough Guy za 18; wcześniej gwiazdka dawała tylko punkty, punkty dawały żetony podpowiedzi, a pętla zamykała się sama w sobie — gra nagradzała za to, że nie potrzebujesz pomocy,
+- lista charakterów jest budowana z tabeli odblokowań, więc zamknięta pozycja **mówi cenę, zanim ją zapłacisz** („🔒 Zen · ★3"), a nie udaje, że jej nie ma,
+- przekroczenie progu ogłasza się w locie, a wybrany charakter nigdy nie zostaje w stanie zablokowanym — po restarcie przygody lista wraca do Drama Queen,
+- każdy charakter to inny zestaw manewrów w locie, więc odblokowanie realnie zmienia to, czym grasz, a nie kolor bohatera,
+- **misja opanowana** — przejście, gwiazdka i trafienie z pierwszego strzału na tej samej misji — dostaje złoty kafelek, znacznik `✦ OPANOWANA` i licznik w mapie oraz w nagłówku rozdziału; rozdział z ośmioma opanowanymi misjami dostaje `✦` przy nazwie,
+- naprawiono błąd, przez który złote oznaczenie było **niewidoczne**: reguła kafelka stała w arkuszu przed regułą bazową, więc przy równej specyficzności wygrywała baza i mistrzostwo nie zmieniało ani ramki, ani tła; podobnie `.mission-tile--mastered span` przegrywało remis z `.mission-tile span`,
+- walidacja pilnuje teraz kolejności i specyficzności obu reguł oraz tego, że kafelek bieżącej misji nadal wygrywa ze złotem — nagroda, której nie widać, jest nagrodą pozorną.
+
 ## 0.18.0 — Restart przygody i koniec fioletowej ramki wokół planszy
 
 - **restart całej przygody** w mapie misji, za dwustopniowym potwierdzeniem: przycisk odsłania ostrzeżenie mówiące dokładnie, co zniknie, i dopiero druga decyzja kasuje postęp,

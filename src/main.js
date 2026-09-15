@@ -1,9 +1,9 @@
-import { GameModel, GameMode, GamePhase, LEVELS, modifierName } from "./game.js?v=0.18.0";
-import { GameRenderer } from "./render.js?v=0.18.0";
-import { GameAudio } from "./audio.js?v=0.18.0";
-import { FaceStudio } from "./face-studio.js?v=0.18.0";
-import { PROGRESS_KEY, TOKEN_SCORE_STEP, readProgress, hintOffer, purchaseHint, rewardSuccess, medalText } from "./progress.js?v=0.18.0";
-import { CHAPTERS } from "./levels.js?v=0.18.0";
+import { GameModel, GameMode, GamePhase, LEVELS, modifierName } from "./game.js?v=0.19.0";
+import { GameRenderer } from "./render.js?v=0.19.0";
+import { GameAudio } from "./audio.js?v=0.19.0";
+import { FaceStudio } from "./face-studio.js?v=0.19.0";
+import { CHARACTER_UNLOCKS, PROGRESS_KEY, TOKEN_SCORE_STEP, characterLock, countMastered, countStars, isMastered, readProgress, hintOffer, purchaseHint, rewardSuccess, medalText } from "./progress.js?v=0.19.0";
+import { CHAPTERS } from "./levels.js?v=0.19.0";
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -94,7 +94,7 @@ let progress = loadProgress();
 let highestUnlockedLevel = progress.highestUnlockedLevel;
 let mapChapterIndex = 0;
 let lastReward = null;
-const FULLSCREEN_TIP_KEY = "slingtoon-fullscreen-tip-0.18.0";
+const FULLSCREEN_TIP_KEY = "slingtoon-fullscreen-tip-0.19.0";
 
 function loadProgress() {
   try {
@@ -112,7 +112,9 @@ function saveProgress() {
 }
 
 function scoreSuccess() {
+  const starsBefore = countStars(progress, LEVELS);
   lastReward = rewardSuccess(progress, { id: model.level.id, attempts: model.attempts, star: model.collectedStar, mode: model.mode, hintStage: model.hintStage, modifier: model.modifier });
+  if (announceUnlocks(starsBefore)) refreshCharacters();
 }
 
 function requestHint() {
@@ -264,6 +266,35 @@ function showToast(message, isError = false) {
 
 // The button shows the player's own head once there is one: no glyph explains
 // "your face goes here" as clearly as the face itself.
+// The character list is the reward wall: a locked entry states its price so the
+// player knows what the next stars buy before spending a shot on them.
+function refreshCharacters() {
+  const stars = countStars(progress, LEVELS);
+  const selected = model.personality;
+  elements.personality.replaceChildren();
+  for (const unlock of CHARACTER_UNLOCKS) {
+    const lock = characterLock(unlock.personality, stars);
+    const option = document.createElement("option");
+    option.value = unlock.personality;
+    option.disabled = lock.locked;
+    option.textContent = lock.locked ? `🔒 ${unlock.name} · ★${lock.stars}` : unlock.name;
+    elements.personality.append(option);
+  }
+  elements.personality.value = characterLock(selected, stars).locked ? CHARACTER_UNLOCKS[0].personality : selected;
+  if (elements.personality.value !== selected) model.setPersonality(elements.personality.value);
+  const next = CHARACTER_UNLOCKS.find((unlock) => characterLock(unlock.personality, stars).locked);
+  elements.personality.title = next
+    ? `Jeszcze ${characterLock(next.personality, stars).missing} ★ do postaci ${next.name}. Każda ma własny zestaw manewrów w locie.`
+    : "Wszystkie postacie odblokowane. Każda ma własny zestaw manewrów w locie.";
+}
+
+function announceUnlocks(before) {
+  const stars = countStars(progress, LEVELS);
+  const fresh = CHARACTER_UNLOCKS.filter((unlock) => unlock.stars > before && unlock.stars <= stars);
+  for (const unlock of fresh) showToast(`★ ${unlock.stars} gwiazdek — odblokowano ${unlock.name}!`);
+  return fresh.length > 0;
+}
+
 function setFaceButton(portrait) {
   const hasFace = Boolean(portrait?.image);
   elements.faceButton.classList.toggle("has-face", hasFace);
@@ -422,6 +453,7 @@ function wipeProgress() {
   hideResult();
   model.setLevel(LEVELS[0]);
   saveProgress();
+  refreshCharacters();
   showResetConfirm(false);
   elements.missions.close();
   elements.canvas.focus({ preventScroll: true });
@@ -437,13 +469,18 @@ function openMissionMap() {
   for (const chapter of CHAPTERS) {
     const option = document.createElement("option");
     option.value = String(chapter.number - 1);
-    option.textContent = `${String(chapter.number).padStart(2, "0")} · ${chapter.name} · ${chapter.first}–${chapter.last}${chapter.first - 1 > highestUnlockedLevel ? " · 🔒" : ""}`;
+    const perfect = LEVELS.slice(chapter.first - 1, chapter.last).every((level) => isMastered(progress.medals[level.id]));
+    option.textContent = `${String(chapter.number).padStart(2, "0")} · ${chapter.name} · ${chapter.first}–${chapter.last}`
+      + (chapter.first - 1 > highestUnlockedLevel ? " · 🔒" : perfect ? " · ✦" : "");
     elements.chapterSelect.append(option);
   }
   elements.chapterSelect.value = String(mapChapterIndex);
   const finished = LEVELS.filter((level) => progress.medals[level.id] & 1).length;
-  const stars = LEVELS.filter((level) => progress.medals[level.id] & 2).length;
-  elements.campaignSummary.textContent = `Przygoda: ${finished} / ${LEVELS.length} misji · ★ ${stars} / ${LEVELS.length} gwiazdek`;
+  const stars = countStars(progress, LEVELS);
+  const mastered = countMastered(progress, LEVELS);
+  const nextCharacter = CHARACTER_UNLOCKS.find((unlock) => characterLock(unlock.personality, stars).locked);
+  elements.campaignSummary.textContent = `Przygoda: ${finished} / ${LEVELS.length} misji · ★ ${stars} / ${LEVELS.length} gwiazdek · ✦ ${mastered} opanowanych`
+    + (nextCharacter ? ` · jeszcze ${characterLock(nextCharacter.personality, stars).missing} ★ do postaci ${nextCharacter.name}` : " · wszystkie postacie odblokowane");
   const resume = LEVELS.find((level) => level.id === progress.resumeLevelId) ?? LEVELS[highestUnlockedLevel];
   elements.resumeMission.textContent = `KONTYNUUJ · MISJA ${resume.number} →`;
   renderMissionChapter();
@@ -454,7 +491,8 @@ function renderMissionChapter() {
   const chapterData = CHAPTERS[mapChapterIndex];
   const chapterLevels = LEVELS.slice(chapterData.first - 1, chapterData.last);
   const finished = chapterLevels.filter((level) => progress.medals[level.id] & 1).length;
-  elements.chapterSummary.textContent = `${chapterData.subtitle} · ${finished} / 8 ukończonych`;
+  const mastered = chapterLevels.filter((level) => isMastered(progress.medals[level.id])).length;
+  elements.chapterSummary.textContent = `${chapterData.subtitle} · ${finished} / 8 ukończonych · ✦ ${mastered} / 8 opanowanych`;
   elements.missionList.replaceChildren();
   for (const level of chapterLevels) {
     const index = level.number - 1;
@@ -467,7 +505,9 @@ function renderMissionChapter() {
     const title = document.createElement("strong");
     const mechanic = document.createElement("span");
     const medals = document.createElement("small");
-    chapter.textContent = `MISJA ${String(index + 1).padStart(2, "0")}${level.pacing === "breather" ? " · CHWILA ODDECHU" : ""}`;
+    const mastered = isMastered(progress.medals[level.id]);
+    button.classList.toggle("mission-tile--mastered", mastered);
+    chapter.textContent = `MISJA ${String(index + 1).padStart(2, "0")}${mastered ? " · ✦ OPANOWANA" : level.pacing === "breather" ? " · CHWILA ODDECHU" : ""}`;
     title.textContent = level.name;
     mechanic.textContent = level.mechanic;
     medals.textContent = button.disabled ? "Ukończ poprzednią misję, by odblokować" : medalText(progress.medals[level.id]);
@@ -611,7 +651,7 @@ function updateUi() {
   elements.shotBadge.textContent = `SHOT ${Math.max(1, model.attempts + (preparing ? 1 : 0))}`;
   elements.scoreBadge.textContent = `★ ${progress.score}`;
 
-  elements.personality.value = model.personality;
+  if (!characterLock(model.personality, countStars(progress, LEVELS)).locked) elements.personality.value = model.personality;
   const instruction = instructionForState();
   elements.instructionIcon.textContent = instruction.icon;
   elements.instructionTitle.textContent = instruction.title;
@@ -779,7 +819,7 @@ window.addEventListener("keydown", (event) => {
 
 window.addEventListener("load", () => {
   if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
-    navigator.serviceWorker.register("./sw.js?v=0.18.0").catch(() => {});
+    navigator.serviceWorker.register("./sw.js?v=0.19.0").catch(() => {});
   }
   scheduleFullscreenSuggestion();
   syncGameViewport();
@@ -788,6 +828,7 @@ window.addEventListener("load", () => {
 currentLevelIndex = Math.max(0, LEVELS.findIndex((level) => level.id === progress.resumeLevelId));
 if (currentLevelIndex > 0) model.setLevel(LEVELS[currentLevelIndex]);
 model.hintStage = Math.min(1, progress.hints[model.level.id] ?? 0);
+refreshCharacters();
 updateMissionUi();
 syncGameViewport();
 updateFullscreenUi();

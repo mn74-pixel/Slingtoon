@@ -61,6 +61,38 @@ export function rewardSuccess(progress, { id, attempts, star, mode, hintStage, m
   return { score, gained, tokenGain, star, precision, newBest: gained > 0 };
 }
 
+// Stars used to feed only the score, which fed hint tokens — the game rewarded
+// you for not needing help, and the loop closed on itself. They now buy the one
+// thing a player actually wants: another in-flight toolkit. Thresholds are low
+// enough that the first unlock lands within the opening chapter.
+export const CHARACTER_UNLOCKS = Object.freeze([
+  { personality: "dramaQueen", stars: 0, name: "Drama Queen" },
+  { personality: "zen", stars: 3, name: "Zen" },
+  { personality: "panic", stars: 9, name: "Panic" },
+  { personality: "toughGuy", stars: 18, name: "Tough Guy" },
+]);
+
+export const MEDAL_BITS = Object.freeze({ CLEARED: 1, STAR: 2, PRECISE: 4 });
+const MASTERED = MEDAL_BITS.CLEARED | MEDAL_BITS.STAR | MEDAL_BITS.PRECISE;
+
+export function countStars(progress, levels) {
+  return levels.filter((level) => progress.medals[level.id] & MEDAL_BITS.STAR).length;
+}
+
+export function isMastered(bits = 0) {
+  return (bits & MASTERED) === MASTERED;
+}
+
+export function countMastered(progress, levels) {
+  return levels.filter((level) => isMastered(progress.medals[level.id])).length;
+}
+
+export function characterLock(personality, stars) {
+  const entry = CHARACTER_UNLOCKS.find((unlock) => unlock.personality === personality);
+  if (!entry) return { locked: true, stars: Infinity, missing: Infinity };
+  return { locked: stars < entry.stars, stars: entry.stars, missing: Math.max(0, entry.stars - stars) };
+}
+
 export function medalText(bits = 0) {
   return `${bits & 1 ? "●" : "○"} Przejście · ${bits & 2 ? "★" : "☆"} Gwiazdka · ${bits & 4 ? "◆" : "◇"} Pierwszy strzał`;
 }

@@ -220,6 +220,26 @@ assert.match(viewport, /viewWidth = Math\.ceil\(safeWorldHeight \* stageAspect\)
 assert.match(viewport, /viewHeight = Math\.ceil\(safeWorldWidth \/ stageAspect\)/);
 assert.match(viewport, /clientPointToWorld/);
 
+// Stars buy characters, and mastery is the mark that proves a mission is done
+// with. Both are rewards, so both have to be visible: the select must be
+// rebuilt from CHARACTER_UNLOCKS, and the gold tile must actually win the
+// cascade. An earlier build shipped a mastery rule declared before the base
+// `.mission-tile` — same specificity, so the base overrode every property and
+// the reward was invisible. These assertions pin the order and the specificity.
+const progress = await readFile(resolve(root, "src/progress.js"), "utf8");
+for (const name of ["CHARACTER_UNLOCKS", "countStars", "countMastered", "isMastered", "characterLock"]) {
+  assert.match(progress, new RegExp(`export (const|function) ${name}\\b`), `progress.js must export ${name}`);
+}
+assert.match(main, /refreshCharacters\(\)/, "the character select is rebuilt from the unlock table");
+assert.match(main, /announceUnlocks\(/, "crossing a star threshold has to be announced");
+assert.doesNotMatch(html, /<option value="(zen|panic|toughGuy)"/, "locked characters must not be hardcoded into the markup");
+const baseTile = css.indexOf(".mission-tile {");
+const masteredTile = css.indexOf(".mission-tile--mastered {");
+const hoverTile = css.indexOf('.mission-tile:hover:not(:disabled)');
+assert.ok(baseTile >= 0 && masteredTile > baseTile, "the mastered tile must be declared after the base tile, or the base wins the tie");
+assert.ok(hoverTile > masteredTile, "hover and current must still outrank mastery: gold is history, mint is where you are");
+assert.ok(/\.mission-tile\.mission-tile--mastered span:first-of-type/.test(css), "the gilded eyebrow needs two classes to beat `.mission-tile span`");
+
 for (const file of requiredFiles.filter((file) => !file.startsWith(".github") && !file.startsWith("docs/"))) {
   if (["package.json", ".gitignore", ".gitattributes"].includes(file)) continue;
   if (file === ".nojekyll") continue;
