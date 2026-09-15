@@ -1,4 +1,4 @@
-import { FaceVision } from "./face-vision.js?v=0.18.0";
+import { FaceVision } from "./face-vision.js?v=0.19.0";
 import {
   DEFAULT_OUTLINE_STRENGTH,
   DEFAULT_PORTRAIT_MODE,
@@ -11,7 +11,7 @@ import {
   normalizeOutlineStrength,
   normalizePortraitMode,
   normalizePortraitStyle,
-} from "./portrait.js?v=0.18.0";
+} from "./portrait.js?v=0.19.0";
 
 export const MODE_COPY = Object.freeze({
   [PORTRAIT_MODES.CUTOUT]: {

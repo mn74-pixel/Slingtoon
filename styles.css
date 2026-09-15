@@ -1855,6 +1855,10 @@ body.is-fullscreen-active .keyboard-help {
 .mission-map p { font-size: 14px; color: #d1c8e4; line-height: 1.5; }
 .mission-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 20px; }
 .mission-tile { text-align: left; display: grid; gap: 7px; min-height: 128px; padding: 16px; border: 2px solid #786496; border-radius: 16px; background: #3c2d55; color: #fff5d9; cursor: pointer; }
+/* Cleared + star + first shot on one mission. It has to read from across the
+   room, so the tile takes a gold rim and a warm wash, not a tint you squint at. */
+.mission-tile--mastered { border-color: #ffd35f; background: linear-gradient(145deg, #5b4433, #453258 58%); }
+.mission-tile.mission-tile--mastered span:first-of-type { color: #ffd35f; }
 .mission-tile:hover:not(:disabled), .mission-tile[aria-current="true"] { border-color: #5ce1bd; background: #403460; }
 .mission-tile:disabled { opacity: .5; cursor: not-allowed; }
 .mission-tile strong { font-size: 17px; }

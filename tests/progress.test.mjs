@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { LEVELS } from "../src/levels.js";
-import { PROGRESS_KEY, readProgress, hintOffer, purchaseHint, rewardSuccess } from "../src/progress.js";
+import { CHARACTER_UNLOCKS, PROGRESS_KEY, characterLock, countMastered, countStars, isMastered, readProgress, hintOffer, purchaseHint, rewardSuccess } from "../src/progress.js";
 const storage = (values = {}) => ({ getItem: (key) => values[key] ?? null });
 const empty = () => readProgress(storage(), LEVELS);
 
@@ -65,4 +65,40 @@ test("later chapters wait longer before stepping in with help", () => {
   assert.equal(hintOffer(p, LEVELS[0], 5).rescue, true);
   assert.equal(hintOffer(p, LEVELS[59], 5).rescue, false);
   assert.equal(hintOffer(p, LEVELS[59], 7).rescue, true);
+});
+
+test("stars buy characters, and the price is stated before it is paid", () => {
+  const p = empty();
+  assert.equal(countStars(p, LEVELS), 0);
+  assert.equal(characterLock("dramaQueen", 0).locked, false, "the starting character is never gated");
+  assert.equal(characterLock("zen", 0).locked, true);
+  assert.equal(characterLock("zen", 0).missing, 3);
+  assert.equal(characterLock("zen", 3).locked, false);
+  assert.equal(characterLock("toughGuy", 17).missing, 1);
+  assert.equal(characterLock("toughGuy", 18).locked, false);
+  assert.equal(characterLock("nieistniejacy", 999).locked, true, "an unknown character stays locked");
+
+  // Every unlock must be reachable, and thresholds have to rise.
+  const prices = CHARACTER_UNLOCKS.map((unlock) => unlock.stars);
+  assert.deepEqual(prices, [...prices].sort((a, b) => a - b));
+  assert.ok(prices.at(-1) < LEVELS.length, "the last character costs fewer stars than the campaign holds");
+});
+
+test("collecting a star moves the unlock counter", () => {
+  const p = empty();
+  rewardSuccess(p, { id: LEVELS[0].id, attempts: 1, star: true, mode: "quickSling", hintStage: 0 });
+  rewardSuccess(p, { id: LEVELS[1].id, attempts: 3, star: true, mode: "quickSling", hintStage: 0 });
+  rewardSuccess(p, { id: LEVELS[2].id, attempts: 3, star: false, mode: "quickSling", hintStage: 0 });
+  assert.equal(countStars(p, LEVELS), 2, "only starred missions count");
+  assert.equal(characterLock("zen", countStars(p, LEVELS)).missing, 1);
+});
+
+test("mastery needs all three medals on the same mission", () => {
+  const p = empty(), id = LEVELS[0].id;
+  rewardSuccess(p, { id, attempts: 2, star: true, mode: "quickSling", hintStage: 0 });
+  assert.equal(isMastered(p.medals[id]), false, "a star without a first-shot is not mastery");
+  assert.equal(countMastered(p, LEVELS), 0);
+  rewardSuccess(p, { id, attempts: 1, star: true, mode: "quickSling", hintStage: 0 });
+  assert.equal(isMastered(p.medals[id]), true, "medals accumulate across attempts");
+  assert.equal(countMastered(p, LEVELS), 1);
 });
