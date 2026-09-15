@@ -1,4 +1,4 @@
-# SlingToon Web 0.21.0 — 80 missions of controlled chaos
+# SlingToon Web 0.22.0 — 80 missions of controlled chaos
 
 An offline-capable HTML5 Canvas PWA prepared for GitHub Pages. No JUCE, Projucer or native build is required for browser testing.
 

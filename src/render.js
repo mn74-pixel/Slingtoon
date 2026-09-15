@@ -1,7 +1,7 @@
-import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.21.0";
-import { clientPointToWorld, createCropFreeViewport } from "./viewport.js?v=0.21.0";
-import { drawInteractions, drawObjective } from "./interactions-renderer.js?v=0.21.0";
-import { drawCampaignGoal, drawCampaignScene, drawWorldCompanion } from "./world-renderer.js?v=0.21.0";
+import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.22.0";
+import { clientPointToWorld, createCropFreeViewport } from "./viewport.js?v=0.22.0";
+import { drawInteractions, drawObjective } from "./interactions-renderer.js?v=0.22.0";
+import { drawCampaignGoal, drawCampaignScene, drawWorldCompanion } from "./world-renderer.js?v=0.22.0";
 
 const PALETTE = Object.freeze({
   ink: "#19142d",
@@ -24,6 +24,7 @@ const lerp = (a, b, amount) => a + (b - a) * amount;
 // Keep the face readable after the complete 1280×640 room is reduced to a
 // phone screen. This is deliberately visual-only: GameModel still uses the
 // original avatar radius for aiming and collisions.
+const LANDING_SECONDS = 0.34;
 const CUSTOM_HEAD_SCALE = 1.92;
 const CUSTOM_HEAD_LIFT = -17;
 
@@ -135,11 +136,13 @@ export class GameRenderer {
       this.trail.length = 0;
       this.lastTrailPoint = null;
       this.successPulse = 0;
+      this.landing = null;
       if (event.resetAttempts || event.type === "mode") this.ghost = null;
     }
 
     if (event.type === "level") {
       this.ghost = null;
+      this.landing = null;
       this.background = null;
       this.backgroundSource = null;
       this.load().catch(() => {});
@@ -149,6 +152,7 @@ export class GameRenderer {
       this.trail.length = 0;
       this.lastTrailPoint = null;
       this.flightPath = [{ x: this.model.avatarPosition.x, y: this.model.avatarPosition.y }];
+      this.landing = null;
       this.spawnDust(event.position?.x ?? this.model.avatarPosition.x, event.position?.y ?? this.model.avatarPosition.y, 10);
     }
 
@@ -171,9 +175,19 @@ export class GameRenderer {
       this.shake = 7;
       this.clockWobble = 1.6;
       this.successPulse = 1;
+      // The hero used to freeze wherever the collision happened, stuck to the
+      // side of the phone or the ice cream like a sprite that lost its update.
+      // Landing settles them onto the goal instead: centred, upright, and sunk
+      // to the chest so the head and shoulders stay above the rim.
+      this.landing = { from: { ...event.position }, at: this.time, goal: { ...this.model.goalCentre }, radius: this.model.goalRadius, puffed: false };
       this.spawnConfetti(event.position.x, event.position.y, 64);
       const goal = this.model.goalCentre;
-      this.callouts.push({ x: goal.x, y: goal.y - 100, text: this.model.level.result.successTag, age: 0, life: 1.6, angle: -0.08 });
+      // Clear the landed head rather than a fixed offset from the goal: the hero
+      // now sits on top of the target, and a photo head reaches much higher than
+      // the drawn one, so a constant would print the tag across the player's face.
+      const headroom = this.faceImage ? 150 : 88;
+      const tagY = Math.max(58, this.landing.goal.y - this.landing.radius * 0.15 - 8 - headroom);
+      this.callouts.push({ x: goal.x, y: tagY, text: this.model.level.result.successTag, age: 0, life: 1.6, angle: -0.08 });
     }
 
     if (event.type === "success" || event.type === "failure") {
@@ -980,7 +994,8 @@ export class GameRenderer {
   }
 
   drawAvatarShadow(ctx) {
-    const avatar = this.model.avatarPosition;
+    const landed = this.landingPose();
+    const avatar = landed ?? this.model.avatarPosition;
     const distance = Math.max(0, this.model.groundY - avatar.y);
     const scale = clamp(1 - distance / 700, 0.28, 1);
     ctx.save();
@@ -990,6 +1005,27 @@ export class GameRenderer {
     ctx.ellipse(avatar.x, this.model.groundY + 4, 46 * scale, 11 * scale, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
+  }
+
+  // Where the hero should sit once they have landed, and how far along that
+  // move they are. The rim is the line the body disappears behind: the origin
+  // rides eight pixels above it, which puts the chest at the rim and keeps the
+  // head — a photograph of a real person — completely clear.
+  landingPose() {
+    if (!this.landing || this.model.phase !== GamePhase.SUCCEEDED) return null;
+    const { from, at, goal, radius } = this.landing;
+    const raw = clamp((this.time - at) / LANDING_SECONDS, 0, 1);
+    const eased = 1 - (1 - raw) ** 3;
+    const rimY = goal.y - radius * 0.15;
+    const target = { x: goal.x, y: rimY - 8 };
+    return {
+      progress: raw,
+      rimY,
+      x: from.x + (target.x - from.x) * eased,
+      y: from.y + (target.y - from.y) * eased,
+      // A little give as they drop in, gone by the time they have settled.
+      squash: Math.sin(Math.min(1, raw / 0.65) * Math.PI) * 0.16 * (1 - raw * 0.5),
+    };
   }
 
   drawAvatar(ctx) {
@@ -1003,10 +1039,24 @@ export class GameRenderer {
     const stretchY = 1 - motionStretch * 0.55 + impactSquash;
     const idleBob = model.phase === GamePhase.READY ? Math.sin(this.time * 3.4) * 2.1 : 0;
 
+    const landed = this.landingPose();
+
     ctx.save();
-    ctx.translate(position.x, position.y + idleBob);
-    ctx.rotate(model.phase === GamePhase.FLYING ? model.rotation : Math.sin(this.time * 2.1) * 0.018);
-    ctx.scale(baseScale * stretchX, baseScale * stretchY);
+    if (landed) {
+      // Everything below the rim belongs to the goal, so the body is simply not
+      // drawn there. No re-drawing of 27 different goal sprites, and it reads
+      // the same whether the target is a bin, a suitcase or an ice cream.
+      ctx.beginPath();
+      ctx.rect(-4000, -4000, 8000, landed.rimY + 4000);
+      ctx.clip();
+    }
+    ctx.translate(landed ? landed.x : position.x, (landed ? landed.y : position.y) + idleBob);
+    // A landing straightens the hero out: keeping the flight angle is what made
+    // them look stuck to the object at whatever angle they arrived.
+    ctx.rotate(landed
+      ? model.rotation * (1 - landed.progress)
+      : model.phase === GamePhase.FLYING ? model.rotation : Math.sin(this.time * 2.1) * 0.018);
+    ctx.scale(baseScale * (stretchX + (landed?.squash ?? 0)), baseScale * (stretchY - (landed?.squash ?? 0)));
     ctx.lineJoin = "round";
     ctx.lineCap = "round";
 
@@ -1328,71 +1378,13 @@ export class GameRenderer {
     ctx.stroke();
   }
 
-  // A photo head is a real person's face. Reaction accents for it are drawn
-  // OUTSIDE the 96 px portrait box — above the hair or clear of the cheeks —
-  // never over the features, which is how a gold star once landed on an eye.
+  // A photo head is a real person's face. EVERY accent for it is drawn OUTSIDE
+  // the 96 px portrait box — above the hair or clear of the cheeks — never over
+  // the features. Accents authored against the 36 px stock skull land on the
+  // face when reused here: that is how a gold star once sat on an eye, and how
+  // victory sparkles ended up printed on the player's hair.
   drawPhotoReaction(ctx, expression) {
-    const shocked = expression === "panic" || expression === "impact";
-    const victory = expression === "victory";
-    const defeat = expression === "defeat";
-    const nervous = expression === "nervous" || expression === "airborne";
-
-    if (expression === "bracing" || expression === "hopeful" || expression === "dizzy" || expression === "serene") {
-      this.drawPhotoAccent(ctx, expression);
-      return;
-    }
-
-    ctx.save();
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    ctx.strokeStyle = PALETTE.ink;
-    ctx.lineWidth = 4;
-
-    if (shocked || nervous) {
-      ctx.fillStyle = shocked ? PALETTE.violetBright : "#87e7f5";
-      ctx.beginPath();
-      ctx.moveTo(27, -28);
-      ctx.quadraticCurveTo(41, -14, 30, -6);
-      ctx.quadraticCurveTo(18, -12, 27, -28);
-      ctx.fill();
-      ctx.stroke();
-    }
-
-    if (shocked) {
-      ctx.strokeStyle = PALETTE.gold;
-      ctx.lineWidth = 4.5;
-      for (const [x1, y1, x2, y2] of [[-38, -26, -48, -35], [-42, 1, -55, 2], [37, 9, 50, 15]]) {
-        ctx.beginPath();
-        ctx.moveTo(x1, y1);
-        ctx.lineTo(x2, y2);
-        ctx.stroke();
-      }
-    } else if (victory) {
-      ctx.fillStyle = PALETTE.gold;
-      for (const [x, y, radius] of [[-31, -27, 8], [32, -19, 6]]) {
-        ctx.beginPath();
-        for (let point = 0; point < 8; point += 1) {
-          const r = point % 2 === 0 ? radius : radius * 0.42;
-          const angle = -Math.PI / 2 + (point * Math.PI) / 4;
-          const px = x + Math.cos(angle) * r;
-          const py = y + Math.sin(angle) * r;
-          if (point === 0) ctx.moveTo(px, py);
-          else ctx.lineTo(px, py);
-        }
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
-      }
-    } else if (defeat) {
-      ctx.strokeStyle = PALETTE.coral;
-      ctx.lineWidth = 4.5;
-      ctx.beginPath();
-      ctx.moveTo(-24, 32);
-      ctx.quadraticCurveTo(-12, 39, 0, 32);
-      ctx.quadraticCurveTo(13, 25, 25, 33);
-      ctx.stroke();
-    }
-    ctx.restore();
+    this.drawPhotoAccent(ctx, expression);
   }
 
   drawPhotoAccent(ctx, expression) {
@@ -1401,7 +1393,52 @@ export class GameRenderer {
     ctx.lineJoin = "round";
     ctx.lineWidth = 5;
 
-    if (expression === "bracing") {
+    if (expression === "victory") {
+      ctx.strokeStyle = PALETTE.ink;
+      ctx.fillStyle = PALETTE.gold;
+      ctx.lineWidth = 4;
+      for (const [x, y, radius] of [[-64, -64, 12], [16, -80, 16], [66, -56, 11]]) {
+        ctx.beginPath();
+        for (let point = 0; point < 10; point += 1) {
+          const r = point % 2 === 0 ? radius : radius * 0.42;
+          const angle = -Math.PI / 2 + (point * Math.PI) / 5;
+          const px = x + Math.cos(angle) * r, py = y + Math.sin(angle) * r;
+          if (point === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      }
+    } else if (expression === "defeat") {
+      ctx.strokeStyle = PALETTE.coral;
+      ctx.lineWidth = 4.5;
+      for (const side of [-1, 1]) {
+        ctx.beginPath();
+        ctx.moveTo(side * 58, -46);
+        ctx.quadraticCurveTo(side * 74, -30, side * 66, -12);
+        ctx.stroke();
+      }
+    } else if (expression === "panic" || expression === "impact") {
+      ctx.strokeStyle = PALETTE.gold;
+      ctx.lineWidth = 4.5;
+      for (const [x1, y1, x2, y2] of [[-56, -40, -74, -52], [-60, -6, -80, -6], [56, -40, 74, -52], [60, -6, 80, -6]]) {
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+      }
+    } else if (expression === "nervous" || expression === "airborne") {
+      // The sweat drop moves off the temple to just beyond the cheek.
+      ctx.strokeStyle = PALETTE.ink;
+      ctx.fillStyle = "#87e7f5";
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(62, -40);
+      ctx.quadraticCurveTo(78, -22, 65, -14);
+      ctx.quadraticCurveTo(52, -22, 62, -40);
+      ctx.fill();
+      ctx.stroke();
+    } else if (expression === "bracing") {
       // Danger lines stab inwards from beyond the portrait, never across it.
       ctx.strokeStyle = PALETTE.coral;
       for (const [x1, y1, x2, y2] of [[-58, -34, -76, -44], [-62, 4, -82, 4], [58, -34, 76, -44], [62, 4, 82, 4]]) {
@@ -1447,11 +1484,15 @@ export class GameRenderer {
   // rest move clear of it. Personality still reads from the torso badge, the
   // cape and the hair bun.
   drawPersonalityFront(ctx, personality) {
-    const photoHead = Boolean(this.faceImage);
+    // A photo head gets no front accent at all. Moving the star off the face was
+    // not enough: parked beside a real head it reads as a stray sprite, not as
+    // character. Personality still shows in the cape, the torso badge and the
+    // hair bun, which are drawn on the body where they belong.
+    if (this.faceImage) return;
     if (personality === Personality.DRAMA_QUEEN) {
-      const centreX = photoHead ? 88 : 24;
-      const centreY = photoHead ? -98 : -40;
-      const outer = photoHead ? 16 : 12;
+      const centreX = 24;
+      const centreY = -40;
+      const outer = 12;
       ctx.fillStyle = PALETTE.gold;
       ctx.strokeStyle = PALETTE.ink;
       ctx.lineWidth = 4;
@@ -1468,7 +1509,7 @@ export class GameRenderer {
       ctx.fill();
       ctx.stroke();
     }
-    if (personality === Personality.ZEN && !photoHead) {
+    if (personality === Personality.ZEN) {
       ctx.strokeStyle = PALETTE.coral;
       ctx.lineWidth = 5;
       ctx.beginPath();

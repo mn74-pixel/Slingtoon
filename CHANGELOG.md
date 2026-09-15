@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.22.0 — Bohater ląduje w celu, a jego twarz zostaje jego twarzą
+
+- **bohater przestał przyklejać się do przedmiotów**: po trafieniu zostawał zamrożony w miejscu zderzenia, pod kątem lotu, przylepiony do boku telefonu czy loda — wyglądał jak sprite, który zgubił aktualizację,
+- teraz **ląduje w celu**: przesuwa się na środek celu, prostuje z kąta lotu, lekko się ugina i zapada po klatkę piersiową, tak że nad krawędzią zostaje głowa i ramiona,
+- ciało poniżej krawędzi jest przycinane, a nie zasłaniane przerysowanym celem — dzięki temu ta sama zasada działa dla wszystkich 27 rodzajów celów; sprawdzone na dwunastu (budzik, kubek, skarpeta, pilot, toster, krasnal, lód, kaczka, kanapka, parasol, boja, walizka),
+- **usunięto gwiazdkę wiszącą obok głowy ze zdjęcia**. Wcześniejsza poprawka zsunęła ją z twarzy, ale zostawiła w powietrzu obok — czytało się to jak błąd rysowania, a nie jak charakter. Głowa ze zdjęcia nie dostaje teraz żadnego akcentu na wysokości twarzy; charakter niosą peleryna, odznaka na torsie i kok,
+- **przy okazji wyszło to samo w trzech innych miejscach**: gwiazdki zwycięstwa rysowały się na włosach, kropla potu na skroni, a kreska porażki na brodzie. Wszystkie akcenty dla głowy ze zdjęcia są teraz rysowane poza kadrem portretu,
+- test akcentów obejmuje **wszystkie dwanaście min**, a nie trzy wybrane — poprzednia wersja sprawdzała tylko nowe stany i przepuściła gwiazdki na włosach; doszła też asercja, że model nie może zwrócić miny, której test nie zna,
+- napis o zwycięstwie podnosi się nad wylądowaną głowę zamiast lądować na twarzy: stały odstęp od celu nie wystarczał, bo portret sięga znacznie wyżej niż głowa rysowana.
+
 ## 0.21.0 — Seria: bieg o jeszcze jedną misję
 
 - **nowy tryb Seria**: losowe misje, które już przeszedłeś, jedna po drugiej, ze wspólnym budżetem strzałów na cały bieg — każdy strzał kosztuje jeden, każde trafienie zwraca dwa,
