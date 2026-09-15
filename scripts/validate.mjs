@@ -232,6 +232,13 @@ assert.ok(/drawPhotoReaction\(ctx, expression\) \{\s*this\.drawPhotoAccent\(ctx,
 assert.ok(render.includes("landingPose()"), "the renderer must compute a landing pose");
 assert.ok(/LANDING_SECONDS = 0\.\d+/.test(render), "the landing tween needs a duration");
 assert.ok(render.includes("ctx.clip()"), "the body below the rim is hidden by a clip, not by redrawing 27 goal sprites");
+// The first landing read as a UI tween: straight diagonal, dead stop, perfectly
+// upright, perfectly still. Each of these keeps one part of the fix honest.
+assert.ok(/Math\.sin\(travel \* Math\.PI\) \* \d+/.test(render), "the landing path must arc, not slide along a straight line");
+assert.ok(/Math\.exp\(-since \* \d+\)/.test(render), "arrival needs a damped bounce, or the hero stops dead on the mark");
+assert.ok(/breath/.test(render) && /tilt:/.test(render), "a landed hero keeps breathing and swaying; a statue in a cup is the artificial look");
+assert.ok(render.includes("spawnLandingPuff"), "touchdown needs its own symmetric puff: the launch spawner only blows left");
+assert.ok(/const lean = clamp/.test(render), "landing dead centre every time reads as canned");
 
 // Seria is a shot budget for a whole run. One shot per mission was measured and
 // rejected: a blind shot wins about 20% of the time, so runs averaged a quarter

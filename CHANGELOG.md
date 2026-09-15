@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.22.1 — Lądowanie przestało wyglądać jak animacja interfejsu
+
+Zgłoszone przez właściciela: kierunek dobry, ale wychodzi trochę sztucznie. Trzy rzeczy robiły tę sztuczność i każda została nazwana osobno:
+
+- **tor był prostą ukośną linią** — pozioma i pionowa składowa dzieliły to samo wygładzenie, więc bohater sunął do celu jak element interfejsu; teraz tor się wygina, bohater wznosi się ponad krawędź (20 px ponad prostą) i wpada za nią,
+- **dolot kończył się martwym stopem** — po dojściu do punktu pozycja zamarzała; teraz przylot ma ciężar: tłumione odbicie trzyma bohatera w ruchu jeszcze przez chwilę (przestrzelenie 12 px, wygaszane), tak jak każdą rzecz z masą,
+- **wylądowany bohater był pomnikiem** — kołysanie na biegu jałowym działa tylko w fazie gotowości, więc po trafieniu nic się nie ruszało; teraz oddech i powolne kołysanie narastają w miarę wygasania odbicia, a bohater nigdy nie zastyga całkowicie,
+- **lądowanie idealnie na środku za każdym razem** czytało się jak gotowiec; bohater zachowuje część kierunku, z którego przyleciał — zmierzone na ośmiu misjach: siedem różnych pozycji spoczynkowych,
+- kurz przy krawędzi dostał własny, symetryczny wyrzut: dotychczasowy spawner startowy dmucha wyłącznie w lewo, co przy lądowaniu czytało się jak podmuch wiatru, a nie jak kontakt,
+- walidacja pilnuje osobno łuku, odbicia, oddechu, kołysania, kurzu i odchylenia od środka — każdy z tych elementów samodzielnie odpowiada za jedną część „sztuczności".
+
 ## 0.22.0 — Bohater ląduje w celu, a jego twarz zostaje jego twarzą
 
 - **bohater przestał przyklejać się do przedmiotów**: po trafieniu zostawał zamrożony w miejscu zderzenia, pod kątem lotu, przylepiony do boku telefonu czy loda — wyglądał jak sprite, który zgubił aktualizację,
