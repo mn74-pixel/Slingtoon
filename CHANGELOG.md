@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.24.0 — Sceny malują cały ekran, a dźwięk przestaje się powtarzać
+
+### Boki: naprawione u źródła, nie zamalowane
+
+Zgłoszenie brzmiało: „nie usunęło pasów". Było słuszne.
+
+- **mierzyłem złą rzecz.** W 0.23.0 sprawdziłem jasność i pokazałem spadek z 51,5% do 9%. Ale pas nie bierze się z jasności — bierze się z tego, że margines był *tą samą sceną w innej skali i rozmytą*. Oko widzi skok skali i ostrości, nie tonu,
+- **sceny malują teraz całą widoczną szerokość.** Niebo, morze, grunt i horyzont rozciągają się do krawędzi ekranu, więc nie ma drugiego obrazu, na którym cokolwiek mogłoby pęknąć,
+- usunięto cały system zastępczego tła: kopia sceny w 1/8 rozdzielczości, jej pamięć podręczna i kompozycja marginesu — 70 z 80 misji maluje się przez `drawCampaignScene`, pozostałe 10 przez sceny w rendererze i **obie ścieżki** dostały to samo rozciąganie,
+- **zmierzone na siedmiu misjach w proporcjach 2,70:1**: skok jasności na granicy świata max **4,5%** (było 51,5%, potem 9%), ubytek detalu max **4,6%**. Tym razem mierzę oba, bo pas tworzy każde z osobna,
+- sprawdzone też przy 2:1 (margines zero — ścieżka w ogóle się nie uruchamia), na iPadzie 4:3 (160 px w pionie) i na ultrapanoramie (310 px na bok),
+- w marginesie nadal żyje wyłącznie sceneria: przy 2:1 i na iPadzie tej przestrzeni nie ma w ogóle, więc nic, co gracz musi zobaczyć, nie może tam trafić.
+
+### Dźwięk: nic, co słyszysz często, nie brzmi dwa razy tak samo
+
+- **porażka, oba manewry w locie, zbieranie gwiazdki, podpowiedź i wszystkie siedem interakcji grały identycznie za każdym razem** — a porażkę słyszysz najczęściej, bo pudło jest stanem domyślnym (uderzenie i wystrzał wariację już miały),
+- wariacja siedzi teraz w samym syntezatorze, więc dziedziczy ją wszystkie czternaście dźwięków zamiast czternastu miejsc wywołania: **±35 centów** wysokości i kilka milisekund rozrzutu w czasie, żeby warstwy nie zlewały się w ten sam metaliczny dzwon,
+- **fanfara zwycięstwa to akord**, więc rozstrajanie nuty po nucie brzmiałoby jak pomyłka — cała figura transponuje się w jedną z sześciu tonacji, a interwały zostają nienaruszone,
+- doszły testy, które to mierzą: że żaden powtarzany dźwięk nie ma tej samej wysokości dwa razy, że rozrzut mieści się między 20 a 150 centów (słyszalny, ale nie fałszywy) i że akord nigdy nie rozstraja się sam ze sobą — wszystkie trzy sprawdzone przez odtworzenie regresji.
+
 ## 0.23.0 — Scena sięga krawędzi ekranu
 
 Zgłoszone przez właściciela: po bokach są szerokie ciemniejsze pasy, na których nic się nie dzieje.

@@ -1,3 +1,9 @@
+// Cents, not percent: pitch is logarithmic, so the same cent figure sounds like
+// the same amount of variation high and low.
+const TONE_JITTER_CENTS = 35;
+// Semitone offsets the victory arpeggio may be transposed by.
+const SUCCESS_KEYS = [-3, -2, 0, 2, 3, 5];
+
 export class GameAudio {
   constructor() {
     this.context = null;
@@ -60,9 +66,24 @@ export class GameAudio {
     }
   }
 
-  tone({ frequency, endFrequency = frequency, duration, type = "sine", volume = 0.12, delay = 0 }) {
+  // Nothing a player hears more than twice should be byte-identical. Impacts and
+  // the launch already varied; the miss, both in-flight moves, the star, the hint
+  // and every interaction repeated exactly, and the miss is the sound you hear
+  // most because missing is the default outcome.
+  //
+  // The jitter lives in the primitive, so all fourteen sounds inherit it instead
+  // of fourteen call sites each rolling their own. +/-35 cents reads as a mouth
+  // making the noise again, not as a wrong note; a few ms of timing scatter stops
+  // layered partials from phase-locking into the same metallic ring every time.
+  // `detune: 0` opts out where pitch carries meaning.
+  tone({ frequency, endFrequency = frequency, duration, type = "sine", volume = 0.12, delay = 0, detune = TONE_JITTER_CENTS }) {
     if (!this.context || this.muted) return;
     const now = this.context.currentTime + delay;
+    const cents = detune ? (Math.random() * 2 - 1) * detune : 0;
+    const shift = 2 ** (cents / 1200);
+    frequency *= shift;
+    endFrequency *= shift;
+    delay += detune ? Math.random() * 0.006 : 0;
     const oscillator = this.context.createOscillator();
     const gain = this.context.createGain();
     oscillator.type = type;
@@ -116,9 +137,13 @@ export class GameAudio {
   }
 
   success(goalKind = "alarm") {
+    // One key for the whole figure, picked fresh each win. Per-note jitter would
+    // detune a chord against itself, which reads as a mistake rather than as life.
+    const key = 2 ** (SUCCESS_KEYS[Math.floor(Math.random() * SUCCESS_KEYS.length)] / 12);
     [0, 0.09, 0.18, 0.31].forEach((delay, index) => {
       const notes = [392, 523.25, 659.25, 783.99];
-      this.tone({ frequency: notes[index], endFrequency: notes[index] * 1.02, duration: 0.26, type: "triangle", volume: 0.085, delay });
+      const note = notes[index] * key;
+      this.tone({ frequency: note, endFrequency: note * 1.02, duration: 0.26, type: "triangle", volume: 0.085, delay, detune: 0 });
     });
     this.noise(0.22, 0.035, 0.16);
 

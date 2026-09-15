@@ -1,7 +1,7 @@
-import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.23.0";
-import { clientPointToWorld, createCropFreeViewport } from "./viewport.js?v=0.23.0";
-import { drawInteractions, drawObjective } from "./interactions-renderer.js?v=0.23.0";
-import { drawCampaignGoal, drawCampaignScene, drawWorldCompanion } from "./world-renderer.js?v=0.23.0";
+import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.24.0";
+import { clientPointToWorld, createCropFreeViewport } from "./viewport.js?v=0.24.0";
+import { drawInteractions, drawObjective } from "./interactions-renderer.js?v=0.24.0";
+import { drawCampaignGoal, drawCampaignScene, drawWorldCompanion, setSceneBleed } from "./world-renderer.js?v=0.24.0";
 
 const PALETTE = Object.freeze({
   ink: "#19142d",
@@ -295,72 +295,16 @@ export class GameRenderer {
     ctx.restore();
   }
 
-  // A screen wider than 2:1 reveals world beyond the 1280x640 the scenes paint,
-  // and that margin used to be a flat purple band framing the board. Filling it
-  // with a stretched, pushed-back copy of the scene makes the room read as if it
-  // simply continues past the edges.
-  sceneBackdrop() {
-    if (this.viewport.offsetX < 2 && this.viewport.offsetY < 2) return null;
-    const key = `${this.model.level.id}:${this.background ? 1 : 0}`;
-    if (this.backdrop?.key !== key) {
-      // Cached small on purpose: stretching a low-resolution copy back up blurs
-      // it for free, so the margin reads as ambience instead of a mirrored
-      // duplicate of the room, and costs one cheap draw per mission.
-      const surface = this.createSurface(WORLD.width / 8, WORLD.height / 8);
-      if (!surface) return null;
-      const context = surface.getContext("2d");
-      context.scale(1 / 8, 1 / 8);
-      this.drawBackground(context);
-      this.backdrop = { key, surface };
-    }
-    return this.backdrop.surface;
-  }
-
+  // Nothing is composited into the margin any more: the scenes paint their own
+  // sky, sea and ground across everything visible. This only clears the canvas
+  // to a plausible colour so a half-painted first frame never flashes white.
   drawViewportBackdrop(ctx) {
-    const scene = this.sceneBackdrop();
-    if (scene) {
-      // The margin used to be the whole scene stretched over the canvas and then
-      // dimmed 58%, which on a 16:10 laptop turned a quarter of the display into
-      // two dark bands where nothing happens. Instead the scene's own edges are
-      // carried outwards: the sky, the water and the ground simply continue, so
-      // the room reaches the screen edge and the playfield stops being framed.
-      //
-      // Only scenery may live out here. The margin is 26% of the width on a
-      // MacBook Air, 33% on a wide desktop, 7.6% on a phone in landscape and
-      // exactly 0% at 2:1 or on an iPad — so anything a player needs to see
-      // stays inside the authored 1280x640.
-      // Scale-to-cover instead of edge-clamping: the backdrop is enlarged until
-      // it fills the canvas and cropped top and bottom, so the margin shows real
-      // scenery pushed back rather than a smeared edge column.
-      const { width: cw, height: ch } = this.canvas;
-      const scale = Math.max(cw / WORLD.width, ch / WORLD.height);
-      const dw = WORLD.width * scale, dh = WORLD.height * scale;
-      ctx.drawImage(scene, 0, 0, scene.width, scene.height, (cw - dw) / 2, (ch - dh) / 2, dw, dh);
-      // A touch of push-back so the margin reads as scenery behind the action.
-      // Measured: this leaves a 9% brightness step at the world boundary, down
-      // from 51.5% for the old dimmed-copy backdrop, so no band reads as an edge.
-      ctx.fillStyle = "rgba(18, 11, 30, 0.08)";
-      ctx.fillRect(0, 0, cw, ch);
-      return;
-    }
     const gradient = ctx.createLinearGradient(0, 0, this.canvas.width, this.canvas.height);
     gradient.addColorStop(0, "#302451");
     gradient.addColorStop(0.5, "#655185");
     gradient.addColorStop(1, "#704565");
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-
-    ctx.save();
-    ctx.globalAlpha = 0.12;
-    ctx.fillStyle = PALETTE.cream;
-    for (let index = 0; index < 18; index += 1) {
-      const x = (index * 173 + 41) % this.canvas.width;
-      const y = (index * 97 + 29) % this.canvas.height;
-      ctx.beginPath();
-      ctx.arc(x, y, 2 + index % 3, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.restore();
   }
 
   drawBackground(ctx) {
@@ -371,16 +315,24 @@ export class GameRenderer {
     }
 
     const visual = this.model.level.visual;
+    // The washes used to stop at the world edge, which put a tint step exactly
+    // where the margin began — the same seam the backdrop copy was making.
+    const ox = this.viewport.offsetX, oy = this.viewport.offsetY;
+    const washX = -ox, washY = -oy, washW = WORLD.width + ox * 2, washH = WORLD.height + oy * 2;
     ctx.fillStyle = "rgba(49,34,75,.23)";
-    ctx.fillRect(0, 0, WORLD.width, WORLD.height);
+    ctx.fillRect(washX, washY, washW, washH);
     if (visual?.wash) {
       ctx.fillStyle = visual.wash;
-      ctx.fillRect(0, 0, WORLD.width, WORLD.height);
+      ctx.fillRect(washX, washY, washW, washH);
     }
     if (visual?.gag) this.drawSceneGag(ctx, visual.gag, visual.accent, visual.gagX, visual.gagY);
   }
 
   drawProceduralScene(ctx) {
+    // Tell the scene how much screen it actually has. It paints its sky, sea and
+    // ground across all of it, so there is no second copy in the margin and no
+    // seam where the scale would break.
+    setSceneBleed(this.viewport.offsetX, this.viewport.offsetX, this.viewport.offsetY, this.viewport.offsetY);
     if (drawCampaignScene(ctx, this.model.level)) return;
     const scenes = {
       laundry: () => this.drawLaundryScene(ctx),
@@ -393,18 +345,23 @@ export class GameRenderer {
     (scenes[this.model.level.scene] ?? scenes.laundry)();
   }
 
+  // Same rule as the campaign scenes: a band of scenery spans everything the
+  // player can see, not the authored 1280 wide box.
+  sceneBand(ctx, y, height, fill) {
+    const ox = this.viewport.offsetX;
+    ctx.fillStyle = fill;
+    ctx.fillRect(-ox, y, WORLD.width + ox * 2, height);
+  }
+
   drawRoomBase(ctx, wallTop, wallBottom, floorTop, floorBottom) {
     const wall = ctx.createLinearGradient(0, 0, 0, 510);
     wall.addColorStop(0, wallTop);
     wall.addColorStop(1, wallBottom);
-    ctx.fillStyle = wall;
-    ctx.fillRect(0, 0, WORLD.width, 510);
-    ctx.fillStyle = floorTop;
-    ctx.fillRect(0, 510, WORLD.width, 76);
-    ctx.fillStyle = floorBottom;
-    ctx.fillRect(0, 586, WORLD.width, 54);
-    ctx.fillStyle = "rgba(25, 20, 45, 0.14)";
-    ctx.fillRect(0, 496, WORLD.width, 14);
+    const oy = this.viewport.offsetY;
+    this.sceneBand(ctx, -oy, 510 + oy, wall);
+    this.sceneBand(ctx, 510, 76, floorTop);
+    this.sceneBand(ctx, 586, 54 + this.viewport.offsetY, floorBottom);
+    this.sceneBand(ctx, 496, 14, "rgba(25, 20, 45, 0.14)");
   }
 
   drawLaundryScene(ctx) {
@@ -472,13 +429,13 @@ export class GameRenderer {
   drawOutdoorBase(ctx, skyTop, skyBottom, grass) {
     const sky = ctx.createLinearGradient(0, 0, 0, 520);
     sky.addColorStop(0, skyTop); sky.addColorStop(1, skyBottom);
-    ctx.fillStyle = sky; ctx.fillRect(0, 0, WORLD.width, 586);
+    this.sceneBand(ctx, -this.viewport.offsetY, 586 + this.viewport.offsetY, sky);
     ctx.fillStyle = "#fff4d8";
     for (const [x, y, s] of [[180, 120, 1], [540, 75, .8], [935, 140, 1.2]]) {
       ctx.beginPath(); ctx.arc(x, y, 32 * s, 0, Math.PI * 2); ctx.arc(x + 40 * s, y - 10, 42 * s, 0, Math.PI * 2); ctx.arc(x + 80 * s, y + 3, 30 * s, 0, Math.PI * 2); ctx.fill();
     }
     ctx.fillStyle = grass; ctx.beginPath(); ctx.moveTo(0, 430); ctx.quadraticCurveTo(310, 350, 610, 440); ctx.quadraticCurveTo(960, 330, 1280, 420); ctx.lineTo(1280, 640); ctx.lineTo(0, 640); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = "#2f7d67"; ctx.fillRect(0, 574, WORLD.width, 66);
+    this.sceneBand(ctx, 574, 66 + this.viewport.offsetY, "#2f7d67");
   }
 
   drawGardenScene(ctx) {
@@ -506,11 +463,11 @@ export class GameRenderer {
 
   drawLakeScene(ctx) {
     this.drawOutdoorBase(ctx, "#5bc6e8", "#d6f4e1", "#73ba78");
-    ctx.fillStyle = "#ae865b"; ctx.fillRect(0, 510, 515, 76);
+    ctx.fillStyle = "#ae865b"; ctx.fillRect(-this.viewport.offsetX, 510, 515 + this.viewport.offsetX, 76);
     ctx.strokeStyle = "#6d4d44"; ctx.lineWidth = 7;
     for (let x = 20; x < 500; x += 65) { ctx.beginPath(); ctx.moveTo(x, 510); ctx.lineTo(x, 586); ctx.stroke(); }
     ctx.fillStyle = "#4bbbd0"; ctx.fillRect(515, 515, 765, 71);
-    ctx.fillStyle = "#327a91"; ctx.fillRect(0, 586, WORLD.width, 54);
+    this.sceneBand(ctx, 586, 54 + this.viewport.offsetY, "#327a91");
     for (let i = 0; i < 9; i += 1) {
       const y = 530 + i % 3 * 17;
       ctx.strokeStyle = i % 2 ? "rgba(255,245,217,.6)" : "rgba(25,20,45,.2)";
