@@ -220,6 +220,31 @@ assert.match(viewport, /viewWidth = Math\.ceil\(safeWorldHeight \* stageAspect\)
 assert.match(viewport, /viewHeight = Math\.ceil\(safeWorldWidth \/ stageAspect\)/);
 assert.match(viewport, /clientPointToWorld/);
 
+// Seria is a shot budget for a whole run. One shot per mission was measured and
+// rejected: a blind shot wins about 20% of the time, so runs averaged a quarter
+// of a mission. The budget, the refund and the cap are the whole design — if any
+// of them drifts the mode stops expressing skill.
+const streak = await readFile(resolve(root, "src/streak.js"), "utf8");
+for (const name of ["STREAK_START_SHOTS", "STREAK_REFUND", "STREAK_MAX_SHOTS", "STREAK_MIN_POOL", "streakPool", "canStartStreak", "createStreakRun", "drawStreakMission", "spendStreakShot", "clearStreakMission"]) {
+  assert.ok(new RegExp(`export (const|function) ${name}\\b`).test(streak), `streak.js must export ${name}`);
+}
+assert.ok(/STREAK_REFUND = 2\b/.test(streak), "a clear must refund two shots, or a first-try clear stops gaining ground");
+assert.ok(/STREAK_START_SHOTS = 5\b/.test(streak), "the run starts on five shots");
+assert.ok(/STREAK_MAX_SHOTS = 8\b/.test(streak), "the budget is capped, or a good run banks an unloseable buffer");
+assert.ok(streak.includes("level.id !== run.lastLevelId"), "the same mission must not come up twice running");
+// A run must never write campaign progress: the summary says so on screen.
+assert.ok(/streakRun\) \{[\s\S]{0,400}?return;/.test(main), "the streak branch has to return before campaign scoring");
+assert.ok(!/inStreak\(\)[\s\S]{0,80}rewardSuccess/.test(main), "a run must not award campaign points");
+for (const id of ["streakHud", "streakCount", "streakShots", "streakQuit", "startStreak", "streakNote"]) {
+  assert.ok(html.includes(`id="${id}"`), `index.html is missing #${id}`);
+}
+// The HUD is absolutely positioned, so it has to live inside the stage or it
+// lands on the top bar and covers the character select.
+const stageStart = html.indexOf('<div id="stage"');
+const stageEnd = html.indexOf('id="rotateHint"', stageStart);
+const hudAt = html.indexOf('id="streakHud"');
+assert.ok(stageStart >= 0 && hudAt > stageStart && hudAt < stageEnd, "the streak HUD must sit inside #stage");
+
 // The hero has to react to the world, not just to its own phase clock. An
 // earlier build let personality short-circuit the expression getter, so Zen and
 // Tough Guy showed two faces for a whole shot — and those are the characters
@@ -266,5 +291,5 @@ for (const file of requiredFiles.filter((file) => !file.startsWith(".github") &&
   }
 }
 
-for (const file of ["campaign", "campaign-routes", "physics", "progress", "interactions-renderer", "world-renderer"]) assert.ok(worker.includes(`./src/${file}.js?v=${version}`));
+for (const file of ["campaign", "campaign-routes", "physics", "progress", "streak", "interactions-renderer", "world-renderer"]) assert.ok(worker.includes(`./src/${file}.js?v=${version}`));
 console.log(`SlingToon ${version}: campaign schema, privacy, mobile viewport and offline assets validated.`);

@@ -717,6 +717,84 @@ footer {
   background: #2b2047;
 }
 
+/* Seria HUD. It sits over the stage because the budget has to be readable
+   mid-shot, not in a panel the player would have to look away to find. */
+.streak-hud {
+  position: absolute;
+  z-index: 6;
+  top: 10px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px 7px 13px;
+  border: 1px solid rgba(255, 211, 95, 0.4);
+  border-radius: 999px;
+  background: rgba(22, 16, 38, 0.82);
+  box-shadow: 0 8px 20px rgba(11, 7, 22, 0.32);
+}
+
+.streak-hud__label {
+  color: var(--gold);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.15em;
+}
+
+.streak-hud strong {
+  color: var(--cream);
+  font-size: 19px;
+  line-height: 1;
+}
+
+.streak-hud__shots {
+  color: var(--mint);
+  font-size: 13px;
+  letter-spacing: 0.12em;
+}
+
+.streak-hud__quit {
+  padding: 5px 10px;
+  border: 1px solid var(--outline);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--cream-dim);
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.streak-hud__quit:hover { background: rgba(255, 255, 255, 0.13); }
+
+.cta--streak {
+  background: linear-gradient(135deg, var(--gold), #ffb545);
+  color: #2a1c12;
+}
+
+.cta--streak:disabled {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--cream-dim);
+  cursor: not-allowed;
+  filter: none;
+  transform: none;
+}
+
+.map-note--streak { color: var(--gold); }
+
+/* On a phone the objective badge spans nearly the whole stage, so the HUD drops
+   to the free bottom-right corner rather than sitting on top of it. */
+@media (max-width: 760px) {
+  .streak-hud {
+    top: auto;
+    bottom: 10px;
+    right: 10px;
+    gap: 7px;
+    padding: 5px 8px 5px 10px;
+  }
+  .streak-hud strong { font-size: 16px; }
+  .streak-hud__shots { font-size: 11px; }
+}
+
 /* The only irreversible action in the game, so it looks like one and asks first. */
 .map-danger {
   margin-top: 18px;
