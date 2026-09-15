@@ -220,6 +220,20 @@ assert.match(viewport, /viewWidth = Math\.ceil\(safeWorldHeight \* stageAspect\)
 assert.match(viewport, /viewHeight = Math\.ceil\(safeWorldWidth \/ stageAspect\)/);
 assert.match(viewport, /clientPointToWorld/);
 
+// A screen wider than 2:1 reveals world the scenes do not paint. That margin is
+// 26% of the width on a MacBook Air and 33% on a wide desktop, and it used to be
+// the scene stretched flat and dimmed 58% — two dark bands where nothing
+// happens. Scale-to-cover carries real scenery out there instead.
+assert.ok(/Math\.max\(cw \/ WORLD\.width, ch \/ WORLD\.height\)/.test(render),
+  "the margin backdrop must scale to cover, not stretch the scene flat across the canvas");
+const dim = render.match(/rgba\(18, 11, 30, (0\.\d+)\)/);
+assert.ok(dim && Number(dim[1]) <= 0.12,
+  `the margin may only be pushed back gently; ${dim?.[1] ?? "?"} re-creates the dark band`);
+// The vignette used to stop at the world edge, putting a hard seam exactly on
+// the boundary — the frame around the board that this removes.
+assert.ok(/ctx\.fillRect\(-ox, -oy, WORLD\.width \+ ox \* 2, WORLD\.height \+ oy \* 2\)/.test(render),
+  "the vignette must span the whole visible viewport, not just the authored world");
+
 // Nothing is drawn at head level on a photograph of a real person. The star on
 // an eye, then the same star parked beside the head, then victory sparkles on
 // the hair were all the same mistake: art authored against the 36 px stock
