@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.20.0 — Bohater wreszcie reaguje na to, co się dzieje
+
+- **mimika odpowiada na świat, a nie na zegar lotu**: bohater zaciska oczy, gdy strefa zakazana jest na wyciągnięcie ręki, rozjaśnia się, gdy cel jest w zasięgu, i kręci mu się w głowie po drugim odbiciu w jednym locie,
+- naprawiono błąd, przez który **połowa obsady była martwa emocjonalnie**: charakter przerywał obliczanie miny, więc Zen i Tough Guy pokazywali dwie miny na cały strzał, podczas gdy Drama Queen i Panic pokazywali cztery — a od 0.19 to właśnie Zen i Tough Guy kupuje się za gwiazdki, więc nagroda czyniła bohatera mniej żywym,
+- charakter jest teraz zabarwieniem min spokojnych, nigdy wyciszeniem reakcji na zdarzenie; pomiar na wszystkich 80 misjach: Zen 2 → 5 min, Tough Guy 2 → 5,
+- zmierzono, że nowe miny naprawdę się pojawiają — na 960 losowych strzałach `dizzy` wystąpiło w 40,5%, `hopeful` w 37,7%, a `bracing` w 51,4% strzałów na sześciu misjach, które w ogóle mają strefę zakazaną,
+- akcenty dla głowy ze zdjęcia są rysowane **poza kadrem portretu**: iskierki, kółka i linie zagrożenia trzymają się z dala od twarzy, zamiast lądować na oku,
+- doszedł test, którego wcześniej nie było: zapisuje każdy punkt rysowany przez akcenty i nie przepuszcza żadnego, który wchodzi w ramkę portretu — sprawdzono, że wykrywa dokładnie tę gwiazdkę na oku, którą trzeba było kiedyś usunąć ręcznie,
+- `serene` przestał wyglądać jak okulary przeciwsłoneczne: dwa łuki dzieliły jedną ścieżkę i łączyły się w ciemny pasek.
+
 ## 0.19.0 — Gwiazdki wreszcie coś kupują
 
 - **gwiazdki odblokowują charaktery**: Zen za 3, Panic za 9, Tough Guy za 18; wcześniej gwiazdka dawała tylko punkty, punkty dawały żetony podpowiedzi, a pętla zamykała się sama w sobie — gra nagradzała za to, że nie potrzebujesz pomocy,

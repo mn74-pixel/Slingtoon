@@ -220,6 +220,21 @@ assert.match(viewport, /viewWidth = Math\.ceil\(safeWorldHeight \* stageAspect\)
 assert.match(viewport, /viewHeight = Math\.ceil\(safeWorldWidth \/ stageAspect\)/);
 assert.match(viewport, /clientPointToWorld/);
 
+// The hero has to react to the world, not just to its own phase clock. An
+// earlier build let personality short-circuit the expression getter, so Zen and
+// Tough Guy showed two faces for a whole shot — and those are the characters
+// stars now buy. Every reaction state must also be drawn, or it is a mood the
+// player never sees.
+for (const reaction of ["bracing", "hopeful", "dizzy", "serene"]) {
+  assert.ok(game.includes(`"${reaction}"`), `game.js must be able to enter the ${reaction} reaction`);
+  assert.ok(render.includes(`"${reaction}"`), `render.js must draw the ${reaction} reaction`);
+}
+assert.ok(/hazardGap < DANGER_GAP/.test(game), "a hazard within reach has to outrank the flight-time flavour");
+assert.ok(/goalGap < HOPE_GAP/.test(game), "closing on the goal has to be visible on the hero");
+assert.ok(physics.includes("model.hazardGap"), "physics must report the nearest danger each step");
+assert.ok(physics.includes("model.goalGap"), "physics must report the live goal gap, not only the closest approach");
+assert.ok(render.includes("drawPhotoAccent"), "a photo head needs accents drawn clear of the portrait");
+
 // Stars buy characters, and mastery is the mark that proves a mission is done
 // with. Both are rewards, so both have to be visible: the select must be
 // rebuilt from CHARACTER_UNLOCKS, and the gold tile must actually win the

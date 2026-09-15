@@ -25,6 +25,11 @@ export function segmentDistance(a, b, p) {
   return Math.hypot(p.x - a.x - dx * t, p.y - a.y - dy * t);
 }
 
+export function rectGap(p, radius, r) {
+  const x = clamp(p.x, r.x, r.x + r.width), y = clamp(p.y, r.y, r.y + r.height);
+  return Math.hypot(p.x - x, p.y - y) - radius;
+}
+
 export function rectContact(p, radius, r) {
   const x = clamp(p.x, r.x, r.x + r.width), y = clamp(p.y, r.y, r.y + r.height);
   const dx = p.x - x, dy = p.y - y, distance = Math.hypot(dx, dy);
@@ -67,7 +72,11 @@ export function stepPhysics(model, dt = FIXED_STEP) {
   model.portalCooldown = Math.max(0, model.portalCooldown - dt);
   v.y += 620 * model.gravityScale * dt;
   let resistance = model.level.environment?.drag ?? 0;
+  // Nearest danger this step, so the hero can brace before the hit rather than
+  // discover it afterwards. Reset each step: a hazard passed is no longer news.
+  model.hazardGap = Infinity;
   for (const item of model.interactions) {
+    if (item.type === "hazard") model.hazardGap = Math.min(model.hazardGap, rectGap(p, radius, movedBody(item, model.flightTime)));
     const distance = Math.hypot(p.x - item.x, p.y - item.y);
     const inFlow = (item.type === "steam" || item.type === "current") && contains(item, p);
     const inBubble = item.type === "bubble" && distance < item.radius;
@@ -174,6 +183,9 @@ export function stepPhysics(model, dt = FIXED_STEP) {
     model.emit("collect", { x: star.x, y: star.y });
   }
   const goalGap = segmentDistance(before, p, model.goalCentre) - radius - model.goalRadius;
+  // The closest approach explains a miss after the fact; the live gap is what
+  // the hero can react to while the shot is still in the air.
+  model.goalGap = goalGap;
   if (goalGap < model.closestGoal) {
     model.closestGoal = goalGap;
     // Remember where the shot came closest, so a miss can say which way it was

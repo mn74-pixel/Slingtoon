@@ -1,7 +1,7 @@
-import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.19.0";
-import { clientPointToWorld, createCropFreeViewport } from "./viewport.js?v=0.19.0";
-import { drawInteractions, drawObjective } from "./interactions-renderer.js?v=0.19.0";
-import { drawCampaignGoal, drawCampaignScene, drawWorldCompanion } from "./world-renderer.js?v=0.19.0";
+import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.20.0";
+import { clientPointToWorld, createCropFreeViewport } from "./viewport.js?v=0.20.0";
+import { drawInteractions, drawObjective } from "./interactions-renderer.js?v=0.20.0";
+import { drawCampaignGoal, drawCampaignScene, drawWorldCompanion } from "./world-renderer.js?v=0.20.0";
 
 const PALETTE = Object.freeze({
   ink: "#19142d",
@@ -1209,8 +1209,58 @@ export class GameRenderer {
     const defeat = expression === "defeat";
     const suspicious = expression === "suspicious";
     const nervous = expression === "nervous" || expression === "airborne";
+    const bracing = expression === "bracing";
+    const hopeful = expression === "hopeful";
+    const dizzy = expression === "dizzy";
+    const serene = expression === "serene";
 
-    if (victory) {
+    if (bracing) {
+      // Eyes screwed shut: the only honest face for "this is going to hurt".
+      ctx.beginPath();
+      ctx.arc(-12, -1, 8, Math.PI * 1.08, Math.PI * 1.92);
+      ctx.arc(12, -1, 8, Math.PI * 1.08, Math.PI * 1.92);
+      ctx.stroke();
+    } else if (serene) {
+      // Two separate strokes: sharing one path joins them into a dark bar that
+      // reads as sunglasses rather than as calmly closed eyes.
+      ctx.lineWidth = 3.5;
+      for (const x of [-13, 13]) {
+        ctx.beginPath();
+        ctx.arc(x, -7, 7, Math.PI * 0.16, Math.PI * 0.84);
+        ctx.stroke();
+      }
+      ctx.lineWidth = 4.5;
+    } else if (dizzy) {
+      for (const x of [-12, 12]) {
+        ctx.beginPath();
+        for (let step = 0; step <= 22; step += 1) {
+          const t = (step / 22) * Math.PI * 3;
+          const r = 1.2 + t * 1.05;
+          const px = x + Math.cos(t) * r, py = -3 + Math.sin(t) * r;
+          if (step === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.lineWidth = 3;
+        ctx.stroke();
+      }
+      ctx.lineWidth = 4.5;
+    } else if (hopeful) {
+      for (const x of [-12, 12]) {
+        ctx.fillStyle = PALETTE.white;
+        ctx.beginPath();
+        ctx.ellipse(x, -4, 9, 10, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = PALETTE.gold;
+        ctx.beginPath();
+        ctx.arc(x, -4, 4.4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = PALETTE.white;
+        ctx.beginPath();
+        ctx.arc(x - 2, -6.5, 1.7, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = PALETTE.ink;
+      }
+    } else if (victory) {
       ctx.beginPath();
       ctx.arc(-12, -4, 7, Math.PI * 0.12, Math.PI * 0.88);
       ctx.arc(12, -4, 7, Math.PI * 0.12, Math.PI * 0.88);
@@ -1250,6 +1300,23 @@ export class GameRenderer {
       ctx.arc(0, 6, 13, 0.08 * Math.PI, 0.92 * Math.PI);
     } else if (shocked) {
       ctx.ellipse(0, 14, 7, 10, 0, 0, Math.PI * 2);
+    } else if (bracing) {
+      ctx.moveTo(-9, 15);
+      ctx.lineTo(9, 15);
+      ctx.moveTo(-6, 11);
+      ctx.lineTo(-6, 19);
+      ctx.moveTo(0, 11);
+      ctx.lineTo(0, 19);
+      ctx.moveTo(6, 11);
+      ctx.lineTo(6, 19);
+    } else if (hopeful) {
+      ctx.arc(0, 4, 12, 0.06 * Math.PI, 0.94 * Math.PI);
+    } else if (dizzy) {
+      ctx.moveTo(-9, 15);
+      ctx.quadraticCurveTo(-4.5, 9, 0, 15);
+      ctx.quadraticCurveTo(4.5, 21, 9, 15);
+    } else if (serene) {
+      ctx.arc(0, 8, 8, 0.2 * Math.PI, 0.8 * Math.PI);
     } else if (defeat || nervous) {
       ctx.arc(0, 21, 10, 1.15 * Math.PI, 1.85 * Math.PI);
     } else if (suspicious) {
@@ -1261,11 +1328,19 @@ export class GameRenderer {
     ctx.stroke();
   }
 
+  // A photo head is a real person's face. Reaction accents for it are drawn
+  // OUTSIDE the 96 px portrait box — above the hair or clear of the cheeks —
+  // never over the features, which is how a gold star once landed on an eye.
   drawPhotoReaction(ctx, expression) {
     const shocked = expression === "panic" || expression === "impact";
     const victory = expression === "victory";
     const defeat = expression === "defeat";
     const nervous = expression === "nervous" || expression === "airborne";
+
+    if (expression === "bracing" || expression === "hopeful" || expression === "dizzy" || expression === "serene") {
+      this.drawPhotoAccent(ctx, expression);
+      return;
+    }
 
     ctx.save();
     ctx.lineCap = "round";
@@ -1315,6 +1390,51 @@ export class GameRenderer {
       ctx.moveTo(-24, 32);
       ctx.quadraticCurveTo(-12, 39, 0, 32);
       ctx.quadraticCurveTo(13, 25, 25, 33);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  drawPhotoAccent(ctx, expression) {
+    ctx.save();
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.lineWidth = 5;
+
+    if (expression === "bracing") {
+      // Danger lines stab inwards from beyond the portrait, never across it.
+      ctx.strokeStyle = PALETTE.coral;
+      for (const [x1, y1, x2, y2] of [[-58, -34, -76, -44], [-62, 4, -82, 4], [58, -34, 76, -44], [62, 4, 82, 4]]) {
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+      }
+    } else if (expression === "hopeful") {
+      ctx.strokeStyle = PALETTE.gold;
+      ctx.fillStyle = PALETTE.gold;
+      for (const [x, y, r] of [[-40, -64, 7], [8, -76, 9], [46, -58, 6]]) {
+        ctx.beginPath();
+        for (const [dx, dy] of [[0, -1], [0, 1], [-1, 0], [1, 0]]) {
+          ctx.moveTo(x, y);
+          ctx.lineTo(x + dx * r, y + dy * r);
+        }
+        ctx.stroke();
+      }
+    } else if (expression === "dizzy") {
+      ctx.strokeStyle = PALETTE.violetBright;
+      ctx.lineWidth = 4;
+      const wobble = Math.sin(this.time * 9) * 0.5;
+      for (const [x, y, r] of [[-34, -66, 10], [6, -74, 12], [42, -62, 9]]) {
+        ctx.beginPath();
+        ctx.ellipse(x, y, r, r * 0.42, wobble, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    } else if (expression === "serene") {
+      ctx.strokeStyle = PALETTE.mint;
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.ellipse(0, -66, 34, 9, 0, 0, Math.PI * 2);
       ctx.stroke();
     }
     ctx.restore();
