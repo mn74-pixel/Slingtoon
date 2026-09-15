@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.23.0 — Scena sięga krawędzi ekranu
+
+Zgłoszone przez właściciela: po bokach są szerokie ciemniejsze pasy, na których nic się nie dzieje.
+
+- **powód był, ale nie usprawiedliwiał wyniku**: ekran szerszy niż 2:1 odsłania świat, którego sceny nie malują, a margines był wypełniany kopią sceny rozciągniętą na płasko i przyciemnioną o 58%; naprawiało to wcześniejszą płaską fioletową ramkę, ale zamieniało ćwierć ekranu w martwą strefę,
+- **zmierzono, ile tej przestrzeni jest**: 26% szerokości na MacBooku Air, 33% na szerokim biurkowym ekranie, 7,6% na telefonie w poziomie i dokładnie 0% przy 2:1 oraz na iPadzie,
+- margines dostaje teraz **powiększoną scenę przyciętą w pionie**, więc w bok wychodzi prawdziwa sceneria — palmy, korale, sznur z praniem ciągną się dalej, zamiast urywać się na granicy,
+- odrzucono po obejrzeniu wariant z rozciąganiem skrajnej kolumny: każdy obiekt dotykający krawędzi sceny rozmazywał się w poziomą smugę,
+- **winieta była drugą połową ramki** — rysowała się wyłącznie w obrębie 1280×640, więc przyciemnienie urywało się dokładnie na granicy świata; teraz obejmuje całe widoczne pole,
+- **zmierzony skok jasności na granicy świata spadł z 51,5% do 9%**, czyli poniżej progu, przy którym margines czyta się jako osobny pas,
+- w marginesie może żyć wyłącznie sceneria: skoro na iPadzie i przy 2:1 tej przestrzeni nie ma w ogóle, nic, co gracz musi zobaczyć, nie może tam trafić — cała rozgrywka zostaje w autorskim polu 1280×640,
+- walidacja pilnuje skalowania „do pokrycia", lekkiego przyciemnienia i zasięgu winiety — sprawdzono przez odtworzenie ciemnego pasa.
+
 ## 0.22.1 — Lądowanie przestało wyglądać jak animacja interfejsu
 
 Zgłoszone przez właściciela: kierunek dobry, ale wychodzi trochę sztucznie. Trzy rzeczy robiły tę sztuczność i każda została nazwana osobno:
