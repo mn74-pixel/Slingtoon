@@ -482,3 +482,52 @@ test("the closest approach is recorded where the shot actually came nearest", ()
   model.resetLevel(false);
   assert.equal(model.closestGoalPoint, null, "a retry starts measuring again");
 });
+
+test("the hero reacts to what is happening, and no character is left emotionally dead", () => {
+  // Personality used to short-circuit the expression getter, so Zen and Tough
+  // Guy showed two faces across a whole shot while the other two showed four.
+  // Since stars now buy those characters, the reward made the hero less alive.
+  const variety = (personality) => {
+    const seen = new Set();
+    for (const level of LEVELS) {
+      const model = new GameModel(() => {}, level);
+      model.setPersonality(personality);
+      model.beginSling({ x: 173, y: 455 });
+      model.dragSling(level.assistPull);
+      seen.add(model.expression);
+      model.releaseSling();
+      for (let step = 0; step < 500 && model.phase === GamePhase.FLYING; step += 1) {
+        model.update(1 / 60);
+        seen.add(model.expression);
+      }
+      seen.add(model.expression);
+    }
+    return seen;
+  };
+  for (const personality of ["dramaQueen", "toughGuy", "panic", "zen"]) {
+    const seen = variety(personality);
+    assert.ok(seen.size >= 5, `${personality} only ever shows ${seen.size} expressions: ${[...seen].join(", ")}`);
+    // Reacting to the world is not optional for any character.
+    for (const reaction of ["bracing", "hopeful", "impact"]) {
+      assert.ok(seen.has(reaction), `${personality} never shows "${reaction}"`);
+    }
+  }
+});
+
+test("danger outranks hope, and both outrank idle flight flavour", () => {
+  const level = LEVELS.find((entry) => (entry.interactions ?? []).some((item) => item.type === "hazard"));
+  const model = new GameModel(() => {}, level);
+  model.beginSling({ x: 173, y: 455 });
+  model.dragSling(level.assistPull);
+  model.releaseSling();
+  model.flightTime = 2; // Old code would call this "panic" regardless of the world.
+  model.hazardGap = 10;
+  model.goalGap = 10;
+  assert.equal(model.expression, "bracing", "a hazard at arm's length is the story, not the goal");
+  model.hazardGap = Infinity;
+  assert.equal(model.expression, "hopeful");
+  model.goalGap = Infinity;
+  assert.equal(model.expression, "panic", "with nothing near, flight flavour returns");
+  model.impactFlash = 0.1;
+  assert.equal(model.expression, "impact", "a hit that just landed always wins");
+});

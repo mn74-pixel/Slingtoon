@@ -1,4 +1,4 @@
-# SlingToon Web 0.19.0 — 80 misji kontrolowanego chaosu
+# SlingToon Web 0.20.0 — 80 misji kontrolowanego chaosu
 
 Samodzielna gra webowa przygotowana w tym samym modelu publikacji co Castle Conflict. Do uruchomienia i wdrożenia nie potrzeba JUCE, Projucera ani Xcode.
 
@@ -58,6 +58,7 @@ Na współczesnym iPhonie SlingToon pokazuje jednorazowy przycisk `Graj pełny e
 - Dwie reguły dochodzą w trakcie podróży. **Ruchoma przeszkoda** (od misji 37) jeździ po zaznaczonej linii i startuje z pozycji, którą widzisz przed strzałem, więc trasa pozostaje do wyliczenia. **Strefa zakazana** (od misji 41) jest jedynym obiektem, który kończy lot od samego dotknięcia — ma własny kolor, kolce i podpis.
 - Trudność rośnie przez precyzję i układ, nie przez większą liczbę przeciwników. Cel zaczyna z zapasem, a od misji 48 jego pole trafienia odpowiada temu, co widać na ekranie: trzeba faktycznie dolecieć do obiektu. Pierwsza misja rozdziału i misja oddechu zawsze mają szerszy cel.
 - Od piątej misji: `FIK!` w locie (przycisk, dotknięcie planszy lub spacja) podbija do góry i lekko do przodu. Od misji 17 dochodzi `KAMIEŃ!` (przycisk lub strzałka w dół), który ścina tor w dół i hamuje część pędu — działa tylko dopóki jeszcze się wznosisz, więc jest decyzją na czas, a nie przyciskiem naprawiającym każdy błąd. Wszystkie misje da się przejść także bez obu manewrów.
+- Bohater reaguje na to, co dzieje się w locie: zaciska oczy przy strefie zakazanej, rozjaśnia się, gdy cel jest w zasięgu, i kręci mu się w głowie po serii odbić. Charakter zabarwia miny spokojne, ale nigdy nie wycisza reakcji na zdarzenie.
 - Gwiazdki kupują charaktery: Zen kosztuje 3, Panic 9, Tough Guy 18. Zamknięta pozycja na liście podaje swoją cenę, więc wiesz, na co zbierasz, zanim zaczniesz.
 - Charakter bohatera to zestaw manewrów, nie skórka. Drama Queen skacze najwyżej, Tough Guy leci najdalej w przód i najciężej nurkuje, Panic dostaje po dwa słabsze ładunki każdego manewru, Zen najmocniej wytraca pęd. Sam wystrzał i lot swobodny są identyczne dla wszystkich, dlatego zmiana charakteru może otworzyć nowe rozwiązanie, ale nigdy nie odbiera istniejącego.
 - Klawiatura: spacja rozpoczyna celowanie, strzałki zmieniają naciąg, kolejna spacja wystrzeliwuje; `R` ponawia. Wyzwanie przestawienia poduszki obsługuje dotyk/mysz.

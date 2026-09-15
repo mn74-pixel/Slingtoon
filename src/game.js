@@ -1,6 +1,6 @@
-import { DEFAULT_LEVEL, WORLD } from "./levels.js?v=0.19.0";
-import { FIXED_STEP, clamp, contains, magnitude, stepPhysics } from "./physics.js?v=0.19.0";
-export { DEFAULT_LEVEL, LEVELS, WORLD, getLevel } from "./levels.js?v=0.19.0";
+import { DEFAULT_LEVEL, WORLD } from "./levels.js?v=0.20.0";
+import { FIXED_STEP, clamp, contains, magnitude, stepPhysics } from "./physics.js?v=0.20.0";
+export { DEFAULT_LEVEL, LEVELS, WORLD, getLevel } from "./levels.js?v=0.20.0";
 
 export const GameMode = Object.freeze({ QUICK: "quickSling", ONE_MOVE: "oneMoveChallenge" });
 export const GamePhase = Object.freeze({ READY: "ready", AIMING: "aiming", FLYING: "flying", SUCCEEDED: "succeeded", FAILED: "failed" });
@@ -18,6 +18,12 @@ export const Personality = Object.freeze({ DRAMA_QUEEN: "dramaQueen", TOUGH_GUY:
 // brake was measured rescuing three quarters of every bad pull, which made
 // aiming pointless. Keeping most of the forward pace leaves it a real tool for
 // an arc that sails too flat, and still demands the horizontal aim be close.
+// Reaction thresholds, in world pixels of clearance. A hazard reads as a threat
+// about a body-length out; the goal reads as within reach a little further,
+// because hope should arrive before the shot resolves, not with it.
+const DANGER_GAP = 96;
+const HOPE_GAP = 130;
+
 export const FLIGHT_STYLES = Object.freeze({
   [Personality.DRAMA_QUEEN]: { lift: 325, push: 40, drop: 285, brake: 0.88, charges: 1, air: "WYSOKI SKOK", dive: "STROME ŚCIĘCIE" },
   [Personality.TOUGH_GUY]: { lift: 205, push: 140, drop: 360, brake: 0.8, charges: 1, air: "NISKI TARAN", dive: "CIĘŻKI MŁOT" },
@@ -92,6 +98,9 @@ export class GameModel {
     this.waterSkips = 0;
     this.closestGoal = Infinity;
     this.closestGoalPoint = null;
+    this.goalGap = Infinity;
+    this.hazardGap = Infinity;
+    this.impactCount = 0;
     this.settledTime = 0;
     this.failureReason = "";
     this.lastImpactTime = -1;
@@ -245,6 +254,7 @@ export class GameModel {
     if (this.flightTime - this.lastImpactTime < 0.075) return;
     this.lastImpactTime = this.flightTime;
     this.impactFlash = 0.2;
+    this.impactCount += 1;
     this.emit("impact", { speed, x, y, surface });
   }
   finishAttempt(success) {
@@ -346,14 +356,29 @@ export class GameModel {
     if (this.interactions.some((item) => item.type === "cushion")) variants.unshift(Modifier.SUPER_BOUNCY);
     return variants[Math.max(0, this.attempts - 1) % variants.length];
   }
+  // What the hero is reacting TO comes first, and only then who the hero is.
+  // Personality used to short-circuit this getter, so Zen and Tough Guy showed
+  // two expressions across an entire shot while the other two showed four —
+  // the characters you now pay stars for were the least alive on screen.
+  // Personality is a flavour on the idle states, never a mute on real events.
   get expression() {
     if (this.impactFlash > 0) return "impact";
     if (this.phase === GamePhase.SUCCEEDED) return "victory";
     if (this.phase === GamePhase.FAILED) return "defeat";
-    if (this.personality === Personality.ZEN) return "neutral";
+    if (this.phase === GamePhase.FLYING) {
+      if (this.hazardGap < DANGER_GAP) return "bracing";
+      if (this.goalGap < HOPE_GAP) return "hopeful";
+      if (this.impactCount >= 2) return "dizzy";
+      if (this.personality === Personality.ZEN) return "serene";
+      if (this.personality === Personality.TOUGH_GUY) return "suspicious";
+      return this.flightTime > 0.7 ? "panic" : "airborne";
+    }
+    if (this.phase === GamePhase.AIMING) {
+      if (this.personality === Personality.ZEN) return "serene";
+      if (this.personality === Personality.TOUGH_GUY) return "suspicious";
+      return "nervous";
+    }
     if (this.personality === Personality.TOUGH_GUY) return "suspicious";
-    if (this.phase === GamePhase.AIMING) return "nervous";
-    if (this.phase === GamePhase.FLYING) return this.flightTime > 0.7 ? "panic" : "airborne";
     return "neutral";
   }
   get statusText() {
