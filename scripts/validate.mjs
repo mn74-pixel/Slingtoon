@@ -220,6 +220,19 @@ assert.match(viewport, /viewWidth = Math\.ceil\(safeWorldHeight \* stageAspect\)
 assert.match(viewport, /viewHeight = Math\.ceil\(safeWorldWidth \/ stageAspect\)/);
 assert.match(viewport, /clientPointToWorld/);
 
+// Nothing is drawn at head level on a photograph of a real person. The star on
+// an eye, then the same star parked beside the head, then victory sparkles on
+// the hair were all the same mistake: art authored against the 36 px stock
+// skull reused over a portrait drawn at CUSTOM_HEAD_SCALE.
+assert.ok(/drawPersonalityFront\(ctx, personality\) \{[\s\S]{0,400}?if \(this\.faceImage\) return;/.test(render),
+  "drawPersonalityFront must bail out early for a photo head");
+assert.ok(/drawPhotoReaction\(ctx, expression\) \{\s*this\.drawPhotoAccent\(ctx, expression\);\s*\}/.test(render),
+  "every photo reaction must go through drawPhotoAccent, which draws clear of the portrait");
+// Landing: the hero settles onto the goal instead of freezing against its edge.
+assert.ok(render.includes("landingPose()"), "the renderer must compute a landing pose");
+assert.ok(/LANDING_SECONDS = 0\.\d+/.test(render), "the landing tween needs a duration");
+assert.ok(render.includes("ctx.clip()"), "the body below the rim is hidden by a clip, not by redrawing 27 goal sprites");
+
 // Seria is a shot budget for a whole run. One shot per mission was measured and
 // rejected: a blind shot wins about 20% of the time, so runs averaged a quarter
 // of a mission. The budget, the refund and the cap are the whole design — if any
