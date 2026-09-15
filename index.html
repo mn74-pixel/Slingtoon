@@ -10,10 +10,10 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="SlingToon">
   <title>SlingToon — 80 misji kontrolowanego chaosu</title>
-  <link rel="manifest" href="manifest.webmanifest?v=0.20.0">
+  <link rel="manifest" href="manifest.webmanifest?v=0.21.0">
   <link rel="icon" href="assets/icon-192.png" sizes="192x192">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="styles.css?v=0.20.0">
+  <link rel="stylesheet" href="styles.css?v=0.21.0">
 </head>
 <body>
   <div class="ambient ambient--one" aria-hidden="true"></div>
@@ -74,6 +74,12 @@
         <div id="stage" class="stage">
           <canvas id="gameCanvas" width="1280" height="640" tabindex="0" aria-describedby="keyboardHelp" aria-label="Złap bohatera, naciągnij procę i traf w budzik"></canvas>
           <p id="objectiveStatus" class="objective-status">☆ Gwiazdka jest opcjonalna</p>
+          <div id="streakHud" class="streak-hud" hidden>
+            <span class="streak-hud__label">SERIA</span>
+            <strong id="streakCount">0</strong>
+            <span id="streakShots" class="streak-hud__shots">●●●●●</span>
+            <button id="streakQuit" type="button" class="streak-hud__quit">Zakończ</button>
+          </div>
           <div id="flightMoves" class="flight-moves">
             <button id="airMoveButton" class="flight-move air-move-button" type="button" title="Podbicie w górę i do przodu. Możesz też nacisnąć spację." hidden>↗ FIK! · 1</button>
             <button id="diveMoveButton" class="flight-move dive-move-button" type="button" title="Ścina lot w dół i hamuje pęd do przodu. Możesz też nacisnąć strzałkę w dół." hidden>↓ KAMIEŃ! · 1</button>
@@ -121,7 +127,7 @@
     </main>
 
     <footer>
-      <span>SLINGTOON WEB 0.20.0</span>
+      <span>SLINGTOON WEB 0.21.0</span>
       <span>Offline PWA · GitHub Pages Ready</span>
     </footer>
     <p id="keyboardHelp" class="keyboard-help">Dotyk: pociągnij bohatera i puść. Klawiatura: spacja rozpoczyna celowanie, strzałki zmieniają naciąg, spacja wystrzeliwuje. W locie: spacja = FIK w górę (od misji 5), strzałka w dół = KAMIEŃ w dół (od misji 17). R = ponów.</p>
@@ -133,8 +139,10 @@
     <div class="chapter-controls">
       <label for="chapterSelect">ROZDZIAŁ<select id="chapterSelect" aria-label="Wybierz rozdział"></select></label>
       <button id="resumeMission" class="cta" type="button">KONTYNUUJ →</button>
+      <button id="startStreak" class="cta cta--streak" type="button">⚡ SERIA</button>
     </div>
     <p id="chapterSummary"></p>
+    <p id="streakNote" class="map-note map-note--streak"></p>
     <p class="map-note">Przejście otwiera kolejną misję. Gwiazdki są opcjonalne. Co 200 punktów dostajesz żeton podpowiedzi.</p>
     <div id="missionList" class="mission-list"></div>
     <div class="map-danger">
@@ -238,6 +246,6 @@
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
   <noscript>Do uruchomienia SlingToon potrzebna jest obsługa JavaScript.</noscript>
-  <script type="module" src="src/main.js?v=0.20.0"></script>
+  <script type="module" src="src/main.js?v=0.21.0"></script>
 </body>
 </html>

@@ -1,9 +1,10 @@
-import { GameModel, GameMode, GamePhase, LEVELS, modifierName } from "./game.js?v=0.20.0";
-import { GameRenderer } from "./render.js?v=0.20.0";
-import { GameAudio } from "./audio.js?v=0.20.0";
-import { FaceStudio } from "./face-studio.js?v=0.20.0";
-import { CHARACTER_UNLOCKS, PROGRESS_KEY, TOKEN_SCORE_STEP, characterLock, countMastered, countStars, isMastered, readProgress, hintOffer, purchaseHint, rewardSuccess, medalText } from "./progress.js?v=0.20.0";
-import { CHAPTERS } from "./levels.js?v=0.20.0";
+import { GameModel, GameMode, GamePhase, LEVELS, modifierName } from "./game.js?v=0.21.0";
+import { GameRenderer } from "./render.js?v=0.21.0";
+import { GameAudio } from "./audio.js?v=0.21.0";
+import { FaceStudio } from "./face-studio.js?v=0.21.0";
+import { CHARACTER_UNLOCKS, PROGRESS_KEY, TOKEN_SCORE_STEP, characterLock, countMastered, countStars, isMastered, readProgress, hintOffer, purchaseHint, recordStreak, rewardSuccess, medalText } from "./progress.js?v=0.21.0";
+import { STREAK_MAX_SHOTS, STREAK_MIN_POOL, canStartStreak, clearStreakMission, createStreakRun, drawStreakMission, spendStreakShot, streakSummary } from "./streak.js?v=0.21.0";
+import { CHAPTERS } from "./levels.js?v=0.21.0";
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -35,6 +36,12 @@ const elements = {
   resultReward: $("#resultReward"),
   whatIfButton: $("#whatIfButton"),
   againButton: $("#againButton"),
+  streakHud: $("#streakHud"),
+  streakCount: $("#streakCount"),
+  streakShots: $("#streakShots"),
+  streakQuit: $("#streakQuit"),
+  startStreak: $("#startStreak"),
+  streakNote: $("#streakNote"),
   restartButton: $("#restartButton"),
   hintButton: $("#hintButton"),
   instructionIcon: $("#instructionIcon"),
@@ -94,7 +101,7 @@ let progress = loadProgress();
 let highestUnlockedLevel = progress.highestUnlockedLevel;
 let mapChapterIndex = 0;
 let lastReward = null;
-const FULLSCREEN_TIP_KEY = "slingtoon-fullscreen-tip-0.20.0";
+const FULLSCREEN_TIP_KEY = "slingtoon-fullscreen-tip-0.21.0";
 
 function loadProgress() {
   try {
@@ -109,6 +116,67 @@ function saveProgress() {
   } catch {
     // Progress persistence is optional in private browsing modes.
   }
+}
+
+// Seria runs beside the campaign, never through it: a run never awards medals,
+// points or unlocks, so a record chased here cannot inflate campaign progress.
+let streakRun = null;
+let streakResult = null;
+
+function inStreak() {
+  return Boolean(streakRun) && !streakRun.over;
+}
+
+function updateStreakHud() {
+  elements.streakHud.hidden = !inStreak();
+  if (!inStreak()) return;
+  elements.streakCount.textContent = String(streakRun.cleared);
+  // Dots, not a number: the budget has to be readable in the corner of an eye
+  // mid-shot, and the count is small enough to read as a shape.
+  elements.streakShots.textContent = "●".repeat(streakRun.shots) + "○".repeat(Math.max(0, STREAK_MAX_SHOTS - streakRun.shots));
+  elements.streakShots.title = `Zostało strzałów: ${streakRun.shots}`;
+}
+
+function nextStreakMission() {
+  const level = drawStreakMission(streakRun);
+  currentLevelIndex = LEVELS.indexOf(level);
+  hideResult();
+  model.setLevel(level);
+  updateStreakHud();
+  updateMissionUi();
+}
+
+function startStreak() {
+  streakResult = null;
+  const gate = canStartStreak(progress, LEVELS);
+  if (!gate.ok) {
+    showToast(`Ukończ jeszcze ${gate.missing} ${gate.missing === 1 ? "misję" : "misje"}, żeby odblokować Serię.`, true);
+    return;
+  }
+  streakRun = createStreakRun(progress, LEVELS, Math.random);
+  streakResult = null;
+  lastReward = null;
+  elements.missions.close();
+  nextStreakMission();
+  showToast("Seria! Budżet strzałów na cały bieg. Trafienie zwraca dwa.");
+  elements.canvas.focus({ preventScroll: true });
+  updateUi();
+}
+
+function endStreak(quit = false) {
+  if (!streakRun) return;
+  const cleared = streakRun.cleared;
+  const { best, record } = recordStreak(progress, cleared);
+  saveProgress();
+  streakResult = { cleared, best, record, quit };
+  streakRun = null;
+  updateStreakHud();
+  // Back to where the campaign was left, so quitting a run costs nothing.
+  const resume = LEVELS.findIndex((level) => level.id === progress.resumeLevelId);
+  currentLevelIndex = Math.max(0, resume);
+  model.setLevel(LEVELS[currentLevelIndex]);
+  showStreakResult();
+  updateUi();
 }
 
 function scoreSuccess() {
@@ -350,6 +418,10 @@ model.onEvent = (event) => {
   audio.handleGameEvent(event);
 
   if (["reset", "mode", "launch", "what-if"].includes(event.type)) hideResult();
+  if (event.type === "launch" && inStreak()) {
+    spendStreakShot(streakRun);
+    updateStreakHud();
+  }
   if ((event.type === "reset" && event.resetAttempts) || event.type === "mode") {
     lastReward = null;
     model.hintStage = Math.min(1, progress.hints[model.level.id] ?? 0);
@@ -370,6 +442,21 @@ model.onEvent = (event) => {
   }
   if (event.type === "hint-layout-reset") showToast("Pełna trasa przywraca poduszkę na pozycję startową.");
   if (event.type === "reset" && model.hintStage === 3 && model.mode === GameMode.ONE_MOVE) model.moveUsed = true;
+  if ((event.type === "success" || event.type === "failure") && streakRun) {
+    // A run neither scores nor unlocks: the campaign record stays something you
+    // earned in the campaign. The run only moves its own budget.
+    if (event.type === "success") clearStreakMission(streakRun);
+    updateStreakHud();
+    clearTimeout(resultTimer);
+    resultTimer = window.setTimeout(() => {
+      if (streakRun?.over) endStreak();
+      else if (event.type === "success") nextStreakMission();
+      else model.resetLevel(false);
+      updateUi();
+    }, event.type === "success" ? 720 : 520);
+    updateUi();
+    return;
+  }
   if (event.type === "success" || event.type === "failure") {
     if (event.type === "success") scoreSuccess();
     if (event.type === "success" && currentLevelIndex < LEVELS.length - 1) {
@@ -420,6 +507,8 @@ function updateLevelNavigation() {
 }
 
 function setLevelIndex(index) {
+  if (inStreak()) return false; // The run picks the missions; the arrows do not.
+  streakResult = null;
   const nextIndex = Math.max(0, Math.min(LEVELS.length - 1, index));
   if (nextIndex > highestUnlockedLevel || nextIndex === currentLevelIndex) return false;
   currentLevelIndex = nextIndex;
@@ -445,6 +534,9 @@ function wipeProgress() {
       // A blocked storage simply has nothing to clear.
     }
   }
+  streakRun = null;
+  streakResult = null;
+  updateStreakHud();
   progress = readProgress({ getItem: () => null }, LEVELS);
   highestUnlockedLevel = 0;
   currentLevelIndex = 0;
@@ -481,6 +573,12 @@ function openMissionMap() {
   const nextCharacter = CHARACTER_UNLOCKS.find((unlock) => characterLock(unlock.personality, stars).locked);
   elements.campaignSummary.textContent = `Przygoda: ${finished} / ${LEVELS.length} misji · ★ ${stars} / ${LEVELS.length} gwiazdek · ✦ ${mastered} opanowanych`
     + (nextCharacter ? ` · jeszcze ${characterLock(nextCharacter.personality, stars).missing} ★ do postaci ${nextCharacter.name}` : " · wszystkie postacie odblokowane");
+  const gate = canStartStreak(progress, LEVELS);
+  elements.startStreak.disabled = !gate.ok;
+  elements.startStreak.textContent = gate.ok ? "⚡ SERIA" : `🔒 SERIA · ${gate.missing}`;
+  elements.streakNote.textContent = gate.ok
+    ? `Seria: losowe ukończone misje pod rząd, wspólny budżet strzałów na cały bieg — trafienie zwraca dwa. Rekord: ${progress.bestStreak ?? 0}. Bieg nie zmienia postępu kampanii.`
+    : `Seria odblokuje się po ukończeniu ${STREAK_MIN_POOL} misji (zostało ${gate.missing}).`;
   const resume = LEVELS.find((level) => level.id === progress.resumeLevelId) ?? LEVELS[highestUnlockedLevel];
   elements.resumeMission.textContent = `KONTYNUUJ · MISJA ${resume.number} →`;
   renderMissionChapter();
@@ -578,7 +676,22 @@ function setMode(mode) {
   model.setMode(mode);
 }
 
+function showStreakResult() {
+  const { cleared, best, record, quit } = streakResult;
+  elements.resultPanel.hidden = false;
+  elements.resultPanel.classList.toggle("is-success", record || cleared > 0);
+  elements.resultPanel.classList.toggle("is-failure", !record && cleared === 0);
+  elements.resultTag.textContent = record ? "NOWY REKORD" : quit ? "SERIA ZAKOŃCZONA" : "KONIEC SERII";
+  elements.resultTitle.textContent = cleared === 1 ? "1 misja pod rząd" : `${cleared} misji pod rząd`;
+  elements.resultSpeech.textContent = streakSummary({ cleared }, record ? Math.max(0, cleared - 1) : best);
+  elements.resultReward.hidden = false;
+  elements.resultReward.textContent = `⚡ Rekord: ${best} · bieg nie zmienia postępu kampanii`;
+  elements.whatIfButton.hidden = true;
+  elements.againButton.textContent = "⚡ JESZCZE JEDNA SERIA";
+}
+
 function showResult() {
+  if (streakResult && !streakRun) { showStreakResult(); return; }
   const success = model.phase === GamePhase.SUCCEEDED;
   const result = model.level.result;
   elements.resultPanel.hidden = false;
@@ -769,9 +882,12 @@ window.addEventListener("beforeinstallprompt", (event) => {
   event.preventDefault();
   installPrompt = event;
 });
+elements.startStreak.addEventListener("click", startStreak);
+elements.streakQuit.addEventListener("click", () => endStreak(true));
 elements.restartButton.addEventListener("click", () => model.resetLevel(false));
 elements.hintButton.addEventListener("click", requestHint);
 elements.againButton.addEventListener("click", () => {
+  if (streakResult && !streakRun) { streakResult = null; startStreak(); return; }
   if (model.phase === GamePhase.SUCCEEDED && currentLevelIndex === LEVELS.length - 1) { openMissionMap(); return; }
   if (model.phase === GamePhase.SUCCEEDED && currentLevelIndex < LEVELS.length - 1) {
     setLevelIndex(currentLevelIndex + 1);
@@ -819,7 +935,7 @@ window.addEventListener("keydown", (event) => {
 
 window.addEventListener("load", () => {
   if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
-    navigator.serviceWorker.register("./sw.js?v=0.20.0").catch(() => {});
+    navigator.serviceWorker.register("./sw.js?v=0.21.0").catch(() => {});
   }
   scheduleFullscreenSuggestion();
   syncGameViewport();

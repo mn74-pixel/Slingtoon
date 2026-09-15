@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.21.0 — Seria: bieg o jeszcze jedną misję
+
+- **nowy tryb Seria**: losowe misje, które już przeszedłeś, jedna po drugiej, ze wspólnym budżetem strzałów na cały bieg — każdy strzał kosztuje jeden, każde trafienie zwraca dwa,
+- pierwszy projekt zakładał jeden strzał na misję i **został odrzucony po pomiarze**: strzał oddany bez znajomości trasy wygrywa około 20% razy (siatka z bilansu kampanii), więc taki bieg kończył się średnio po **0,25 misji** — to automat do gry, nie gra,
+- budżet z premią wypłaca za umiejętność: przy 20% trafień bieg daje 1,5 misji, przy 30% — 3, przy 40% — 5,9, przy 49% — 11,6, przy 58% — 23,6; umiejętność zmienia wynik szesnastokrotnie i nie ma sufitu, a żaden bieg nie kończy się na zerze,
+- **bieg nie dotyka postępu kampanii**: nie przyznaje medali, punktów, żetonów ani odblokowań — zapisuje wyłącznie własny rekord, co sprawdzono w przeglądarce (punkty, ukończone misje i odblokowania bez zmian po całym biegu),
+- Seria losuje wyłącznie z misji już ukończonych i nigdy nie daje tej samej dwa razy pod rząd; odblokowuje się po trzech ukończonych misjach,
+- budżet jest pokazany kropkami przy planszy, bo liczbę trzeba czytać kątem oka w trakcie strzału, a nie w panelu,
+- naprawiono błąd układu: licznik był rysowany względem strony zamiast planszy i lądował na pasku górnym, zasłaniając wybór charakteru; na telefonie schodzi do wolnego dolnego rogu, bo odznaka celu zajmuje tam prawie całą szerokość,
+- walidacja pilnuje budżetu, premii, limitu, braku powtórzeń i tego, że licznik siedzi wewnątrz planszy — sprawdzono, że wykrywa dokładnie tamten błąd układu.
+
 ## 0.20.0 — Bohater wreszcie reaguje na to, co się dzieje
 
 - **mimika odpowiada na świat, a nie na zegar lotu**: bohater zaciska oczy, gdy strefa zakazana jest na wyciągnięcie ręki, rozjaśnia się, gdy cel jest w zasięgu, i kręci mu się w głowie po drugim odbiciu w jednym locie,

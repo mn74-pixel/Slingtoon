@@ -3,7 +3,7 @@ export const TOKEN_SCORE_STEP = 200;
 const integer = (value, maximum = 1_000_000) => Number.isFinite(value) ? Math.max(0, Math.min(maximum, Math.floor(value))) : 0;
 
 export function readProgress(storage, levels) {
-  const result = { version: 3, highestUnlockedLevel: 0, resumeLevelId: levels[0].id, score: 0, hintTokens: 2, bestScores: {}, hints: {}, medals: {} };
+  const result = { version: 3, highestUnlockedLevel: 0, resumeLevelId: levels[0].id, score: 0, hintTokens: 2, bestStreak: 0, bestScores: {}, hints: {}, medals: {} };
   try {
     const current = storage.getItem(PROGRESS_KEY);
     const previous = storage.getItem("slingtoon-progress-v2");
@@ -12,6 +12,7 @@ export function readProgress(storage, levels) {
       result.highestUnlockedLevel = integer(parsed.highestUnlockedLevel, levels.length - 1);
       result.score = integer(parsed.score);
       result.hintTokens = Number.isFinite(parsed.hintTokens) ? integer(parsed.hintTokens, 999) : 2;
+      result.bestStreak = integer(parsed.bestStreak, levels.length);
       // Old scores are retained in the total. These are new puzzles, with fresh personal records.
       if (parsed.version === 3) for (const { id } of levels) {
         result.bestScores[id] = integer(parsed.bestScores?.[id], 240);
@@ -91,6 +92,13 @@ export function characterLock(personality, stars) {
   const entry = CHARACTER_UNLOCKS.find((unlock) => unlock.personality === personality);
   if (!entry) return { locked: true, stars: Infinity, missing: Infinity };
   return { locked: stars < entry.stars, stars: entry.stars, missing: Math.max(0, entry.stars - stars) };
+}
+
+export function recordStreak(progress, cleared) {
+  const best = Math.max(0, Math.floor(progress.bestStreak ?? 0));
+  const record = Math.max(0, Math.floor(cleared)) > best;
+  if (record) progress.bestStreak = Math.floor(cleared);
+  return { best: progress.bestStreak ?? 0, record };
 }
 
 export function medalText(bits = 0) {
