@@ -49,7 +49,12 @@ for (const level of LEVELS.slice(8).filter((l) => !selected || l.number === Numb
   // tolerance could be one the route never actually survived. Sample a grid
   // that always lands exactly on ±margin.
   const tolerates = (pull, margin) => {
-    const steps = Math.max(2, Math.ceil((margin * 2) / 4));
+    // The step count must be EVEN, or the grid straddles the centre and never
+    // samples it: at margin 10 an odd 5 steps checked -10,-6,-2,+2,+6,+10 and
+    // skipped 0, so a route could ship a tolerance whose own axes fail. The
+    // game's own check tries {-margin, 0, +margin} on both axes, so those nine
+    // points have to be in the grid the tool signs off on.
+    const steps = 2 * Math.max(1, Math.ceil(margin / 4));
     for (let ix = 0; ix <= steps; ix += 1) for (let iy = 0; iy <= steps; iy += 1) {
       const dx = -margin + (margin * 2 * ix) / steps;
       const dy = -margin + (margin * 2 * iy) / steps;

@@ -232,8 +232,9 @@ test("What If replays both moves in order and restores the character that made t
   const model = new GameModel(() => {}, LEVELS[16]);
   model.setPersonality(Personality.PANIC);
   // A pull that loses even after all three corrections, so What If has a real
-  // failure to replay.
-  launch(model, { x: 35, y: 480 });
+  // failure to replay. Re-chosen when the campaign's shot shapes moved the
+  // goals: the old pull started winning, which quietly hollowed the test out.
+  launch(model, { x: 35, y: 440 });
   model.update(.08); assert.equal(model.useAirMove(), true);
   model.update(.08); assert.equal(model.useDiveMove(), true);
   model.update(.08); assert.equal(model.useAirMove(), true, "Panic has a second charge");
@@ -530,4 +531,42 @@ test("danger outranks hope, and both outrank idle flight flavour", () => {
   assert.equal(model.expression, "panic", "with nothing near, flight flavour returns");
   model.impactFlash = 0.1;
   assert.equal(model.expression, "impact", "a hit that just landed always wins");
+});
+
+test("the campaign asks for many different shots, not one shot eighty times", () => {
+  // The shipped campaign put every goal at x 890..1100 with a median of 1070,
+  // and 77% of missions flew 850-950 px. Eighty missions, one shot repeated.
+  const distances = LEVELS.map((level) => level.goal.x - level.anchor.x);
+  const heights = LEVELS.map((level) => level.goal.y);
+  const spread = Math.max(...distances) - Math.min(...distances);
+  assert.ok(spread >= 450, `flight length only spans ${spread} px; the campaign is one shot again`);
+  assert.ok(Math.max(...heights) - Math.min(...heights) >= 250, "every goal sits at the same height");
+
+  // No band of 150 px may hold more than half the campaign.
+  const bands = new Map();
+  for (const d of distances) {
+    const key = Math.floor(d / 150);
+    bands.set(key, (bands.get(key) ?? 0) + 1);
+  }
+  const biggest = Math.max(...bands.values());
+  assert.ok(biggest <= LEVELS.length / 2, `${biggest} of ${LEVELS.length} missions share one 150 px band`);
+  assert.ok(bands.size >= 4, `flight lengths only fall into ${bands.size} bands`);
+
+  // Seven shapes across eighty missions would read as seven target spots.
+  const spots = new Set(LEVELS.map((level) => `${level.goal.x},${level.goal.y}`));
+  assert.equal(spots.size, LEVELS.length, "two missions share the exact same target position");
+});
+
+test("no goal is placed where the sling cannot reach it", () => {
+  // Measured mid-air interception windows on a flat level: at x=1130 the
+  // trajectory family spans roughly y 303..529, and past 1250 it is a line. A
+  // goal outside that envelope would need the level's furniture to be solvable
+  // at all, which is how the campaign ended up pinned just past free flight.
+  for (const level of LEVELS) {
+    const reach = level.goal.x - level.anchor.x;
+    assert.ok(reach <= 1060, `mission ${level.number} sits ${reach} px out, past the reachable envelope`);
+    if (level.goal.x > 1050) {
+      assert.ok(level.goal.y >= 280, `mission ${level.number} is long AND high, which no trajectory reaches`);
+    }
+  }
 });

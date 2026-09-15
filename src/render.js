@@ -1,7 +1,7 @@
-import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.24.0";
-import { clientPointToWorld, createCropFreeViewport } from "./viewport.js?v=0.24.0";
-import { drawInteractions, drawObjective } from "./interactions-renderer.js?v=0.24.0";
-import { drawCampaignGoal, drawCampaignScene, drawWorldCompanion, setSceneBleed } from "./world-renderer.js?v=0.24.0";
+import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.25.0";
+import { clientPointToWorld, createCropFreeViewport } from "./viewport.js?v=0.25.0";
+import { drawInteractions, drawObjective } from "./interactions-renderer.js?v=0.25.0";
+import { drawCampaignGoal, drawCampaignScene, drawWorldCompanion, setSceneBleed } from "./world-renderer.js?v=0.25.0";
 
 const PALETTE = Object.freeze({
   ink: "#19142d",

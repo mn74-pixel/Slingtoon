@@ -1,5 +1,38 @@
 # Changelog
 
+## 0.25.0 — Osiemdziesiąt różnych strzałów zamiast jednego powtórzonego
+
+Pytanie brzmiało, czy nie dałoby się rozsunąć procy i celu. Pomiar pokazał coś gorszego niż brak miejsca.
+
+### Co było nie tak
+
+- **cele stały w 50-pikselowym oknie.** Mediana x=1070, ćwiartki 1030–1080; **77% misji miało długość lotu 850–950 px**. Osiemdziesiąt misji, jeden strzał powtórzony osiemdziesiąt razy,
+- zmierzona **obwiednia trafienia w locie** (gdzie cel w ogóle da się trafić swobodnym lotem) pokazała, dlaczego akurat tam: przy x=1000 okno ma 118 px wysokości, przy x=700 aż **508 px**, a za x=1250 zapada się do kreski. Wszystkie cele siedziały w najciaśniejszym miejscu dostępnej przestrzeni,
+- przesunięcie celu dalej w prawo, o które pytano, **pogorszyłoby sprawę** — wolne miejsce jest bliżej i w pionie, nie dalej.
+
+### Co zrobiono
+
+- **dystans i wysokość są dobierane osobno.** Dystans rotuje równomiernie, żeby plansza używała całej szerokości; wysokość niesie trudność, co potwierdza pomiar udziału wygrywających naciągów: cel nisko jest trudny na każdym dystansie (17,4% w średnim, 19,2% w długim), wysoko jest wybaczający (31,1% w krótkim),
+- **układ misji skaluje się razem z celem** — skrzynka, która stała w jednej trzeciej lotu, nadal stoi w jednej trzeciej. Autorskie współrzędne opisują proporcje, nie piksele,
+- **wynik: dystans 427–1010 px zamiast 717–927, wysokość celu 174–504 zamiast 350–455, 80 różnych pozycji celu na 80 misji** (wcześniej połowa dzieliła 50-pikselowe okno),
+- wszystkie 72 mierzone trasy przeliczone od zera; 15 misji dostało dobrany kształt, wybrany przez narzędzie jako **najciaśniejszy, który nadal przechodzi**, a nie najwygodniejszy.
+
+### Naprawiony błąd w narzędziu balansu
+
+- siatka tolerancji liczyła nieparzystą liczbę kroków, więc przy tolerancji ±10 sprawdzała −10, −6, −2, +2, +6, +10 i **nigdy zera**. Misja mogła dostać zatwierdzoną tolerancję, której własna oś nie działa — dokładnie to wyszło na misji 54,
+- liczba kroków jest teraz parzysta, więc każda tolerancja próbkuje własny środek.
+
+### Trudność
+
+| ćwiartka | przed | po |
+|---|---|---|
+| 1 | 24,3% | 26,4% |
+| 2 | 21,7% | 21,2% |
+| 3 | 19,6% | 22,3% |
+| 4 | **14,9%** | **15,3%** |
+
+Końcówka zachowała trudność. W ćwiartce 3 zostało wahnięcie 1,1 pkt, którego nie udało się usunąć — krzywa opada, ale nie idealnie monotonicznie.
+
 ## 0.24.0 — Sceny malują cały ekran, a dźwięk przestaje się powtarzać
 
 ### Boki: naprawione u źródła, nie zamalowane
