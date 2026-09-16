@@ -72,7 +72,7 @@ assert.ok(main.includes(`serviceWorker.register("./sw.js?v=${version}")`));
 assert.ok(main.includes(`slingtoon-fullscreen-tip-${version}`));
 for (const level of LEVELS) {
   assert.ok(Object.isFrozen(level));
-  assert.ok(level.interactions.every((item) => ["breakable", "portal", "cushion", "steam", "current", "bubble", "gravity", "switch", "gate", "solid", "water", "hazard"].includes(item.type)));
+  assert.ok(level.interactions.every((item) => ["breakable", "portal", "cushion", "steam", "current", "bubble", "gravity", "switch", "gate", "solid", "water", "hazard", "pendulum", "spring"].includes(item.type)));
   assert.ok(level.required.every((id) => level.interactions.some((item) => item.id === id)));
   // A hazard ends the flight, so it can never be an objective the player must visit.
   assert.ok(level.interactions.filter((item) => item.type === "hazard").every((item) => !level.required.includes(item.id)));
@@ -112,8 +112,8 @@ assert.match(levels, /id:\s*"gnome-emergency"/);
 assert.match(levels, /id:\s*"pigeon-protocol"/);
 assert.match(levels, /id:\s*"duck-rescue"/);
 assert.match(levels, /export const LEVELS/);
-assert.equal(LEVELS.length, 80);
-assert.equal(new Set(LEVELS.map((level) => level.id)).size, 80);
+assert.equal(LEVELS.length, 88);
+assert.equal(new Set(LEVELS.map((level) => level.id)).size, 88);
 assert.match(levels, /assistPull:\s*point/g);
 assert.match(levels, /scene:\s*"lake"/);
 assert.match(levels, /freeStages/);
@@ -174,6 +174,7 @@ assert.match(main, /function wipeProgress/);
 // A screen wider than 2:1 must not frame the board with a flat purple band.
 assert.match(render, /this\.ghost = this\.flightPath\.length > 2/);
 const physics = await readFile(resolve(root, "src/physics.js"), "utf8");
+const interactionsRenderer = await readFile(resolve(root, "src/interactions-renderer.js"), "utf8");
 assert.match(physics, /export function describeMiss/);
 assert.match(physics, /model\.closestGoalPoint = \{/);
 // Scenery must never borrow the outline that marks a real collider, and the
@@ -224,17 +225,30 @@ assert.match(viewport, /clientPointToWorld/);
 assert.ok(/ctx\.fillRect\(-ox, -oy, WORLD\.width \+ ox \* 2, WORLD\.height \+ oy \* 2\)/.test(render),
   "the vignette must span the whole visible viewport, not just the authored world");
 
+const campaign = await readFile(resolve(root, "src/campaign.js"), "utf8");
+// Two mechanics that name a real thing about the world. Both have to stay real:
+// a pendulum whose period ignores its length, or a spring that returns the same
+// push whatever you bring, would be decoration wearing a physics label.
+assert.ok(/export function pendulumBob/.test(physics) && /export function pendulumAngle/.test(physics),
+  "the pendulum needs a real arc, not a sine slide dressed up as one");
+assert.ok(/Math\.sqrt\(1050 \/ length\)/.test(campaign),
+  "pendulum speed must fall with the square root of length, or two ropes keep the same time and teach nothing");
+assert.ok(/item\.type === "spring"/.test(physics) && /charge \* \(item\.gain/.test(physics),
+  "the spring must repay in proportion to what it is given");
+for (const type of ["pendulum", "spring"]) {
+  assert.ok(interactionsRenderer.includes(`item.type === "${type}"`), `${type} exists in physics but is never drawn`);
+}
+
 // Shot shape is the campaign's main variable now. The tolerance grid must also
 // sample its own centre: an odd step count straddled zero, so a mission could
 // ship a margin whose own axes fail.
-const campaign = await readFile(resolve(root, "src/campaign.js"), "utf8");
 const balance = await readFile(resolve(root, "scripts/balance-campaign.mjs"), "utf8");
 assert.ok(/const steps = 2 \* Math\.max/.test(balance), "the tolerance grid needs an even step count or it never samples the centre");
 assert.ok(/const REACH = \{/.test(campaign) && /const HEIGHT = \{/.test(campaign),
   "distance and height must be chosen separately; tying difficulty to distance pulled the campaign into the left half of the screen");
 assert.ok(!/long: \[[^\]]*"high"/.test(campaign), "a long shot cannot also be a high one: no trajectory reaches there");
 assert.ok(/function scaleItem/.test(campaign), "moving a goal must carry its obstacles with it");
-for (const field of ["out.entry", "out.exit", "out.a", "out.b", "out.width"]) {
+for (const field of ["out.entry", "out.exit", "out.a", "out.b", "out.width", "out.pendulum"]) {
   assert.ok(campaign.includes(field), `scaleItem must rescale ${field}, or portals and ramps detach from the flight`);
 }
 

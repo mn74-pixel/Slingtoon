@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
 import { DEFAULT_LEVEL, FLIGHT_STYLES, GameModel, GameMode, GamePhase, LEVELS, Modifier, Personality } from "../src/game.js";
-import { FIXED_STEP, describeMiss, magnitude, movedBody, rectContact, resolveContact, stepPhysics } from "../src/physics.js";
+import { FIXED_STEP, describeMiss, magnitude, movedBody, pendulumBob, rectContact, resolveContact, stepPhysics } from "../src/physics.js";
 
 // The authoring tool measures how far each hint route may be nudged and still
 // win. Guarding the shipped number keeps a layout edit from silently widening
@@ -24,11 +24,15 @@ function finish(model, hz = 60) {
 }
 const originalStarShots = [{ x: 120, y: 550 }, { x: 65, y: 525 }, { x: 105, y: 510 }, { x: 135, y: 565 }, { x: 130, y: 530 }, { x: 55, y: 550 }, { x: 65, y: 550 }, { x: 110, y: 520 }];
 
-test("80 authored missions, stable progress IDs and immutable level data", () => {
-  assert.equal(LEVELS.length, 80);
-  assert.equal(new Set(LEVELS.map((l) => l.id)).size, 80);
+test("every authored mission has a stable progress ID and immutable level data", () => {
+  // Counted, not asserted at 80: the campaign grew to eleven chapters and a test
+  // that pins the old number only reports that it changed, never that it is wrong.
+  assert.equal(LEVELS.length % 8, 0, "chapters are eight missions each");
+  assert.ok(LEVELS.length >= 80, `the campaign shrank to ${LEVELS.length} missions`);
+  assert.equal(new Set(LEVELS.map((l) => l.id)).size, LEVELS.length, "two missions share an id");
+  assert.deepEqual(LEVELS.map((l) => l.number), LEVELS.map((_, i) => i + 1), "mission numbers must run in order");
   assert.equal(new Set(LEVELS.slice(0, 8).map((l) => l.mechanic)).size, 8);
-  assert.equal(new Set(LEVELS.map((l) => l.chapterId)).size, 10);
+  assert.equal(new Set(LEVELS.map((l) => l.chapterId)).size, LEVELS.length / 8, "every chapter holds exactly eight missions");
   assert.ok(LEVELS.every((l) => Object.isFrozen(l.interactions)));
   assert.ok(LEVELS.every((l) => !l.interactions.some((i) => i.type === "trampoline")));
   assert.equal(DEFAULT_LEVEL.interactions.length, 0);
@@ -567,6 +571,22 @@ test("no goal is placed where the sling cannot reach it", () => {
     assert.ok(reach <= 1060, `mission ${level.number} sits ${reach} px out, past the reachable envelope`);
     if (level.goal.x > 1050) {
       assert.ok(level.goal.y >= 280, `mission ${level.number} is long AND high, which no trajectory reaches`);
+    }
+  }
+});
+
+test("no swinging obstacle sweeps across the goal it guards", () => {
+  // A pendulum passing over the target hides the one thing the player aims at,
+  // and hides it intermittently, which reads as the game cheating. Mission 84
+  // had one clearing the goal by 1 px.
+  for (const level of LEVELS) {
+    for (const item of level.interactions.filter((entry) => entry.type === "pendulum")) {
+      let closest = Infinity;
+      for (let t = 0; t < 12; t += 0.02) {
+        const bob = pendulumBob(item, t);
+        closest = Math.min(closest, Math.hypot(bob.x - level.goal.x, bob.y - level.goal.y) - item.width / 2 - level.goal.radius);
+      }
+      assert.ok(closest >= 45, `mission ${level.number}: ${item.id} sweeps to ${Math.round(closest)} px of the goal`);
     }
   }
 });

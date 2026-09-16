@@ -1,11 +1,11 @@
-# SlingToon Web 0.25.0 — Release Manifest
+# SlingToon Web 0.26.0 — Release Manifest
 
 Data: 15 września 2026. Format: HTML5 Canvas / PWA, statyczny hosting GitHub Pages.
-Pakiet kandydujący 0.25.0. Publikacja wymaga osobnej zgody właściciela po obejrzeniu wersji roboczej.
+Pakiet kandydujący 0.26.0. Publikacja wymaga osobnej zgody właściciela po obejrzeniu wersji roboczej.
 
 ## Zawartość
 
-80 misji w 10 rozdziałach. Pierwsze osiem pozostaje bez zmian, a 72 dalsze prowadzą przez plażę, podwodne światy, port, lunapark i kosmos. Reguły obejmują prądy, wyporność, pola przyciągania, wieloprzyciskowe bramki, zmienną grawitację oraz dwie nowe: ruchomą przeszkodę i strefę zakazaną kończącą lot od dotknięcia. Mapa wyświetla rozdziały po osiem misji i wznawia aktualny etap.
+88 misji w 11 rozdziałach. Pierwsze osiem pozostaje bez zmian, a 72 dalsze prowadzą przez plażę, podwodne światy, port, lunapark i kosmos. Reguły obejmują prądy, wyporność, pola przyciągania, wieloprzyciskowe bramki, zmienną grawitację oraz dwie nowe: ruchomą przeszkodę i strefę zakazaną kończącą lot od dotknięcia. Mapa wyświetla rozdziały po osiem misji i wznawia aktualny etap.
 
 Po trafieniu bohater ląduje w celu łukiem, z tłumionym odbiciem i lekkim odchyleniem w stronę nadlotu, po czym oddycha i kołysze się zamiast zastygnąć. Głowa ze zdjęcia nie dostaje żadnego akcentu na wysokości twarzy. Tryb Seria prowadzi przez losowe ukończone misje ze wspólnym budżetem strzałów i zapisuje własny rekord, nie zmieniając postępu kampanii. Mimika bohatera odpowiada na zdarzenia w locie: bliską strefę zakazaną, cel w zasięgu i serię odbić. Gwiazdki odblokowują charaktery (Zen ★3, Panic ★9, Tough Guy ★18), a każdy charakter to inny zestaw manewrów w locie. Misja z kompletem trzech medali jest oznaczona jako opanowana w mapie misji.
 
@@ -20,7 +20,7 @@ Rendery plansz nie zastępują testu przeglądarki ani urządzenia. Pełny test 
 
 ## Publikacja
 
-Publikować po zgodzie właściciela do istniejącego repozytorium i GitHub Pages. Sprawdzić po wdrożeniu wersję `0.25.0`, mapę rozdziałów oraz aktualizację cache poprzedniej instalacji.
+Publikować po zgodzie właściciela do istniejącego repozytorium i GitHub Pages. Sprawdzić po wdrożeniu wersję `0.26.0`, mapę rozdziałów oraz aktualizację cache poprzedniej instalacji.
 
 ## Dalszy rozwój
 

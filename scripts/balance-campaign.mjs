@@ -107,5 +107,6 @@ if (failed.length) {
 } else if (process.argv.includes("--write") && !selected) {
   await writeFile("src/campaign-routes.js", `// Measured with scripts/balance-campaign.mjs. No search runs on the player's device.\nexport const CAMPAIGN_ROUTES = ${JSON.stringify(routes, null, 2)};\n`);
   await writeFile("docs/campaign-balance.json", JSON.stringify(report, null, 2) + "\n");
-  console.log("Stored 72 forgiving routes, alternate star routes and their measured tolerance.");
+  // Counted, not hardcoded: the message said 72 long after the campaign grew.
+  console.log(`Stored ${Object.keys(routes).length} forgiving routes, alternate star routes and their measured tolerance.`);
 }

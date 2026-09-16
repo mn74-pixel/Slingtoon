@@ -1,6 +1,6 @@
 // Visual language: mint = active/entry, coral = obstacle, gold = optional reward,
 // crimson + spikes = the one thing that ends the flight on touch.
-import { movedBody } from "./physics.js?v=0.25.0";
+import { movedBody, pendulumAngle, pendulumBob } from "./physics.js?v=0.26.0";
 const ink = "#19142d", cream = "#fff5d9", mint = "#5ce1bd", coral = "#ff6078", gold = "#ffd35f", violet = "#a28bff", danger = "#d6002f";
 function box(ctx, x, y, w, h, color, radius = 12) {
   ctx.beginPath(); ctx.roundRect(x, y, w, h, radius);
@@ -102,6 +102,50 @@ export function drawInteractions(ctx, model, time) {
       for (let x = 30; x < length; x += 50) circle(ctx, x, 0, 3, ink, 1);
       ctx.restore();
       label(ctx, model.mode === "oneMoveChallenge" && !model.moveUsed ? "↔ PRZESUŃ RAZ" : "KĄT = KIERUNEK", (item.a.x + item.b.x) / 2, Math.min(item.a.y, item.b.y) - 33, violet);
+    }
+    // A spring is drawn as a coil under a plate, because it has to look like the
+    // thing that stores what you give it — not like the cushion, which returns
+    // the same fraction whatever you bring.
+    if (item.type === "spring") {
+      const dx = item.b.x - item.a.x, dy = item.b.y - item.a.y, length = Math.hypot(dx, dy);
+      ctx.save(); ctx.translate(item.a.x, item.a.y); ctx.rotate(Math.atan2(dy, dx));
+      ctx.strokeStyle = gold; ctx.lineWidth = 6; ctx.lineCap = "round";
+      ctx.beginPath();
+      for (let i = 0; i <= 18; i += 1) {
+        const x = 12 + (length - 24) * (i / 18);
+        const y = 16 + (i % 2 ? -9 : 9);
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+      box(ctx, 0, -item.thickness, length, item.thickness * 1.5, gold, item.thickness);
+      ctx.restore();
+      label(ctx, "SPRĘŻYNA ↑", (item.a.x + item.b.x) / 2, Math.min(item.a.y, item.b.y) - 38, gold);
+    }
+    // A pendulum shows its own rope and pivot, so the arc it will travel is
+    // readable before the first shot, and two of different lengths visibly keep
+    // different time.
+    if (item.type === "pendulum") {
+      const bob = pendulumBob(item, model.flightTime);
+      ctx.strokeStyle = "rgba(255,245,217,.8)"; ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.moveTo(item.pendulum.x, item.pendulum.y); ctx.lineTo(bob.x, bob.y); ctx.stroke();
+      // The path it sweeps, so timing is a decision rather than a surprise.
+      ctx.strokeStyle = "rgba(255,96,120,.5)"; ctx.lineWidth = 3; ctx.setLineDash([9, 9]);
+      ctx.beginPath();
+      ctx.arc(item.pendulum.x, item.pendulum.y, item.pendulum.length, Math.PI / 2 - item.pendulum.swing, Math.PI / 2 + item.pendulum.swing);
+      ctx.stroke(); ctx.setLineDash([]);
+      // A bracket, not a bare dot, so it reads as something bolted to the ceiling.
+      box(ctx, item.pendulum.x - 26, item.pendulum.y - 12, 52, 16, cream, 6);
+      circle(ctx, item.pendulum.x, item.pendulum.y + 4, 7, ink, 3);
+      ctx.save(); ctx.translate(bob.x, bob.y); ctx.rotate(pendulumAngle(item, model.flightTime));
+      // A rotated square reads as an abstract diamond. A rounded weight with a
+      // hook and a band reads as a thing hanging on a rope, which is what it is.
+      circle(ctx, 0, -item.height / 2 - 4, 7, cream, 4);
+      box(ctx, -item.width / 2, -item.height / 2, item.width, item.height, coral, item.width * 0.42);
+      ctx.strokeStyle = ink; ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.moveTo(-item.width / 2 + 6, 0); ctx.lineTo(item.width / 2 - 6, 0); ctx.stroke();
+      ctx.restore();
+      // Short label: the long one collided with every other sign on the board.
+      label(ctx, "WAHADŁO", item.pendulum.x, item.pendulum.y - 30, coral);
     }
     if (item.type === "steam" || item.type === "current") {
       const gradient = ctx.createLinearGradient(0, item.y, 0, item.y + item.height);
