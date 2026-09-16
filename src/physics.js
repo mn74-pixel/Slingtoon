@@ -11,7 +11,26 @@ export function itemShift(item, time) {
   return item.motion ? Math.sin(time * item.motion.speed) * item.motion.amplitude : 0;
 }
 
+// A pendulum is not a body sliding back and forth: it swings on an arc and moves
+// fastest at the bottom of it. The angle follows a real swing, so two pendulums
+// of different lengths visibly keep different time — which is the whole lesson.
+export function pendulumAngle(item, time) {
+  return item.pendulum.swing * Math.cos(time * item.pendulum.speed + (item.pendulum.phase ?? 0));
+}
+
+export function pendulumBob(item, time) {
+  const angle = pendulumAngle(item, time);
+  return {
+    x: item.pendulum.x + Math.sin(angle) * item.pendulum.length,
+    y: item.pendulum.y + Math.cos(angle) * item.pendulum.length,
+  };
+}
+
 export function movedBody(item, time) {
+  if (item.pendulum) {
+    const bob = pendulumBob(item, time);
+    return { ...item, x: bob.x - item.width / 2, y: bob.y - item.height / 2 };
+  }
   if (!item.motion) return item;
   const shift = itemShift(item, time);
   return item.motion.axis === "x"
@@ -151,6 +170,19 @@ export function stepPhysics(model, dt = FIXED_STEP) {
       if (speed > 70) {
         model.markInteraction(item, "cushion");
         model.triggerImpact(speed, p.x, p.y, "cushion");
+      }
+    }
+    // A spring stores what it is given. Arriving gently it barely answers;
+    // arriving fast it hands the energy back with interest, so the player learns
+    // that the launch they get is the landing they brought.
+    if (item.type === "spring") {
+      const incoming = magnitude(v);
+      const charge = clamp((incoming - (item.threshold ?? 180)) / 520, 0, 1);
+      const bounce = (item.base ?? 0.55) + charge * (item.gain ?? 1.15);
+      const speed = resolveContact(p, v, lineContact(p, radius, item), bounce * model.bounceScale);
+      if (speed > 60) {
+        model.markInteraction(item, "spring");
+        model.triggerImpact(speed, p.x, p.y, "spring");
       }
     }
     if (item.type === "water" && p.x > item.x && p.x < item.x + item.width) {

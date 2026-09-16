@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.26.0 — Pracownia fizyki: wahadło, sprężyna i osiem nowych misji
+
+### Naprawione: przeszkody stały za blisko siebie
+
+- skalowanie misji do krótkiego strzału ściskało układ — **misja 16 miała dwa obiekty 69 px od siebie**, co czyta się jak jedna bryła zamiast dwóch decyzji; siedem misji było poniżej 110 px,
+- teraz **układ ogranicza strzał, a nie tylko odwrotnie**: misja z trzema przeszkodami zarabia na dłuższy lot. Najciaśniejsza para w całej grze to 120 px, zero misji poniżej 110, a rozrzut dystansu przetrwał (436–1010 px).
+
+### Dwie nowe mechaniki, obie uczą czegoś prawdziwego
+
+- **WAHADŁO** — swinguje po łuku, nie przesuwa się sinusoidalnie. Zmierzone: okres rośnie z długością sznurka (2,48 s → 3,38 s → 4,28 s), a ciężarek stoi niemal w miejscu na skrajach (4 px/s) i pędzi na dole (do 553 px/s). Misja 84 daje **dwa wahadła o różnej długości obok siebie** — lekcja jest widoczna, nie opisana,
+- **SPRĘŻYNA** — oddaje proporcjonalnie do tego, co dostanie. Zmierzone: przy wejściu 150 px/s oddaje **mniej** niż poduszka (83 vs 158), przy 900 px/s **znacznie więcej** (1530 vs 945). Jaki przylot, taki wystrzał,
+- misja ucząca sprężyny dostała łagodniejszą charakterystykę, bo przy pełnej stromości wprowadzenie tolerowało celowanie ±6 px, czyli zamieniało lekcję w zgadywankę.
+
+### Nowy rozdział: Szkolna pracownia fizyki (misje 81–88)
+
+Osiem misji po finale kampanii, każda nazywa jedną rzecz prawdziwą o świecie i każe jej użyć: od salami na sznurku, przez „długi sznurek, krótki sznurek", po egzamin praktyczny ze wszystkiego naraz. Gra ma teraz **88 misji w 11 rozdziałach**.
+
+### Błędy znalezione przy okazji
+
+- **`scaleItem` nie skalował punktu zawieszenia wahadła.** Kolider liczy się z `pendulum.x`, więc wahadła w ogóle nie podążały za układem misji i zostawały na autorskiej pozycji,
+- **wahadło w misji 84 przechodziło 1 px od celu** — zasłaniało cel w trakcie wymachu, co czyta się jak oszustwo gry. Doszedł test pilnujący 45 px prześwitu dla każdego wahadła,
+- **narzędzie balansu wypisywało „Stored 72" na sztywno** długo po tym, jak kampania urosła. Teraz liczy,
+- trzy testy zakładały 80 misji i 10 rozdziałów na sztywno; teraz liczą zamiast zakładać.
+
 ## 0.25.0 — Osiemdziesiąt różnych strzałów zamiast jednego powtórzonego
 
 Pytanie brzmiało, czy nie dałoby się rozsunąć procy i celu. Pomiar pokazał coś gorszego niż brak miejsca.

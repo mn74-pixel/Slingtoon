@@ -1,6 +1,6 @@
 // Authored campaign layouts. Coordinates describe actual colliders, not decoration.
 // Routes are measured offline with the same solver used by the game.
-import { CAMPAIGN_ROUTES } from "./campaign-routes.js?v=0.25.0";
+import { CAMPAIGN_ROUTES } from "./campaign-routes.js?v=0.26.0";
 
 export const CHAPTERS = Object.freeze([
   { id: "home", name: "Domowy chaos", subtitle: "Od drzemki do pierwszej kaczki", scene: "bedroom" },
@@ -13,6 +13,7 @@ export const CHAPTERS = Object.freeze([
   { id: "moon", name: "Księżyc służbowo", subtitle: "Mały krok. Duży problem z hamowaniem.", scene: "moon", environment: { gravity: .28, drag: 0 } },
   { id: "station", name: "Orbita absurdu", subtitle: "Podłoga ma dziś wolne", scene: "station", environment: { gravity: .18, drag: .02 } },
   { id: "homebound", name: "Powrót pod kołdrę", subtitle: "Wszechświat odprowadza Cię do łóżka", scene: "comet", environment: { gravity: .4, drag: .025 } },
+  { id: "lab", name: "Szkolna pracownia fizyki", subtitle: "Wahadło wie, która godzina. Sprężyna pamięta, jak mocno wszedłeś.", scene: "laundry" },
 ].map((chapter, index) => Object.freeze({ ...chapter, number: index + 1, first: index * 8 + 1, last: index * 8 + 8 })));
 
 const p = (x, y) => ({ x, y });
@@ -30,6 +31,16 @@ const planet = (id, x, y, radius = 220, strength = 900) => ({ id, type: "gravity
 const move = (axis, amplitude = 40, speed = .9) => ({ axis, amplitude, speed });
 const hazard = (id, x, y, width, height, label = "NIE DOTYKAJ", failure = null) => ({ id, type: "hazard", x, y, width, height, label, ...(failure ? { failure } : {}) });
 const moving = (item, axis, amplitude, speed) => ({ ...item, motion: move(axis, amplitude, speed) });
+// Length decides the period, so a short rope keeps faster time than a long one —
+// which is the whole reason two of them in one mission teach anything.
+const pendulum = (id, x, y, length, swing = .85, phase = 0, label = "WAHADŁO") =>
+  ({ id, type: "pendulum", x: x - 38, y: y + length - 38, width: 76, height: 76, pendulum: { x, y, length, swing, speed: Math.sqrt(1050 / length), phase }, label });
+// Gives back what it is given: a soft landing barely answers, a fast one launches.
+// `gain` is how sharply it repays. The mission that teaches the spring uses a
+// gentle one, because a steep response turns the lesson into a guessing game —
+// measured: at gain 1.15 the introduction only tolerated a +/-6 px aim.
+const spring = (id, ax, ay, bx, by, gain = 1.15, label = "SPRĘŻYNA") =>
+  ({ id, type: "spring", a: p(ax, ay), b: p(bx, by), thickness: 15, threshold: 180, base: .55, gain, label });
 
 // The drawn goals reach about 56 px from their centre, so a 56 px collider is
 // the honest value: the player has to actually reach the object instead of an
@@ -65,6 +76,8 @@ const ANCHOR_X = 173;
 // win-share supports: a low target is hard at any distance (mid-low 17.4%,
 // long-low 19.2%) while a high one is forgiving (short-high 31.1%).
 const REACH = { short: 655, mid: 890, long: 1130 };
+// Past here the measured interception window collapses to a line.
+const MAX_REACH = 1010;
 const HEIGHT = { high: 205, mid: 340, low: 470 };
 // The measured mid-air window at x=1130 runs y 303..529, so a long shot cannot
 // also be a high one. Every other pairing is reachable.
@@ -101,12 +114,26 @@ function shotFor(number, override) {
   const options = SHOT_GRID[reach];
   // Height climbs from forgiving to demanding across the campaign; a chapter's
   // opener and breather step back down it.
-  const rank = Math.round((chapter / 9) * (options.length - 1) + LOCAL_STEP[local] * 0.6);
+  const rank = Math.round((chapter / (CHAPTERS.length - 1)) * (options.length - 1) + LOCAL_STEP[local] * 0.6);
   const height = override?.height ?? options[Math.max(0, Math.min(options.length - 1, rank))];
   return {
     x: Math.round(REACH[reach] + jitter(number, 55)),
     y: Math.round(HEIGHT[height] + jitter(number + 91, 34)),
   };
+}
+
+// Obstacles must stay far enough apart to be read as separate problems. Scaling a
+// mission down to a short shot squeezed them together: mission 16 ended up with
+// two objects 69 px apart, which reads as one lump rather than two decisions.
+// So the layout constrains the shot, not only the other way round — a mission
+// carrying three obstacles earns a longer flight.
+const MIN_OBSTACLE_GAP = 130;
+const itemCentre = (item) => item.entry ? item.entry.x : item.a ? (item.a.x + item.b.x) / 2 : item.x + (item.width ?? 0) / 2;
+function tightestGap(items) {
+  const xs = items.map(itemCentre).sort((a, b) => a - b);
+  let gap = Infinity;
+  for (let i = 1; i < xs.length; i += 1) gap = Math.min(gap, xs[i] - xs[i - 1]);
+  return gap;
 }
 
 // Horizontal rescale of an authored layout around the sling.
@@ -119,6 +146,10 @@ function scaleItem(item, factor) {
   if (out.exit) out.exit = { ...out.exit, x: scaleX(out.exit.x, factor) };
   if (out.a) out.a = { ...out.a, x: scaleX(out.a.x, factor) };
   if (out.b) out.b = { ...out.b, x: scaleX(out.b.x, factor) };
+  // The pivot is where a pendulum actually lives — movedBody derives the body
+  // from it and ignores the item's own x. Leaving it unscaled pinned every
+  // pendulum to its authored spot while the rest of the mission moved away.
+  if (out.pendulum) out.pendulum = { ...out.pendulum, x: scaleX(out.pendulum.x, factor) };
   if (out.force && out.motion?.axis === "x") out.motion = { ...out.motion, amplitude: out.motion.amplitude * factor };
   return out;
 }
@@ -126,7 +157,7 @@ function scaleItem(item, factor) {
 // Missions whose layout does not survive the rotation's shape. Each entry was
 // chosen by running the offline balance tool over every shape and keeping the
 // one with the most forgiving measured route, not by guessing.
-const SHOT_OVERRIDES = Object.freeze({ 12: { reach: "short", height: "low" }, 13: { reach: "mid", height: "mid" }, 20: { reach: "long", height: "mid" }, 30: { reach: "long", height: "mid" }, 39: { reach: "mid", height: "mid" }, 45: { reach: "short", height: "low" }, 47: { reach: "long", height: "mid" }, 56: { reach: "short", height: "low" }, 58: { reach: "mid", height: "mid" }, 59: { reach: "long", height: "mid" }, 62: { reach: "mid", height: "high" }, 66: { reach: "long", height: "mid" }, 72: { reach: "mid", height: "high" }, 74: { reach: "long", height: "mid" }, 75: { reach: "short", height: "high" } });
+const SHOT_OVERRIDES = Object.freeze({ 12: { reach: "short", height: "low" }, 13: { reach: "mid", height: "mid" }, 20: { reach: "long", height: "mid" }, 30: { reach: "long", height: "mid" }, 39: { reach: "mid", height: "mid" }, 45: { reach: "short", height: "low" }, 47: { reach: "long", height: "mid" }, 56: { reach: "short", height: "high" }, 58: { reach: "mid", height: "mid" }, 59: { reach: "long", height: "mid" }, 62: { reach: "mid", height: "high" }, 66: { reach: "long", height: "mid" }, 72: { reach: "mid", height: "high" }, 74: { reach: "long", height: "mid" }, 75: { reach: "short", height: "high" } });
 const HONEST_GOAL_RADIUS = 56;
 function goalRadius(number, local) {
   const base = Math.max(HONEST_GOAL_RADIUS, Math.round(84 - (number - 9) * 0.72));
@@ -143,11 +174,19 @@ function mission(number, name, kind, authoredX, authoredY, mechanic, clue, win, 
   // shape decides where the mission actually sits in the sling's reach, and the
   // obstacles ride along so their place in the flight is unchanged.
   const shot = shotFor(number, SHOT_OVERRIDES[number]);
-  const x = shot.x, y = shot.y;
-  const factor = (x - ANCHOR_X) / (authoredX - ANCHOR_X);
+  const y = shot.y;
+  // The shot may have to grow so the layout still reads. It never shrinks below
+  // what was chosen, so the campaign's spread survives the constraint.
+  const authoredGap = tightestGap(authoredInteractions);
+  const authoredReach = authoredX - ANCHOR_X;
+  const needed = Number.isFinite(authoredGap) && authoredGap > 0
+    ? authoredReach * (MIN_OBSTACLE_GAP / authoredGap)
+    : 0;
+  const x = Math.round(ANCHOR_X + Math.min(Math.max(shot.x - ANCHOR_X, needed), MAX_REACH));
+  const factor = (x - ANCHOR_X) / authoredReach;
   const interactions = authoredInteractions.map((item) => scaleItem(item, factor));
   const route = CAMPAIGN_ROUTES[number];
-  const required = options.required ?? interactions.filter((item) => !["solid", "gate", "hazard"].includes(item.type)).map((item) => item.id);
+  const required = options.required ?? interactions.filter((item) => !["solid", "gate", "hazard", "pendulum"].includes(item.type)).map((item) => item.id);
   const surface = interactions.find((item) => item.type === "water");
   const pull = route?.pull ?? p(55, 500);
   const angle = Math.atan2(pull.y - 455, 173 - pull.x) * 180 / Math.PI;
@@ -260,4 +299,15 @@ export const EXTRA_LEVELS = [
   mission(78, "Ziemia prosi najpierw zadzwonić", "bell", 1080, 410, "PRZYCISK, PACZKA, POWRÓT", "Naciśnij dzwonek Ziemi, przebij opakowanie pamiątki i przeleć przez otwartą bramkę.", "Ziemia mówi: wytrzyj buty z pyłu księżycowego.", [button("earth-bell", 405, 390), hazard("re-entry", 530, 440, 70, 146, "GORĄCO!", "Osłona termiczna nie wybacza. Poprowadź tor ponad strefą."), crate("gift", 680, 190, 396, "DLA DOMOWNIKÓW"), gate("earth-door", 925, "earth-bell")]),
   mission(79, "Lądowanie w pralni", "sock", 1070, 425, "PORTAL Z POWROTEM", "Pralnia przywraca ziemską grawitację. Wejdź do rury, potem otwórz drzwiczki.", "Po całej podróży nadal brakuje jednej skarpetki.", [portal("home-washer", 440, 390, 770, 295), button("laundry-button", 895, 355), gate("washer-door", 985, "laundry-button")], { scene: "laundry", environment: { gravity: 1, drag: 0 } }),
   mission(80, "Jeszcze pięć minut. Tym razem serio.", "alarm", 1040, 440, "OSTATNI DZWONEK", "Zadzwoń do sypialni, potem wskocz do domowego skrótu. Budzik czeka od pierwszej misji.", "Budzik: gdzie byłeś przez te pięć minut?!", [button("home-bell", 405, 355), portal("pillow-tunnel", 615, 370, 835, 285), gate("bedroom-door", 950, "home-bell")], { scene: "bedroom", background: "assets/stage_morning_mayhem.svg", environment: { gravity: 1, drag: 0 }, radius: 62, tag: "DOBRANOC, WSZECHŚWIECIE!", gag: "DRZEMKA: 80 MISJI PÓŹNIEJ", gagX: 650, gagY: 90 }),
+  // Chapter 11 is the school lab: every mission names one thing that is true
+  // about the world and then makes you use it. The jokes carry the lesson, so
+  // nobody has to read a paragraph to learn that a long rope keeps slow time.
+  mission(81, "Pani od fizyki wiesza salami", "sandwich", 980, 380, "WAHADŁO: CZEKAJ NA MOMENT", "Salami wisi na sznurku i wraca zawsze w tym samym rytmie. Policz do trzech i przeleć, kiedy odpływa.", "Pierwsza lekcja: cierpliwość jest darmowa.", [pendulum("salami", 620, 120, 250, .8)], { scene: "laundry", tag: "ZDANE!" }),
+  mission(82, "Trampolina pamięta wszystko", "coffee", 900, 300, "SPRĘŻYNA: JAKI PRZYLOT, TAKI WYSTRZAŁ", "Sprężyna oddaje tyle, ile jej dasz. Wejdź w nią miękko, a ledwie odpowie. Wejdź mocno, a wyrzuci Cię wysoko.", "Kawa na regale. Kubek nie pytał o zgodę.", [spring("board", 470, 520, 660, 520, .55)], { scene: "kitchen", tag: "WYSOKI LOT!" }),
+  mission(83, "Salami kontra trampolina", "sock", 1000, 440, "WAHADŁO I SPRĘŻYNA", "Odbij się mocno, a potem przeczekaj wahadło. Kolejność ma znaczenie, bo sprężyna nie czeka.", "Skarpetka widziała wszystko i nic nie powie.", [spring("launch", 400, 540, 560, 540), pendulum("ham", 730, 130, 230, .75, 1.1)], { scene: "laundry" }),
+  mission(84, "Długi sznurek, krótki sznurek", "bell", 1010, 350, "DŁUGOŚĆ DECYDUJE O RYTMIE", "Dwa wahadła, dwie różne długości. Krótsze wraca szybciej. Nie zgadujesz — możesz to policzyć.", "Dzwonek ogłasza koniec lekcji. Lekcja się nie zgadza.", [pendulum("short-rope", 520, 110, 150, .9), pendulum("long-rope", 680, 110, 300, .7, .6)], { scene: "living-room", tag: "RYTM ZŁAPANY!" }),
+  mission(85, "Przerwa na kanapkę", "sandwich", 700, 300, "SPOKOJNY ODBIÓR", "Jedna sprężyna, żadnego pośpiechu. Sprawdź, jak mocne wejście daje jak wysoki wyskok.", "Kanapka skorzystała z przerwy wcześniej niż Ty.", [spring("break-pad", 400, 530, 580, 530, .6)], { scene: "garden", tag: "SMACZNEGO!" }),
+  mission(86, "Eksperyment wymknął się spod kontroli", "toaster", 990, 460, "SPRĘŻYNA NAD STREFĄ", "Sprężyna wyrzuci Cię ponad gorącą płytę, ale tylko jeśli wejdziesz w nią z prędkością. Miękko znaczy prosto w kłopoty.", "Toster przyznaje się do współudziału.", [spring("hot-launch", 380, 545, 540, 545, 1.15), hazard("hotplate", 620, 470, 90, 116, "GORĄCE!", "Płyta grzewcza kończy eksperyment. Przeleć nad nią, nie przez nią.")], { scene: "kitchen" }),
+  mission(87, "Dzwonek, wahadło, drzwi", "remote", 1005, 400, "PRZYCISK PRZED WAHADŁEM", "Zadzwoń, zanim wahadło zamknie drogę. Bramka otworzy się dopiero po sygnale.", "Pilot znaleziony. Pod wahadłem, oczywiście.", [button("lab-bell", 430, 400), pendulum("swinging-lamp", 700, 120, 220, .8, .4), gate("lab-door", 890, "lab-bell")], { scene: "living-room" }),
+  mission(88, "Egzamin praktyczny", "alarm", 1010, 465, "WSZYSTKO NARAZ", "Sprężyna, potem wahadło, potem dzwonek i drzwi. Pracownia sprawdza, czy słuchałeś.", "Zaliczone. Pani od fizyki wraca do salami.", [spring("exam-pad", 360, 550, 500, 550), pendulum("exam-swing", 700, 115, 260, .85, .9), button("exam-bell", 870, 380), gate("exam-door", 960, "exam-bell")], { scene: "laundry", radius: 60, tag: "ZALICZONE!", gag: "PRACOWNIA FIZYCZNA", gagX: 380, gagY: 86 }),
 ];

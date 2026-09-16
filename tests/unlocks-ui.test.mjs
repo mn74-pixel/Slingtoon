@@ -37,7 +37,7 @@ test("a veteran's stars have already opened the characters they paid for", async
 
   // The map states the campaign's whole reward position in one line.
   elements.levelIndicator.click();
-  assert.match(elements.campaignSummary.textContent, /★ 9 \/ 80/);
+  assert.match(elements.campaignSummary.textContent, new RegExp(`★ 9 / ${LEVELS.length}`));
   assert.match(elements.campaignSummary.textContent, /✦ 0 opanowanych/, "stars alone are not mastery");
   assert.match(elements.campaignSummary.textContent, /jeszcze 9 ★ do postaci Tough Guy/);
   restoreTimers();
