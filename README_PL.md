@@ -1,4 +1,4 @@
-# SlingToon Web 0.26.0 — 80 misji kontrolowanego chaosu
+# SlingToon Web 0.27.0 — 88 misji kontrolowanego chaosu
 
 Samodzielna gra webowa przygotowana w tym samym modelu publikacji co Castle Conflict. Do uruchomienia i wdrożenia nie potrzeba JUCE, Projucera ani Xcode.
 
@@ -78,6 +78,8 @@ Na współczesnym iPhonie SlingToon pokazuje jednorazowy przycisk `Graj pełny e
 - Powtórka zachowuje także moment użycia FIK-a. Podgląd i rozgrywka korzystają z tego samego solvera 120 Hz, niezależnego od częstotliwości rysowania.
 - Przycisk z sylwetką głowy w ramce otwiera Face Studio. Po ustawieniu twarzy przycisk pokazuje Twoją własną głowę, więc od razu widać, co jest wybrane.
 - Face Studio ma dwa tryby. **ZDJĘCIE** to domyślny czysty wycinek: lokalny model segmentuje włosy, skórę i tło, usuwa tło, a samo zdjęcie zostaje nietknięte — twarz nadal przypomina oryginał. Suwak ustawia wyłącznie grubość komiksowego konturu, a `0%` oznacza zero efektu. **TOON** rysuje twarz od nowa z 478 punktów: wygląda komiksowo, ale mniej przypomina oryginał. Wybór trybu nie kasuje ustawienia drugiego. Plik nie jest wysyłany.
+- **MIMIKA** dokłada do wycinka dwanaście min: nerwy przed strzałem, panikę w locie, bęc przy uderzeniu, wygraną i porażkę. Zdjęcie zostaje zdjęciem — miny powstają z jego własnych pikseli: punkty twarzy przeciągają siatkę trójkątów, cała głowa ściska się i przechyla, a wnętrze otwartych ust dostaje cień. Nic nie jest dorysowane. Suwak od `0%` (mimika wyłączona) do `200%`, a pasek nad nim pokazuje wszystkie miny na Twoim zdjęciu, zanim zatwierdzisz głowę. Cały komplet jest wypiekany raz, przy zatwierdzaniu zdjęcia (~60 ms) — w trakcie gry nie kosztuje nic.
+- Jeśli wycinek wyjdzie pusty — zdarza się, gdy model znajdzie twarz, ale nie znajdzie człowieka, na przykład na rysunku — pracownia mówi to wprost i nie pozwala zatwierdzić niewidzialnej głowy.
 - Na telefonie gra jest przeznaczona do pozycji poziomej; kamera zawsze pokazuje cały pokój i odsłania dodatkową przestrzeń dla proporcji danego ekranu, zamiast przycinać górę albo rozciągać scenę.
 
 ## Testy

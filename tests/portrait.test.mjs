@@ -7,9 +7,11 @@ import {
   connectionPaths,
   createPortraitTransform,
   deriveHeadBounds,
+  fitInsideFrame,
   isHeadPixel,
   normalizePortraitStyle,
 } from "../src/portrait.js";
+import { opaqueBounds } from "../src/face-mimic.js";
 
 test("portrait strength is bounded", () => {
   assert.equal(normalizePortraitStyle(0), 0.45);
@@ -97,4 +99,39 @@ test("head mask keeps hair and face but rejects clothing", () => {
   assert.equal(isHeadPixel(FACE_CATEGORIES.FACE_SKIN, 0.5, 0.5, headBounds), true);
   assert.equal(isHeadPixel(FACE_CATEGORIES.CLOTHES, 0.5, 0.8, headBounds), false);
   assert.equal(isHeadPixel(FACE_CATEGORIES.BODY_SKIN, 0.5, 0.87, headBounds), false);
+});
+
+// Sztuczny canvas: tylko tyle, ile czyta opaqueBounds — kanał alfa.
+function stubCanvas(width, height, opaque) {
+  const data = new Uint8ClampedArray(width * height * 4);
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      if (opaque(x, y)) data[(y * width + x) * 4 + 3] = 255;
+    }
+  }
+  return { width, height, getContext: () => ({ getImageData: () => ({ data }) }) };
+}
+
+// Kołnierz dochodzący do dołu kadru nie zostawia minom miejsca na ruch, więc
+// wycinek wjeżdża do środka. Skala liczona od środka kadru, nie od własnego
+// boksu: głowa ma zostać tam, gdzie rysuje ją renderer, tylko mniejsza.
+test("a cut-out that touches the frame is eased in to leave room for expressions", () => {
+  const canvas = stubCanvas(512, 512, (x, y) => x >= 52 && x <= 458 && y >= 28);
+  const { scale } = fitInsideFrame(canvas, 26);
+  assert.ok(scale < 1 && scale > 0.8, `skala ${scale}`);
+  const middle = 256;
+  const bottom = middle + (511 - middle) * scale;
+  const top = middle + (28 - middle) * scale;
+  assert.ok(bottom <= 512 - 1 - 26 + 1e-6, `dół na ${bottom}`);
+  assert.ok(top >= 26 - 1e-6, `góra na ${top}`);
+});
+
+test("a cut-out that already has room is left at full size", () => {
+  const canvas = stubCanvas(512, 512, (x, y) => x >= 80 && x <= 430 && y >= 60 && y <= 450);
+  assert.equal(fitInsideFrame(canvas, 26).scale, 1);
+});
+
+test("an empty cut-out reports no coverage instead of passing as a head", () => {
+  assert.equal(opaqueBounds(stubCanvas(64, 64, () => false)).coverage, 0);
+  assert.equal(opaqueBounds(stubCanvas(64, 64, () => true)).coverage, 1);
 });

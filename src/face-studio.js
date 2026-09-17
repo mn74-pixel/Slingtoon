@@ -1,4 +1,5 @@
-import { FaceVision } from "./face-vision.js?v=0.26.0";
+import { FaceVision } from "./face-vision.js?v=0.27.0";
+import { DEFAULT_MIMIC_STRENGTH, MAX_MIMIC_STRENGTH, MIMIC_EXPRESSIONS } from "./face-mimic.js?v=0.27.0";
 import {
   DEFAULT_OUTLINE_STRENGTH,
   DEFAULT_PORTRAIT_MODE,
@@ -11,7 +12,7 @@ import {
   normalizeOutlineStrength,
   normalizePortraitMode,
   normalizePortraitStyle,
-} from "./portrait.js?v=0.26.0";
+} from "./portrait.js?v=0.27.0";
 
 export const MODE_COPY = Object.freeze({
   [PORTRAIT_MODES.CUTOUT]: {
@@ -34,7 +35,20 @@ export const MODE_COPY = Object.freeze({
   },
 });
 
+const MIMIC_LABELS = Object.freeze({
+  neutral: "SPOKÓJ", nervous: "NERWY", airborne: "LOT", panic: "PANIKA",
+  impact: "BĘC", suspicious: "PODEJRZLIWY", serene: "ZEN", bracing: "BRACE",
+  hopeful: "NADZIEJA", dizzy: "ZAWROTY", victory: "WYGRANA", defeat: "PORAŻKA",
+});
+const normalizeMimicStrength = (value) => {
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.max(0, Math.min(MAX_MIMIC_STRENGTH, number)) : DEFAULT_MIMIC_STRENGTH;
+};
+
 const PREVIEW_SIZE = 640;
+// Poniżej tego wycinek jest pusty albo jest z niego skrawek — nie ma czego
+// wystrzelić z procy. Prawdziwe zdjęcie daje tu 40–70%.
+const MIN_PORTRAIT_COVERAGE = 0.04;
 const MAX_ANALYSIS_EDGE = 1024;
 const MAX_FILE_SIZE = 30 * 1024 * 1024;
 
@@ -157,6 +171,7 @@ export class FaceStudio {
     this.mode = DEFAULT_PORTRAIT_MODE;
     this.styleStrength = normalizePortraitStyle(DEFAULT_PORTRAIT_STYLE);
     this.outlineStrength = normalizeOutlineStrength(DEFAULT_OUTLINE_STRENGTH);
+    this.mimicStrength = DEFAULT_MIMIC_STRENGTH;
     this.hasAppliedFace = false;
     this.snapshot = null;
     this.analysisToken = 0;
@@ -165,10 +180,11 @@ export class FaceStudio {
     this.render();
     this.renderPortraitPreview();
     this.updateStyleUi();
+    this.updateMimicUi();
   }
 
   bindEvents() {
-    const { backdrop, cancel, confirm, cutoutMode, remove, replace, rotate, styleStrength, toonMode } = this.elements;
+    const { backdrop, cancel, confirm, cutoutMode, mimicStrength, remove, replace, rotate, styleStrength, toonMode } = this.elements;
     replace.addEventListener("click", () => this.requestFile());
     rotate.addEventListener("click", () => this.rotatePhoto());
     confirm.addEventListener("click", () => this.apply());
@@ -183,6 +199,13 @@ export class FaceStudio {
       this.updateStyleUi();
       this.schedulePortrait();
     });
+    // The strip re-bakes on release, not on every pixel of the drag: twelve
+    // warps per input event would stutter on a phone for no extra information.
+    mimicStrength.addEventListener("input", () => {
+      this.mimicStrength = normalizeMimicStrength(mimicStrength.value);
+      this.updateMimicUi();
+    });
+    mimicStrength.addEventListener("change", () => this.schedulePortrait());
     document.addEventListener("keydown", (event) => {
       if (event.key === "Escape" && !this.elements.root.hidden) this.cancel();
     });
@@ -263,8 +286,16 @@ export class FaceStudio {
     this.analysisCanvas = analysisCanvas;
     this.analysis = analysis;
     this.previewMask = createHeadMaskCanvas(analysis.mask, analysis.headBounds, [92, 225, 189, 170]);
-    this.refreshPortrait();
+    const built = this.refreshPortrait();
     this.render();
+    if (!built) {
+      // Zdarza się, gdy MediaPipe znajdzie twarz, ale nie znajdzie człowieka:
+      // maska wraca pusta, wycinek jest przezroczysty i gracz zatwierdza
+      // niewidzialną głowę. Widziane na rysunku podanym jako zdjęcie.
+      this.setBusy(false, "Znalazłem twarz, ale nie udało się oddzielić głowy od tła — wycinek wyszedł pusty. Spróbuj zdjęcia z aparatu, na którym widać ramiona.");
+      this.elements.confirm.disabled = true;
+      return;
+    }
     this.setBusy(
       false,
       analysis.headBounds.foundHair
@@ -399,6 +430,7 @@ export class FaceStudio {
     slider.value = String(cutout ? this.outlineStrength : this.styleStrength);
     slider.setAttribute("aria-label", copy.heading);
     this.elements.styleValue.textContent = `${Math.round((cutout ? this.outlineStrength : this.styleStrength) * 100)}%`;
+    this.updateMimicUi();
     this.elements.styleHeading.textContent = copy.heading;
     this.elements.styleNote.textContent = copy.note;
     this.elements.title.textContent = copy.title;
@@ -419,14 +451,18 @@ export class FaceStudio {
   }
 
   refreshPortrait() {
-    if (!this.analysisCanvas || !this.analysis) return;
+    if (!this.analysisCanvas || !this.analysis) return false;
     this.portrait = createPortrait(this.analysisCanvas, this.analysis, {
       mode: this.mode,
       style: this.styleStrength,
       outline: this.outlineStrength,
+      mimic: this.mimicStrength,
     });
     this.renderPortraitPreview();
-    this.elements.confirm.disabled = false;
+    this.renderMimicStrip();
+    const usable = (this.portrait.metadata.coverage ?? 1) >= MIN_PORTRAIT_COVERAGE;
+    this.elements.confirm.disabled = !usable;
+    return usable;
   }
 
   render() {
@@ -493,6 +529,37 @@ export class FaceStudio {
     context.textBaseline = "middle";
     context.font = "900 15px system-ui, sans-serif";
     context.fillText("GŁOWA + WŁOSY WYKRYTE", labelX + labelWidth / 2, labelY + 21);
+  }
+
+  updateMimicUi() {
+    const { mimic, mimicStrength, mimicValue } = this.elements;
+    mimicStrength.value = String(this.mimicStrength);
+    mimicValue.textContent = `${Math.round(this.mimicStrength * 100)}%`;
+    mimic.classList.toggle("is-off", this.mimicStrength <= 0);
+    // Only a photo head warps. A drawn portrait already has drawn features.
+    mimic.hidden = this.mode !== PORTRAIT_MODES.CUTOUT;
+  }
+
+  // Every expression the game can ask for, on the player's own face, before they
+  // accept it. Nobody can judge this feature from a description of it.
+  renderMimicStrip() {
+    const strip = this.elements.mimicStrip;
+    strip.replaceChildren();
+    const sheet = this.portrait?.expressions;
+    if (!sheet || this.mode !== PORTRAIT_MODES.CUTOUT) return;
+    for (const name of MIMIC_EXPRESSIONS) {
+      const source = sheet[name];
+      if (!source) continue;
+      const figure = document.createElement("figure");
+      const canvas = document.createElement("canvas");
+      canvas.width = 116;
+      canvas.height = 116;
+      canvas.getContext("2d").drawImage(source, 0, 0, canvas.width, canvas.height);
+      const caption = document.createElement("figcaption");
+      caption.textContent = MIMIC_LABELS[name] ?? name;
+      figure.append(canvas, caption);
+      strip.append(figure);
+    }
   }
 
   renderPortraitPreview() {

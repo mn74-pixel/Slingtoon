@@ -1,3 +1,5 @@
+import { DEFAULT_MIMIC_STRENGTH, buildExpressionSheet, mimicAnchors, opaqueBounds } from "./face-mimic.js?v=0.27.0";
+
 const clamp = (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value));
 
 export const DEFAULT_PORTRAIT_STYLE = 0.78;
@@ -5,6 +7,8 @@ export const MAX_OUTLINE_WIDTH = 15;
 export const PORTRAIT_MODES = Object.freeze({ CUTOUT: "cutout", TOON: "toon" });
 // Likeness beats stylisation: the default keeps the player's real face.
 export const DEFAULT_PORTRAIT_MODE = PORTRAIT_MODES.CUTOUT;
+// Zapas przy krawędzi kadru, w pikselach portretu 512 px, na ruch min.
+const MIMIC_HEADROOM = 26;
 export const DEFAULT_OUTLINE_STRENGTH = 0.34;
 export const FACE_CATEGORIES = Object.freeze({
   BACKGROUND: 0,
@@ -131,6 +135,39 @@ export function isHeadPixel(category, normalizedX, normalizedY, headBounds) {
     return earBand && verticalBand;
   }
   return false;
+}
+
+// How far the cut-out has to shrink, about the middle of the frame, to leave a
+// margin the expressions can move into. Scaling about the centre and not about
+// the photo's own box matters: the head has to stay where the renderer expects
+// it, only smaller.
+export function fitInsideFrame(canvas, margin) {
+  const bounds = opaqueBounds(canvas);
+  const middle = canvas.width / 2;
+  let scale = 1;
+  const pull = (edge, target) => {
+    const span = edge - middle;
+    if (Math.abs(span) < 1e-6) return;
+    scale = Math.min(scale, (target - middle) / span);
+  };
+  if (bounds.left < margin) pull(bounds.left, margin);
+  if (bounds.top < margin) pull(bounds.top, margin);
+  if (bounds.right > canvas.width - 1 - margin) pull(bounds.right, canvas.width - 1 - margin);
+  if (bounds.bottom > canvas.height - 1 - margin) pull(bounds.bottom, canvas.height - 1 - margin);
+  return { scale: Math.max(0.5, Math.min(1, scale)), bounds };
+}
+
+function shrinkAboutCentre(canvas, scale, make) {
+  const surface = make(canvas.width, canvas.height);
+  const context = surface.getContext("2d");
+  context.imageSmoothingEnabled = true;
+  context.imageSmoothingQuality = "high";
+  const middle = canvas.width / 2;
+  context.translate(middle, middle);
+  context.scale(scale, scale);
+  context.translate(-middle, -middle);
+  context.drawImage(canvas, 0, 0);
+  return surface;
 }
 
 function createCanvas(width, height) {
@@ -332,7 +369,7 @@ function tintLayer(layer, color) {
 // The cut-out keeps the photograph itself. Nothing is redrawn, so the head in
 // the game still looks like the person; only the background is removed and an
 // optional comic outline separates it from a busy stage.
-export function createCutoutPortrait(sourceCanvas, analysis, outlineStrength = DEFAULT_OUTLINE_STRENGTH, outputSize = 512) {
+export function createCutoutPortrait(sourceCanvas, analysis, outlineStrength = DEFAULT_OUTLINE_STRENGTH, outputSize = 512, mimicStrength = DEFAULT_MIMIC_STRENGTH) {
   const { landmarks, mask } = analysis;
   const headBounds = analysis.headBounds ?? deriveHeadBounds(landmarks, mask);
   const transform = createPortraitTransform(headBounds, sourceCanvas.width, sourceCanvas.height, outputSize);
@@ -352,11 +389,21 @@ export function createCutoutPortrait(sourceCanvas, analysis, outlineStrength = D
     sourceCanvas.height * transform.scale,
   );
 
-  const canvas = createCanvas(outputSize, outputSize);
-  const context = canvas.getContext("2d");
+  const composed = createCanvas(outputSize, outputSize);
+  const composedContext = composed.getContext("2d");
   const outlineWidth = outlineWidthFor(outlineStrength);
-  if (outlineWidth >= 0.5) drawOffsetOutline(context, tintLayer(silhouette, "rgb(27, 20, 44)"), outlineWidth);
-  context.drawImage(photo, 0, 0);
+  if (outlineWidth >= 0.5) drawOffsetOutline(composedContext, tintLayer(silhouette, "rgb(27, 20, 44)"), outlineWidth);
+  composedContext.drawImage(photo, 0, 0);
+
+  // A collar that runs all the way to the bottom of the frame leaves the
+  // expressions nowhere to go: tilting the head four degrees swings it straight
+  // out of the canvas, and the guard then throws the whole tilt away. Easing the
+  // whole cut-out in by a few percent buys that room back. Measured on a real
+  // photograph it costs about 3% of head size — invisible — and it is what keeps
+  // the wry, dizzy and squashed faces from collapsing back to a still photo.
+  const headroom = fitInsideFrame(composed, MIMIC_HEADROOM);
+  const canvas = headroom.scale < 1 ? shrinkAboutCentre(composed, headroom.scale, createCanvas) : composed;
+  const context = canvas.getContext("2d");
 
   const face = headBounds.face;
   const metadata = {
@@ -372,13 +419,33 @@ export function createCutoutPortrait(sourceCanvas, analysis, outlineStrength = D
     hasHairMask: headBounds.foundHair,
   };
   canvas.slingtoonPortrait = metadata;
-  return { image: canvas, metadata, headBounds };
+
+  // The expressions are baked here, once, while the photo is being accepted.
+  // The game then only ever picks an already-finished image, so a face that
+  // pulls faces costs nothing per frame.
+  const middle = outputSize / 2;
+  const toPortrait = (point) => {
+    const mapped = transform.map(point);
+    return {
+      x: middle + (mapped.x - middle) * headroom.scale,
+      y: middle + (mapped.y - middle) * headroom.scale,
+    };
+  };
+  const anchors = mimicAnchors(landmarks, toPortrait);
+  const faceHeight = face.height * sourceCanvas.height * transform.scale * headroom.scale;
+  const bounds = opaqueBounds(canvas);
+  metadata.coverage = bounds.coverage;
+  const expressions = buildExpressionSheet(canvas, anchors, faceHeight, createCanvas, mimicStrength, bounds);
+  metadata.mimicStrength = mimicStrength;
+  metadata.mimicExpressions = Object.keys(expressions).length;
+
+  return { image: canvas, metadata, headBounds, expressions };
 }
 
 export function createPortrait(sourceCanvas, analysis, options = {}) {
   return normalizePortraitMode(options.mode) === PORTRAIT_MODES.TOON
     ? createToonPortrait(sourceCanvas, analysis, options.style, options.outputSize)
-    : createCutoutPortrait(sourceCanvas, analysis, options.outline, options.outputSize);
+    : createCutoutPortrait(sourceCanvas, analysis, options.outline, options.outputSize, options.mimic);
 }
 
 function averagePoint(landmarks, indices, transform) {
@@ -552,6 +619,7 @@ export function createToonPortrait(sourceCanvas, analysis, style = DEFAULT_PORTR
     faceAspect: (face.width * sourceCanvas.width) / Math.max(1, face.height * sourceCanvas.height),
     hasHairMask: headBounds.foundHair,
   };
+  metadata.coverage = opaqueBounds(canvas).coverage;
   canvas.slingtoonPortrait = metadata;
   return { image: canvas, metadata, headBounds };
 }
