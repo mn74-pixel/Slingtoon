@@ -543,7 +543,16 @@ test("the campaign asks for many different shots, not one shot eighty times", ()
   const distances = LEVELS.map((level) => level.goal.x - level.anchor.x);
   const heights = LEVELS.map((level) => level.goal.y);
   const spread = Math.max(...distances) - Math.min(...distances);
-  assert.ok(spread >= 450, `flight length only spans ${spread} px; the campaign is one shot again`);
+  const ratio = Math.max(...distances) / Math.min(...distances);
+  // This floor was 450 px while the shortest flight was 482 px long. The bands
+  // then moved right, because a short shot ending at x=655 of 1280 left the
+  // mission in the left half of the screen and the right half as wallpaper: the
+  // narrowest mission went from 48% of the width to 58%, and the count ending
+  // before 70% from thirty-one to ten. That bought back 46 px of absolute
+  // spread. What has to survive is the feel of a different shot, which is a
+  // ratio: the longest flight is still three quarters longer than the shortest.
+  assert.ok(ratio >= 1.6, `longest flight is only ${ratio.toFixed(2)}x the shortest; the campaign is one shot again`);
+  assert.ok(spread >= 400, `flight length only spans ${spread} px; the campaign is one shot again`);
   assert.ok(Math.max(...heights) - Math.min(...heights) >= 250, "every goal sits at the same height");
 
   // No band of 150 px may hold more than half the campaign.

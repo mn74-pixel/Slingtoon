@@ -1,7 +1,7 @@
-import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.27.0";
-import { clientPointToWorld, createCropFreeViewport } from "./viewport.js?v=0.27.0";
-import { drawInteractions, drawObjective } from "./interactions-renderer.js?v=0.27.0";
-import { drawCampaignGoal, drawCampaignScene, drawWorldCompanion, setSceneBleed } from "./world-renderer.js?v=0.27.0";
+import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.28.0";
+import { clientPointToWorld, createCropFreeViewport } from "./viewport.js?v=0.28.0";
+import { drawInteractions, drawObjective } from "./interactions-renderer.js?v=0.28.0";
+import { drawCampaignGoal, drawCampaignScene, drawWorldCompanion, setSceneBleed } from "./world-renderer.js?v=0.28.0";
 
 const PALETTE = Object.freeze({
   ink: "#19142d",
@@ -396,13 +396,33 @@ export class GameRenderer {
     }
     ctx.strokeStyle = PALETTE.ink;
     ctx.lineWidth = 5;
-    ctx.beginPath(); ctx.moveTo(65, 120); ctx.quadraticCurveTo(360, 180, 650, 120); ctx.stroke();
-    for (const [x, colour] of [[132, PALETTE.gold], [245, PALETTE.coral], [575, PALETTE.violet]]) {
+    // Sznurek biegnie przez cały pokój, nie do połowy.
+    ctx.beginPath(); ctx.moveTo(65, 120); ctx.quadraticCurveTo(420, 186, 780, 128); ctx.quadraticCurveTo(1060, 92, 1235, 130); ctx.stroke();
+    for (const [x, colour] of [[132, PALETTE.gold], [245, PALETTE.coral], [575, PALETTE.violet], [790, PALETTE.gold], [1010, PALETTE.coral]]) {
       ctx.fillStyle = colour; ctx.fillRect(x, 128, 70, 68); ctx.strokeRect(x, 128, 70, 68);
     }
+    this.drawLaundryCorner(ctx);
     ctx.fillStyle = "rgba(255,255,255,.72)";
     ctx.font = "900 38px system-ui, sans-serif";
     ctx.fillText("PRALNIA", 55, 75);
+  }
+
+  // Prawa strona pralni. Cztery scenerie domowe kończyły się w połowie kadru —
+  // pralnia nie miała nic za x=665, salon za 773, kuchnia za 883, jezioro za
+  // 515. Na ekranie czyta się to jako „wszystko ściśnięte po lewej", niezależnie
+  // od tego, jak rozstawione są przeszkody.
+  drawLaundryCorner(ctx) {
+    roundedRect(ctx, 985, 238, 245, 18, 6); strokeFill(ctx, "#8f7bb4", PALETTE.ink, 5);
+    for (const [x, colour, height] of [[1005, "#ffd35f", 52], [1065, "#6fd7c8", 66], [1125, "#ff8b79", 44], [1180, "#a28bff", 58]]) {
+      roundedRect(ctx, x, 238 - height, 42, height, 8); strokeFill(ctx, colour, PALETTE.ink, 5);
+    }
+    roundedRect(ctx, 1040, 404, 180, 106, 16); strokeFill(ctx, "#f0e2c4", PALETTE.ink, 7);
+    ctx.strokeStyle = "rgba(25,20,45,.35)"; ctx.lineWidth = 4;
+    for (let x = 1062; x < 1215; x += 26) { ctx.beginPath(); ctx.moveTo(x, 412); ctx.lineTo(x, 502); ctx.stroke(); }
+    for (const [x, y, colour] of [[1075, 392, "#ff8b79"], [1128, 384, "#6fd7c8"], [1170, 396, "#ffd35f"]]) {
+      ctx.fillStyle = colour; ctx.beginPath(); ctx.arc(x, y, 22, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 5; ctx.stroke();
+    }
   }
 
   drawLivingRoomScene(ctx) {
@@ -418,22 +438,69 @@ export class GameRenderer {
     ctx.fillStyle = PALETTE.coral; ctx.font = "900 35px system-ui, sans-serif"; ctx.textAlign = "center";
     ctx.fillText("SZTUKA", 187, 158); ctx.fillStyle = PALETTE.ink; ctx.font = "900 16px system-ui, sans-serif"; ctx.fillText("(podobno)", 187, 191);
     ctx.textAlign = "start";
+    this.drawLivingRoomCorner(ctx);
     ctx.fillStyle = "rgba(25,20,45,.55)"; ctx.font = "900 27px system-ui, sans-serif"; ctx.fillText("SALON · STREFA ZAGINIĘĆ", 55, 65);
+  }
+
+  // Prawa strona salonu. Pierwsza wersja postawiła tu regał pełny jasnych
+  // książek — i cel misji 2 i 4 wylądował dokładnie na nim. Cele w tej scenerii
+  // siadają nisko (y 380–460) i po prawej (x 1000–1200), więc meble trzymają
+  // się nad tym pasem albo na lewo od niego, w kolorach bliskich ścianie. Głębia
+  // zamiast konkurencji.
+  drawLivingRoomCorner(ctx) {
+    const recede = "rgba(25, 20, 45, 0.5)";
+    roundedRect(ctx, 812, 182, 124, 96, 12); strokeFill(ctx, "#8b72d9", recede, 6);
+    ctx.fillStyle = "rgba(255,245,217,.5)"; ctx.fillRect(828, 198, 92, 64);
+    roundedRect(ctx, 968, 246, 208, 116, 12); strokeFill(ctx, "#6250a1", recede, 6);
+    ctx.strokeStyle = recede; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(974, 306); ctx.lineTo(1170, 306); ctx.stroke();
+    for (const [x, y, w, h] of [
+      [980, 262, 14, 44], [998, 268, 12, 38], [1014, 264, 16, 42],
+      [980, 322, 13, 40], [997, 316, 15, 46], [1120, 330, 44, 32],
+    ]) { ctx.fillStyle = "rgba(255, 211, 95, 0.42)"; ctx.fillRect(x, y, w, h); ctx.strokeRect(x, y, w, h); }
+    ctx.strokeStyle = recede; ctx.lineWidth = 6;
+    ctx.beginPath(); ctx.moveTo(1226, 510); ctx.lineTo(1226, 330); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(1186, 326); ctx.lineTo(1266, 326); ctx.lineTo(1250, 268); ctx.lineTo(1202, 268); ctx.closePath();
+    ctx.fillStyle = "rgba(229, 198, 111, 0.58)"; ctx.fill(); ctx.stroke();
+    roundedRect(ctx, 880, 454, 58, 56, 10); strokeFill(ctx, "#8a6048", recede, 5);
+    ctx.fillStyle = "rgba(87, 168, 111, 0.66)";
+    for (const [dx, dy, r] of [[-12, -16, 20], [12, -22, 17], [0, -36, 15]]) {
+      ctx.beginPath(); ctx.arc(909 + dx, 454 + dy, r, 0, Math.PI * 2); ctx.fill();
+    }
   }
 
   drawKitchenScene(ctx) {
     this.drawRoomBase(ctx, "#ffe4b5", "#eea780", "#d8c7a8", "#62485f");
     ctx.fillStyle = "rgba(255,255,255,.23)";
     for (let y = 48; y < 430; y += 70) for (let x = (y / 70) % 2 * 35; x < WORLD.width; x += 70) ctx.fillRect(x, y, 66, 66);
-    ctx.fillStyle = "#49385f"; ctx.fillRect(300, 295, 600, 28);
-    for (const x of [315, 510, 705]) {
+    ctx.fillStyle = "#49385f"; ctx.fillRect(300, 295, 772, 28);
+    for (const x of [315, 510, 705, 890]) {
       roundedRect(ctx, x, 323, 178, 176, 10); strokeFill(ctx, x === 510 ? "#ff8b79" : "#7c63e7", PALETTE.ink, 6);
       ctx.fillStyle = PALETTE.gold; ctx.beginPath(); ctx.arc(x + 89, 350, 7, 0, Math.PI * 2); ctx.fill();
     }
     ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 8;
     ctx.beginPath(); ctx.moveTo(100, 120); ctx.lineTo(100, 205); ctx.moveTo(170, 120); ctx.lineTo(170, 205); ctx.stroke();
     ctx.fillStyle = PALETTE.coral; ctx.beginPath(); ctx.arc(100, 218, 25, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    this.drawKitchenCorner(ctx);
     ctx.fillStyle = "rgba(25,20,45,.58)"; ctx.font = "900 28px system-ui, sans-serif"; ctx.fillText("KUCHNIA · BHP WYSZŁO", 55, 65);
+  }
+
+  // Koniec kuchni: lodówka i półka ze słoikami. Pierwsza wersja postawiła je w
+  // pełnym kontraście i cel misji 5 wylądował na drzwiach lodówki. Tak samo jak
+  // w salonie: prawa strona cofa się kolorem, żeby cel zawsze czytał się na
+  // wierzchu, a półka przenosi się na pustą ścianę po lewej.
+  drawKitchenCorner(ctx) {
+    const recede = "rgba(25, 20, 45, 0.45)";
+    roundedRect(ctx, 1146, 250, 124, 260, 14); strokeFill(ctx, "rgba(223, 231, 240, 0.62)", recede, 6);
+    ctx.strokeStyle = recede; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(1152, 336); ctx.lineTo(1264, 336); ctx.stroke();
+    ctx.fillStyle = "rgba(143, 123, 180, 0.62)";
+    ctx.fillRect(1248, 280, 10, 42); ctx.strokeRect(1248, 280, 10, 42);
+    ctx.fillRect(1248, 354, 10, 46); ctx.strokeRect(1248, 354, 10, 46);
+    roundedRect(ctx, 508, 172, 126, 14, 5); strokeFill(ctx, "rgba(143, 123, 180, 0.66)", recede, 4);
+    for (const [x, colour] of [[520, "rgba(255, 139, 121, 0.6)"], [556, "rgba(111, 215, 200, 0.6)"], [592, "rgba(255, 211, 95, 0.6)"]]) {
+      roundedRect(ctx, x, 136, 30, 36, 6); strokeFill(ctx, colour, recede, 4);
+    }
   }
 
   drawOutdoorBase(ctx, skyTop, skyBottom, grass) {
@@ -457,7 +524,22 @@ export class GameRenderer {
       ctx.fillStyle = "#74513f"; ctx.fillRect(x + 36, 300, 20, 150);
       ctx.fillStyle = colour; ctx.beginPath(); ctx.arc(x + 45, 275, 70, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
     }
+    this.drawGardenCorner(ctx);
     ctx.fillStyle = "rgba(25,20,45,.58)"; ctx.font = "900 28px system-ui, sans-serif"; ctx.fillText("OGRÓD · STREFA GNOMA", 55, 65);
+  }
+
+  // Koniec ogrodu: drzewo i płot. Krasnal-cel stoi nisko przy x=1080, więc płot
+  // jest niski i stoi za nim, a korona drzewa wysoko nad pasem rozgrywki.
+  drawGardenCorner(ctx) {
+    ctx.fillStyle = "#74513f"; ctx.fillRect(1176, 244, 20, 214);
+    ctx.fillStyle = "#4f9c63"; ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 6;
+    ctx.beginPath(); ctx.arc(1186, 222, 74, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = "rgba(25,20,45,.55)"; ctx.lineWidth = 5;
+    ctx.fillStyle = "rgba(196, 160, 118, 0.78)";
+    for (let x = 986; x < 1272; x += 34) { ctx.fillRect(x, 452, 20, 62); ctx.strokeRect(x, 452, 20, 62); }
+    ctx.beginPath(); ctx.moveTo(980, 470); ctx.lineTo(1274, 470); ctx.stroke();
+    roundedRect(ctx, 906, 462, 56, 50, 8); strokeFill(ctx, "#c0705f", "rgba(25,20,45,.55)", 5);
+    ctx.beginPath(); ctx.arc(934, 458, 15, Math.PI, 0); ctx.strokeStyle = "rgba(25,20,45,.55)"; ctx.stroke();
   }
 
   drawParkScene(ctx) {
@@ -483,7 +565,27 @@ export class GameRenderer {
       ctx.strokeStyle = i % 2 ? "rgba(255,245,217,.6)" : "rgba(25,20,45,.2)";
       ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(535 + i * 73, y); ctx.quadraticCurveTo(560 + i * 73, y - 8, 590 + i * 73, y); ctx.stroke();
     }
+    this.drawLakeCorner(ctx);
     ctx.fillStyle = "rgba(25,20,45,.6)"; ctx.font = "900 28px system-ui, sans-serif"; ctx.fillText("JEZIORO · RATOWNIK: KACZKA", 55, 65);
+  }
+
+  // Koniec jeziora: przywiązana łódka i trzciny. Woda ciągnęła się przez pół
+  // ekranu bez jednego punktu zaczepienia dla oka.
+  drawLakeCorner(ctx) {
+    ctx.strokeStyle = "rgba(25,20,45,.55)"; ctx.lineWidth = 6;
+    ctx.fillStyle = "#b9835d";
+    // Łódka stoi w pustym środku jeziora, nie przy prawej krawędzi: tam siada
+    // kaczka-cel i pierwsza wersja schowała łódkę za nią.
+    ctx.beginPath();
+    ctx.moveTo(646, 494); ctx.lineTo(844, 494); ctx.lineTo(810, 540); ctx.lineTo(680, 540); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(670, 508); ctx.lineTo(820, 508); ctx.stroke();
+    ctx.fillStyle = "#e9c18e"; ctx.fillRect(728, 470, 34, 26); ctx.strokeRect(728, 470, 34, 26);
+    ctx.beginPath(); ctx.moveTo(828, 496); ctx.lineTo(892, 462); ctx.stroke();
+    ctx.strokeStyle = "rgba(47, 125, 103, 0.9)"; ctx.lineWidth = 7;
+    for (const [x, h] of [[1198, 74], [1218, 96], [1240, 62], [1260, 86]]) {
+      ctx.beginPath(); ctx.moveTo(x, 528); ctx.quadraticCurveTo(x + 10, 528 - h / 2, x + 4, 528 - h); ctx.stroke();
+    }
   }
 
   drawSceneGag(ctx, text, accent = PALETTE.gold, x = 914, y = 90) {
