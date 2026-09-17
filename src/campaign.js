@@ -1,6 +1,6 @@
 // Authored campaign layouts. Coordinates describe actual colliders, not decoration.
 // Routes are measured offline with the same solver used by the game.
-import { CAMPAIGN_ROUTES } from "./campaign-routes.js?v=0.27.0";
+import { CAMPAIGN_ROUTES } from "./campaign-routes.js?v=0.28.0";
 
 export const CHAPTERS = Object.freeze([
   { id: "home", name: "Domowy chaos", subtitle: "Od drzemki do pierwszej kaczki", scene: "bedroom" },
@@ -75,17 +75,55 @@ const ANCHOR_X = 173;
 // keeps using the full width. Height carries the difficulty, which the measured
 // win-share supports: a low target is hard at any distance (mid-low 17.4%,
 // long-low 19.2%) while a high one is forgiving (short-high 31.1%).
-const REACH = { short: 655, mid: 890, long: 1130 };
-// Past here the measured interception window collapses to a line.
-const MAX_REACH = 1010;
-const HEIGHT = { high: 205, mid: 340, low: 470 };
-// The measured mid-air window at x=1130 runs y 303..529, so a long shot cannot
-// also be a high one. Every other pairing is reachable.
+// Absolute target columns. The first version of these bands left a third of the
+// screen empty: a short shot ended at x=655 of 1280, so the mission lived in the
+// left half and the right half was wallpaper. The whole set moves right.
+const REACH = { short: 790, mid: 985, long: 1105 };
+// Past here the measured interception window falls below 120 px and aiming turns
+// into guessing.
+const MAX_REACH = 1000;
+
+// One height table for every distance was wrong, and raising it proved it: the
+// interception window narrows as the target moves away. Re-measured with the
+// game's own solver, every free flight from the sling, sampled every 5 px:
+//
+//   x= 790  y  93..551      x=1040  y 261..551
+//   x= 845  y 128..551      x=1095  y 299..551
+//   x= 930  y 187..551      x=1150  y 343..551
+//   x= 985  y 229..551      x=1205  y 390..551
+//
+// The long band sits at 1105 and not further. At 1150 the campaign still built,
+// but two missions lost their optional star: a long shot spends most of the
+// launch power, so there is only one way to fly it, and no second route left to
+// hang a star on. Distance past that point buys wallpaper and costs a choice.
+//
+// A target at y=160 is a fine high shot at 790 and physically unreachable at
+// 985. So each band carries its own heights, each one inside the window at that
+// band's far edge (the column includes the ±55 px jitter) with room left for the
+// ±34 px vertical jitter on top. A long shot still cannot be a high one.
 const SHOT_GRID = Object.freeze({
-  short: ["high", "mid", "low"],
-  mid: ["high", "mid", "low"],
-  long: ["mid", "low"],
+  short: { high: 180, mid: 330, low: 480 },
+  mid: { high: 300, mid: 410, low: 505 },
+  long: { mid: 430, low: 515 },
 });
+const HEIGHT_ORDER = Object.freeze(["high", "mid", "low"]);
+
+// The top of the interception envelope, measured with the game's own solver:
+// the highest point a free flight from the sling still reaches at that column.
+const REACH_FLOOR = Object.freeze([
+  [735, 62], [790, 93], [845, 128], [930, 187], [985, 229],
+  [1040, 261], [1095, 299], [1150, 343], [1205, 390], [1250, 431],
+]);
+export function reachFloor(x) {
+  if (x <= REACH_FLOOR[0][0]) return REACH_FLOOR[0][1];
+  for (let i = 1; i < REACH_FLOOR.length; i += 1) {
+    const [x1, y1] = REACH_FLOOR[i];
+    if (x > x1) continue;
+    const [x0, y0] = REACH_FLOOR[i - 1];
+    return y0 + ((y1 - y0) * (x - x0)) / (x1 - x0);
+  }
+  return REACH_FLOOR[REACH_FLOOR.length - 1][1];
+}
 // The distance mix shifts with the campaign as well as the height. A single
 // shared cycle gave chapter 10 as many forgiving short lobs as chapter 1, which
 // flattened the curve even though every late target sat low. Early chapters lean
@@ -111,29 +149,82 @@ function shotFor(number, override) {
   const chapter = Math.floor((number - 1) / 8), local = (number - 1) % 8;
   const cycle = REACH_CYCLES[chapter < 3 ? 0 : chapter < 5 ? 1 : 2];
   const reach = override?.reach ?? cycle[(local + chapter) % cycle.length];
-  const options = SHOT_GRID[reach];
+  const band = SHOT_GRID[reach];
+  const options = HEIGHT_ORDER.filter((name) => band[name] !== undefined);
   // Height climbs from forgiving to demanding across the campaign; a chapter's
   // opener and breather step back down it.
   const rank = Math.round((chapter / (CHAPTERS.length - 1)) * (options.length - 1) + LOCAL_STEP[local] * 0.6);
-  const height = override?.height ?? options[Math.max(0, Math.min(options.length - 1, rank))];
+  const requested = override?.height ?? options[Math.max(0, Math.min(options.length - 1, rank))];
+  // An override may ask for a height this distance does not have — a long high
+  // shot does not exist — so it falls back to the nearest one that does.
+  const height = band[requested] !== undefined ? requested : options[0];
   return {
     x: Math.round(REACH[reach] + jitter(number, 55)),
-    y: Math.round(HEIGHT[height] + jitter(number + 91, 34)),
+    y: Math.round(band[height] + jitter(number + 91, 34)),
   };
 }
 
-// Obstacles must stay far enough apart to be read as separate problems. Scaling a
-// mission down to a short shot squeezed them together: mission 16 ended up with
-// two objects 69 px apart, which reads as one lump rather than two decisions.
-// So the layout constrains the shot, not only the other way round — a mission
-// carrying three obstacles earns a longer flight.
-const MIN_OBSTACLE_GAP = 130;
-const itemCentre = (item) => item.entry ? item.entry.x : item.a ? (item.a.x + item.b.x) / 2 : item.x + (item.width ?? 0) / 2;
+// Raised from 130 after looking at the renders rather than the numbers: 130 px
+// on a 1280-wide world is two objects touching shoulders. Seventeen missions had
+// a pair closer than that anyway, because this guard only ever looked at the
+// interactions and never at the goal — mission 88 had an obstacle 40 px from the
+// target it was supposed to guard.
+const MIN_OBSTACLE_GAP = 165;
+const itemCentre = (item) => item.entry ? item.entry.x : item.a ? (item.a.x + item.b.x) / 2 : item.pendulum ? item.pendulum.x : item.x + (item.width ?? 0) / 2;
 function tightestGap(items) {
   const xs = items.map(itemCentre).sort((a, b) => a - b);
   let gap = Infinity;
   for (let i = 1; i < xs.length; i += 1) gap = Math.min(gap, xs[i] - xs[i - 1]);
   return gap;
+}
+
+// Moving one object sideways, keeping its parts together. A portal is two rings,
+// a spring is two ends; shifting only the item's own x tore them apart.
+function shiftItem(item, dx) {
+  if (!dx) return item;
+  const out = { ...item };
+  if (typeof out.x === "number") out.x += dx;
+  for (const key of ["entry", "exit", "a", "b", "pendulum"]) {
+    if (out[key]) out[key] = { ...out[key], x: out[key].x + dx };
+  }
+  return out;
+}
+
+// Stretching the whole mission to pull one crowded pair apart was the wrong
+// tool: nineteen missions ended up pinned against the far reach cap and the pair
+// stayed crowded anyway, because there was nowhere further to go. The shot is a
+// global decision; crowding is local. So the objects are nudged apart in place,
+// right to left, with the goal standing still.
+//
+// Nothing is pushed closer than this to the sling — a hero boxed in by an
+// obstacle at launch cannot read its own shot.
+const SLING_CLEARANCE = 150;
+function relaxGaps(items, goalX, gap = MIN_OBSTACLE_GAP) {
+  const order = items.map((item, index) => ({ index, centre: itemCentre(item) }))
+    .sort((a, b) => a.centre - b.centre);
+  const shifted = [...items];
+  const columns = order.map((entry) => entry.centre);
+  const floor = ANCHOR_X + SLING_CLEARANCE;
+  // Right to left first, so nothing crowds the goal.
+  let limit = goalX;
+  for (let i = columns.length - 1; i >= 0; i -= 1) {
+    columns[i] = Math.max(floor, Math.min(columns[i], limit - gap));
+    limit = columns[i];
+  }
+  // Then left to right, because pulling left alone cannot help a layout whose
+  // objects are already bunched by the sling: mission 27 had two of them 114 px
+  // apart with a quarter of the flight standing empty to their right.
+  let previous = floor - gap;
+  for (let i = 0; i < columns.length; i += 1) {
+    const headroom = goalX - gap * (columns.length - i);
+    columns[i] = Math.min(Math.max(columns[i], previous + gap), Math.max(floor, headroom));
+    previous = columns[i];
+  }
+  for (let i = 0; i < order.length; i += 1) {
+    const { index, centre } = order[i];
+    if (columns[i] !== centre) shifted[index] = shiftItem(shifted[index], columns[i] - centre);
+  }
+  return shifted;
 }
 
 // Horizontal rescale of an authored layout around the sling.
@@ -157,7 +248,13 @@ function scaleItem(item, factor) {
 // Missions whose layout does not survive the rotation's shape. Each entry was
 // chosen by running the offline balance tool over every shape and keeping the
 // one with the most forgiving measured route, not by guessing.
-const SHOT_OVERRIDES = Object.freeze({ 12: { reach: "short", height: "low" }, 13: { reach: "mid", height: "mid" }, 20: { reach: "long", height: "mid" }, 30: { reach: "long", height: "mid" }, 39: { reach: "mid", height: "mid" }, 45: { reach: "short", height: "low" }, 47: { reach: "long", height: "mid" }, 56: { reach: "short", height: "high" }, 58: { reach: "mid", height: "mid" }, 59: { reach: "long", height: "mid" }, 62: { reach: "mid", height: "high" }, 66: { reach: "long", height: "mid" }, 72: { reach: "mid", height: "high" }, 74: { reach: "long", height: "mid" }, 75: { reach: "short", height: "high" } });
+// Missions the balance tool could not make forgiving on their generated shot.
+// Each value is the longest flight that still passes, and among those the
+// tightest — a rescued mission must not become the easy one. Eight entries were
+// added when the campaign moved right: a longer flight spends more of the launch
+// power, which leaves less room for both a forgiving window and a second route
+// to hang the optional star on.
+const SHOT_OVERRIDES = Object.freeze({ 12: { reach: "short", height: "low" }, 13: { reach: "mid", height: "mid" }, 16: { reach: "long", height: "low" }, 20: { reach: "mid", height: "high" }, 30: { reach: "long", height: "mid" }, 35: { reach: "long", height: "mid" }, 39: { reach: "mid", height: "mid" }, 45: { reach: "short", height: "low" }, 47: { reach: "mid", height: "mid" }, 56: { reach: "short", height: "high" }, 58: { reach: "mid", height: "high" }, 59: { reach: "long", height: "mid" }, 62: { reach: "mid", height: "high" }, 66: { reach: "long", height: "mid" }, 70: { reach: "long", height: "mid" }, 72: { reach: "mid", height: "high" }, 74: { reach: "mid", height: "mid" }, 75: { reach: "short", height: "high" }, 76: { reach: "mid", height: "mid" }, 86: { reach: "long", height: "mid" } });
 const HONEST_GOAL_RADIUS = 56;
 function goalRadius(number, local) {
   const base = Math.max(HONEST_GOAL_RADIUS, Math.round(84 - (number - 9) * 0.72));
@@ -174,17 +271,27 @@ function mission(number, name, kind, authoredX, authoredY, mechanic, clue, win, 
   // shape decides where the mission actually sits in the sling's reach, and the
   // obstacles ride along so their place in the flight is unchanged.
   const shot = shotFor(number, SHOT_OVERRIDES[number]);
-  const y = shot.y;
-  // The shot may have to grow so the layout still reads. It never shrinks below
-  // what was chosen, so the campaign's spread survives the constraint.
-  const authoredGap = tightestGap(authoredInteractions);
+  // The shot may still have to grow, but only by as much as the object count
+  // actually needs: clearance from the sling plus one minimum gap per object.
+  // The old rule scaled the shortfall by the authored layout's proportions,
+  // which over-stretched — twenty-three missions ended up pinned to the far
+  // reach cap, all in one column, which is "one shot repeated" arriving through
+  // a side door. Dropping the rule entirely was worse: relaxGaps then ran out of
+  // room against the sling clearance and the tightest pair fell to 113 px.
+  const needed = SLING_CLEARANCE + authoredInteractions.length * MIN_OBSTACLE_GAP;
   const authoredReach = authoredX - ANCHOR_X;
-  const needed = Number.isFinite(authoredGap) && authoredGap > 0
-    ? authoredReach * (MIN_OBSTACLE_GAP / authoredGap)
-    : 0;
   const x = Math.round(ANCHOR_X + Math.min(Math.max(shot.x - ANCHOR_X, needed), MAX_REACH));
+  // The height has to follow where the mission actually ended up, not the band
+  // it asked for. When the spacing rule stretched a short shot out to the reach
+  // cap, its "high" target stayed high — mission 56 sat at x=1173, y=209, which
+  // no free flight reaches. It was solvable only through the mission's own
+  // furniture, which is a trap dressed as a target.
+  // The clamp keeps its own jitter, or every mission the spacing rule pushed to
+  // the reach cap lands on the same pixel: five pairs of missions ended up with
+  // byte-identical target positions, which reads as the same shot twice.
+  const y = Math.round(Math.max(shot.y, reachFloor(x) + 30 + Math.abs(jitter(number + 17, 34))));
   const factor = (x - ANCHOR_X) / authoredReach;
-  const interactions = authoredInteractions.map((item) => scaleItem(item, factor));
+  const interactions = relaxGaps(authoredInteractions.map((item) => scaleItem(item, factor)), x);
   const route = CAMPAIGN_ROUTES[number];
   const required = options.required ?? interactions.filter((item) => !["solid", "gate", "hazard", "pendulum"].includes(item.type)).map((item) => item.id);
   const surface = interactions.find((item) => item.type === "water");

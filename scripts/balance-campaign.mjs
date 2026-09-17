@@ -12,7 +12,11 @@ function distanceToPath(point, points) {
   return Math.min(...points.slice(1).map((to, i) => segmentDistance(points[i], to, point)));
 }
 function starIsReadable(point, level) {
-  if (point.x < 340 || point.x > 1090 || point.y < 145 || point.y > 470) return false;
+  // The readable band follows the campaign's reach. It used to stop at x=1090,
+  // which was fine while targets sat at 1130; once they moved out to 1150 the
+  // star candidates all fell outside it and two missions reported "no room" for
+  // a star that was simply off the end of the ruler.
+  if (point.x < 340 || point.x > 1215 || point.y < 115 || point.y > 480) return false;
   if (pointDistance(point, level.goal) < level.goal.radius + 85) return false;
   return level.interactions.every((item) => {
     // A star inside a hazard could never be collected, and a moving obstacle

@@ -244,9 +244,69 @@ for (const type of ["pendulum", "spring"]) {
 // ship a margin whose own axes fail.
 const balance = await readFile(resolve(root, "scripts/balance-campaign.mjs"), "utf8");
 assert.ok(/const steps = 2 \* Math\.max/.test(balance), "the tolerance grid needs an even step count or it never samples the centre");
-assert.ok(/const REACH = \{/.test(campaign) && /const HEIGHT = \{/.test(campaign),
+assert.ok(/const REACH = \{/.test(campaign) && /const SHOT_GRID = Object\.freeze/.test(campaign),
   "distance and height must be chosen separately; tying difficulty to distance pulled the campaign into the left half of the screen");
-assert.ok(!/long: \[[^\]]*"high"/.test(campaign), "a long shot cannot also be a high one: no trajectory reaches there");
+// One height table for every distance is wrong, and raising it proved it: the
+// interception window narrows as the target moves away, so y=160 is a fine high
+// shot at x=790 and physically unreachable at x=985.
+assert.ok(/short: \{ high:/.test(campaign) && /mid: \{ high:/.test(campaign),
+  "each distance band needs its own heights; the interception window narrows with distance");
+assert.ok(!/long: \{[^}]*high:/.test(campaign), "a long shot cannot also be a high one: no trajectory reaches there");
+
+// The layout guard used to look only at the interactions, never at the target
+// they guard, and seventeen missions shipped with a pair closer than the minimum
+// — mission 88 had an obstacle 40 px from the goal. Measured on the real levels,
+// because a regex cannot see where the objects ended up.
+const MIN_NEIGHBOUR_GAP = 160;
+const itemColumn = (item) => item.entry ? item.entry.x
+  : item.a ? (item.a.x + item.b.x) / 2
+    : item.pendulum ? item.pendulum.x : item.x + (item.width ?? 0) / 2;
+for (const level of LEVELS.slice(8)) {
+  const columns = [...level.interactions.map(itemColumn), level.goal.x].sort((a, b) => a - b);
+  for (let i = 1; i < columns.length; i += 1) {
+    const gap = columns[i] - columns[i - 1];
+    assert.ok(gap >= MIN_NEIGHBOUR_GAP,
+      `mission ${level.number}: two objects ${Math.round(gap)} px apart read as one lump, goal included`);
+  }
+  assert.ok(columns[0] - level.anchor.x >= 140,
+    `mission ${level.number}: an object sits ${Math.round(columns[0] - level.anchor.x)} px from the sling and boxes the hero in`);
+}
+assert.ok(/function relaxGaps/.test(campaign) && /const SLING_CLEARANCE/.test(campaign),
+  "crowding is local: nudge the objects apart in place instead of stretching the whole flight to the reach cap");
+
+// The campaign has to use the screen it is given. Twelve missions used to end
+// before 60% of the width and thirty-one before 70%, which reads as a game
+// squeezed into the left half whatever the obstacle spacing says.
+const reachFractions = LEVELS.slice(8).map((level) => {
+  const right = Math.max(level.goal.x, ...level.interactions.map(itemColumn));
+  return right / 1280;
+}).sort((a, b) => a - b);
+assert.ok(reachFractions[0] >= 0.55,
+  `the narrowest mission stops at ${(reachFractions[0] * 100).toFixed(0)}% of the screen`);
+// Fourteen missions still stop before 70%, and they are the short band: a short
+// shot lands at 57-66% of the width by construction. Pushing that band further
+// out is the one lever left, and it costs the distance variety the campaign is
+// built on — so the answer for those missions is the scenery, which now reaches
+// the right-hand edge, not a longer flight. Sixteen is the short band's whole
+// population; more than that means a band drifted.
+assert.ok(reachFractions.filter((value) => value < 0.7).length <= 16,
+  `${reachFractions.filter((value) => value < 0.7).length} missions stop before 70% of the screen`);
+const medianReach = reachFractions[Math.floor(reachFractions.length / 2)];
+assert.ok(medianReach >= 0.78, `the median mission stops at ${(medianReach * 100).toFixed(0)}% of the screen`);
+// Distance variety is what all of this is protecting: the shortest and longest
+// flights must stay genuinely different lengths.
+const flights = LEVELS.slice(8).map((level) => level.goal.x - level.anchor.x).sort((a, b) => a - b);
+assert.ok(flights[flights.length - 1] / flights[0] >= 1.55,
+  "the shortest and longest flights have collapsed into one shot repeated");
+
+// Four of the six hand-built home scenes had no prop at all past the middle of
+// the frame: nothing after x=665 in the laundry, 773 in the living room, 883 in
+// the kitchen, 515 at the lake. Obstacle spacing cannot fix that — the scenery
+// itself has to reach the right-hand edge.
+for (const corner of ["drawLaundryCorner", "drawLivingRoomCorner", "drawKitchenCorner", "drawGardenCorner", "drawLakeCorner"]) {
+  assert.ok(render.includes(`${corner}(ctx)`) && new RegExp(`this\\.${corner}\\(ctx\\)`).test(render),
+    `${corner} must exist and be called, or that scene stops halfway across the screen`);
+}
 assert.ok(/function scaleItem/.test(campaign), "moving a goal must carry its obstacles with it");
 for (const field of ["out.entry", "out.exit", "out.a", "out.b", "out.width", "out.pendulum"]) {
   assert.ok(campaign.includes(field), `scaleItem must rescale ${field}, or portals and ramps detach from the flight`);

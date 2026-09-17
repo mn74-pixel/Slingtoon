@@ -1,5 +1,43 @@
 # Changelog
 
+## 0.28.0 — Gra przestaje siedzieć w lewej połowie ekranu
+
+„Nadal wszystko jest bardzo wąsko rozstawione na ekranie". Zmierzone — i rzeczywiście, z dwóch niezależnych powodów naraz.
+
+### Powód pierwszy: strażnik odstępów nigdy nie patrzył na cel
+
+- reguła minimalnego odstępu z 0.26.0 sprawdzała tylko przeszkody między sobą. **Siedemnaście misji miało parę bliżej niż 130 px, a misja 88 przeszkodę 40 px od celu**, który ta przeszkoda miała chronić,
+- doszło do tego, że reguła naprawiała ciasnotę **rozciągając cały lot**. To tępe narzędzie: przy podniesionym progu **dwadzieścia trzy misje wylądowały w tej samej kolumnie**, dobite o limit zasięgu. Czyli „jeden strzał powtórzony" wchodzący tylnymi drzwiami,
+- teraz odstępy są rozsuwane **lokalnie**: obiekty przesuwają się w miejscu, najpierw od celu w lewo, potem od procy w prawo. Lot rośnie tylko o tyle, ile faktycznie wymaga liczba obiektów: zapas od procy plus jeden odstęp na obiekt. Najciaśniejsza para w całej grze — z celem włącznie — to teraz **165 px** zamiast 40, a **żadna misja nie stoi przy limicie zasięgu**.
+
+Sama korekta dwukierunkowa też była potrzebna: ciągnięcie wyłącznie w lewo nie pomaga układowi już ściśniętemu przy procy — misja 27 miała dwa obiekty 114 px od siebie i pustą ćwiartkę lotu po prawej.
+
+### Powód drugi: pasma dystansu trzymały grę w lewej połowie
+
+- krótki strzał kończył się na **x=655 z 1280**, więc misja mieszkała w lewej połowie, a prawa była tapetą. **Dwanaście misji kończyło się przed 60% szerokości, trzydzieści jeden przed 70%**,
+- obwiednia trafienia zmierzona od nowa własnym solverem gry (każdy swobodny lot z procy, próbkowany co 5 px) pokazała dużo więcej miejsca, niż zakładał stary limit — okno ma jeszcze 208 px przy x=1150. Całe pasmo przesunęło się w prawo: **790 / 985 / 1105**,
+- **misji kończących się przed 70% jest teraz czternaście zamiast trzydziestu jeden**, mediana sięga 80% szerokości, a rozrzut długości lotu zostaje realny: najdłuższy jest **1,75 raza dłuższy** od najkrótszego.
+
+### Błąd znaleziony przy okazji: cel, do którego nie da się dolecieć
+
+Wysokość była jedną tabelą dla wszystkich dystansów, a **okno trafienia zwęża się z odległością**: y=160 to dobry wysoki strzał przy x=790 i punkt fizycznie nieosiągalny przy x=985. Po przesunięciu pasm misja 56 wylądowała na x=1173, y=209 — do tego nie dolatuje żaden swobodny lot. Dało się ją przejść wyłącznie przez jej własne meble, co jest pułapką udającą cel.
+
+- każde pasmo ma teraz **własne wysokości**, każda w zmierzonym oknie tego pasma,
+- a kiedy reguła odstępów mimo wszystko wydłuży strzał, wysokość **podąża za tym, gdzie misja naprawdę wylądowała**, a nie za pasmem, o które prosiła. Pilnuje tego zmierzona krzywa `reachFloor`,
+- pierwsza wersja tego przycięcia zrobiła z pięciu par misji **bliźniaki o identycznej pozycji celu**; przycięcie ma własny rozrzut, więc wszystkie 88 pozycji są znów różne.
+
+### I powód trzeci, którego żadne liczby o przeszkodach nie widziały
+
+Cztery z sześciu ręcznie rysowanych scenerii domowych **nie miały ani jednego elementu za połową kadru**: pralnia kończyła się na x=665, salon na 773, kuchnia na 883, jezioro na 515. Można rozsuwać przeszkody dowolnie długo — jeśli sceneria urywa się w połowie, ekran nadal wygląda na ściśnięty po lewej.
+
+Pralnia dostała półkę z płynami, kosz i sznurek przez cały pokój. Salon — regał, lampę i roślinę. Kuchnia — blat przez cały pokój, czwartą szafkę i lodówkę domykającą pomieszczenie. Ogród — drzewo i płot. Jezioro — łódkę i trzciny.
+
+Pierwsza wersja tych mebli była błędem, który widać było dopiero na renderze: **cele misji 2, 4 i 5 wylądowały dokładnie na nowych meblach**. Prawa strona cofa się teraz kolorem — meble są w odcieniach bliskich ścianie, a półka kuchenna przeniosła się na pustą ścianę po lewej. Głębia zamiast konkurencji o wzrok gracza.
+
+### Strażnicy
+
+Nowe asercje liczą na prawdziwych poziomach, nie na wyrażeniach regularnych: żadna para sąsiadów bliżej niż 160 px (z celem), nic bliżej niż 140 px od procy, mediana sięga 78% szerokości, najwęższa misja 55%, i stosunek najdłuższego do najkrótszego lotu co najmniej 1,6. Każdy z nich sprawdzony sabotażem.
+
 ## 0.27.0 — Zdjęcie robi miny
 
 Pytanie brzmiało, czy wgrana twarz może zacząć robić śmieszne miny — bez kreskówki. Może, ale pierwsza wersja była atrapą i pomiar to pokazał.
