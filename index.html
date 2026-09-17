@@ -9,11 +9,11 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="SlingToon">
-  <title>SlingToon — 80 misji kontrolowanego chaosu</title>
-  <link rel="manifest" href="manifest.webmanifest?v=0.26.0">
+  <title>SlingToon — 88 misji kontrolowanego chaosu</title>
+  <link rel="manifest" href="manifest.webmanifest?v=0.27.0">
   <link rel="icon" href="assets/icon-192.png" sizes="192x192">
   <link rel="apple-touch-icon" href="assets/icon-192.png">
-  <link rel="stylesheet" href="styles.css?v=0.26.0">
+  <link rel="stylesheet" href="styles.css?v=0.27.0">
 </head>
 <body>
   <div class="ambient ambient--one" aria-hidden="true"></div>
@@ -127,7 +127,7 @@
     </main>
 
     <footer>
-      <span>SLINGTOON WEB 0.26.0</span>
+      <span>SLINGTOON WEB 0.27.0</span>
       <span>Offline PWA · GitHub Pages Ready</span>
     </footer>
     <p id="keyboardHelp" class="keyboard-help">Dotyk: pociągnij bohatera i puść. Klawiatura: spacja rozpoczyna celowanie, strzałki zmieniają naciąg, spacja wystrzeliwuje. W locie: spacja = FIK w górę (od misji 5), strzałka w dół = KAMIEŃ w dół (od misji 17). R = ponów.</p>
@@ -135,7 +135,7 @@
 
   <dialog id="missionMap" class="mission-map" aria-labelledby="missionMapTitle">
     <header><div><span class="eyebrow">KONTROLOWANA KATASTROFA</span><h2 id="missionMapTitle">Dokąd dziś polecimy?</h2></div><button id="closeMissions" type="button" class="icon-button" aria-label="Zamknij mapę misji">×</button></header>
-    <p id="campaignSummary">Przygoda: 0 / 80 misji · ★ 0 / 80 gwiazdek</p>
+    <p id="campaignSummary">Przygoda: 0 / 88 misji · ★ 0 / 88 gwiazdek</p>
     <div class="chapter-controls">
       <label for="chapterSelect">ROZDZIAŁ<select id="chapterSelect" aria-label="Wybierz rozdział"></select></label>
       <button id="resumeMission" class="cta" type="button">KONTYNUUJ →</button>
@@ -201,6 +201,15 @@
               <small id="faceStyleNote">Zdjęcie zostaje takie, jakie jest — znika tylko tło. Zero na suwaku to czysty wycinek bez żadnego efektu.</small>
             </label>
           </div>
+          <div id="faceMimic" class="face-mimic">
+            <span class="face-mimic__heading">
+              <strong>MIMIKA</strong>
+              <output id="faceMimicValue" for="faceMimicStrength">100%</output>
+            </span>
+            <div id="faceMimicStrip" class="face-mimic__strip" aria-label="Podgląd min na Twoim zdjęciu"></div>
+            <input id="faceMimicStrength" type="range" min="0" max="2" value="1" step="0.1" aria-label="Siła mimiki">
+            <small>Twoje zdjęcie zostaje zdjęciem — nic nie jest dorysowane. Ruszają się brwi, oczy i usta, a cała głowa ściska się i przechyla. Zero wyłącza mimikę całkowicie.</small>
+          </div>
           <div class="face-pipeline" aria-label="Etapy tworzenia portretu">
             <span><b>1</b> TŁO OUT</span>
             <span><b>2</b> AUTO ZOOM</span>
@@ -246,6 +255,6 @@
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
   <noscript>Do uruchomienia SlingToon potrzebna jest obsługa JavaScript.</noscript>
-  <script type="module" src="src/main.js?v=0.26.0"></script>
+  <script type="module" src="src/main.js?v=0.27.0"></script>
 </body>
 </html>

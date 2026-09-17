@@ -1,5 +1,40 @@
 # Changelog
 
+## 0.27.0 — Zdjęcie robi miny
+
+Pytanie brzmiało, czy wgrana twarz może zacząć robić śmieszne miny — bez kreskówki. Może, ale pierwsza wersja była atrapą i pomiar to pokazał.
+
+### Co było nie tak z pierwszym podejściem
+
+- mimika ruszała punktami twarzy o kilka pikseli w portrecie 512 px. Gra rysuje głowę w kwadracie **96 px**, więc te kilka pikseli zamieniało się w ułamek piksela. Zmierzone przy realnym rozmiarze głowy: **panika zmieniała 16% pikseli przy średniej różnicy 6,7 na 255** — czyli nic. Usta mają tam kilkanaście pikseli szerokości; sama geometria nie udźwignie miny w tej skali,
+- **wyginanie nie potrafi stworzyć ciemności za wargami.** Rozsuwało usta i naciągało na szparę policzek, więc otwarte usta wyglądały jak zamknięte.
+
+### Co robi mina teraz
+
+Trzy warstwy zamiast jednej, każda mierzona po zmniejszeniu do 96 px:
+
+- **mimika** — punkty twarzy ciągną piksele zdjęcia, amplitudy podniesione tam, gdzie pomiar pokazał, że nie widać,
+- **poza** — cała głowa ściska się, rozciąga i przechyla, z obrotem wokół **brody**, nie wokół środka kadru, tak jak robi to animator. To ta warstwa przeżywa zmniejszenie: sylwetka o 10% niższa i 11% szersza czyta się natychmiast,
+- **cień wnętrza ust** — wyliczany z tego, o ile opada szczęka, przycięty do głowy (`source-atop`), więc nigdy nie wypływa na tło.
+
+Zmierzone po zmianie, przy głowie 96 px: najsłabsza mina zmienia **31,5%** pikseli zamiast 1,9%, najmocniejsza 68%. Wszystkie dwanaście min ruszają zdjęciem o co najmniej 2,5 px na ekranie — to jest próg, którego pilnuje test.
+
+### Błędy znalezione po drodze
+
+- **pasek podglądu min był pusty — razem z „SPOKÓJ”, czyli nietkniętym zdjęciem.** Przyczyną nie było wyginanie: pusty był sam wycinek. Zdjęcie testowe było rysunkiem, a segmentacja nie znajduje na rysunku człowieka — maska wracała pusta. Sprawdzone na wydanej wersji 0.26.0: **ten sam rysunek daje tam dokładnie taki sam pusty wycinek**, tylko nikt tego nie widział, bo podgląd ma szachownicę pod spodem i wygląda na wypełniony w 100%,
+- **stąd prawdziwy błąd produktowy: gra mówiła „Gotowe: tło usunięte” i pozwalała zatwierdzić niewidzialną głowę.** Teraz portret raportuje swoje pokrycie, a pracownia twarzy odmawia zatwierdzenia pustego wycinka i mówi, co zrobić,
+- **kołnierz dochodzący do dołu kadru zabijał przechylenia.** Strażnik kadru słusznie nie pozwalał obciąć kapelusza, więc kasował całą pozę: „podejrzliwy” spadał z 6,7 px do 0,6 px. Wycinek wjeżdża teraz o kilka procent do środka, jeśli dotyka krawędzi — niewidoczne, a miny odzyskują miejsce na ruch,
+- **wypiek arkusza min trwał 640 ms.** Poza była rysowana jako drugie przejście po całym portrecie. Poza i wyginanie są oba afiniczne, więc składają się dokładnie — teraz to jedno przejście i **60 ms**,
+- **strażnik kadru chronił przed niemożliwym.** Przycinanie samego wyginania nie odpalało się przy żadnej sile dostępnej z suwaka, a przy ciasnym kadrze kasowało mimikę do zera. Usunięte: pilnuje pozy, bo tylko poza naprawdę wychodzi poza kadr.
+
+### Trzy pomiary, które mierzyły nie to co trzeba
+
+Warte zapisania, bo każdy wyglądał na zielony:
+
+- **jasność podglądu portretu: 100% nieprzezroczystych pikseli.** Pod portretem jest szachownica, więc ta liczba jest zawsze taka sama — także dla pustego wycinka,
+- **przesunięcie samej mimiki.** „Podejrzliwy” rusza zdjęciem o 0,6 px i jest doskonale czytelny, bo niesie go przechylenie głowy. Próg musi mierzyć **całą** geometrię,
+- **oszacowanie kadru liczone dwa razy z rzędu.** Test krzyczał, że kapelusz wychodzi poza kadr, choć się mieścił. Teraz sprawdza, gdzie naprawdę ląduje piksel — barycentrycznie, tak jak rysuje `warpTriangle`.
+
 ## 0.26.0 — Pracownia fizyki: wahadło, sprężyna i osiem nowych misji
 
 ### Naprawione: przeszkody stały za blisko siebie

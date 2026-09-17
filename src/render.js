@@ -1,7 +1,7 @@
-import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.26.0";
-import { clientPointToWorld, createCropFreeViewport } from "./viewport.js?v=0.26.0";
-import { drawInteractions, drawObjective } from "./interactions-renderer.js?v=0.26.0";
-import { drawCampaignGoal, drawCampaignScene, drawWorldCompanion, setSceneBleed } from "./world-renderer.js?v=0.26.0";
+import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.27.0";
+import { clientPointToWorld, createCropFreeViewport } from "./viewport.js?v=0.27.0";
+import { drawInteractions, drawObjective } from "./interactions-renderer.js?v=0.27.0";
+import { drawCampaignGoal, drawCampaignScene, drawWorldCompanion, setSceneBleed } from "./world-renderer.js?v=0.27.0";
 
 const PALETTE = Object.freeze({
   ink: "#19142d",
@@ -77,6 +77,7 @@ export class GameRenderer {
     this.background = null;
     this.backgroundSource = null;
     this.faceImage = null;
+    this.faceExpressions = null;
     this.faceMetadata = null;
     this.particles = [];
     this.callouts = [];
@@ -123,10 +124,19 @@ export class GameRenderer {
     if (portrait?.image) {
       this.faceImage = portrait.image;
       this.faceMetadata = portrait.metadata ?? portrait.image.slingtoonPortrait ?? null;
+      this.faceExpressions = portrait.expressions ?? null;
       return;
     }
     this.faceImage = portrait ?? null;
     this.faceMetadata = portrait?.slingtoonPortrait ?? null;
+    this.faceExpressions = null;
+  }
+
+  // The expression sheet was baked when the photo was accepted, so this is a
+  // lookup, not a computation. A face the mesh could not reach falls back to the
+  // untouched photo rather than to something approximate.
+  faceFor(expression) {
+    return this.faceExpressions?.[expression] ?? this.faceImage;
   }
 
   handleGameEvent(event) {
@@ -1171,7 +1181,7 @@ export class GameRenderer {
       ctx.shadowOffsetY = 5;
       // The portrait is a transparent, naturally shaped head. It is never
       // clipped to the stock character's circular skull.
-      ctx.drawImage(this.faceImage, -48, -48, 96, 96);
+      ctx.drawImage(this.faceFor(expression), -48, -48, 96, 96);
       ctx.restore();
       this.drawPhotoReaction(ctx, expression);
 

@@ -1,10 +1,10 @@
-import { GameModel, GameMode, GamePhase, LEVELS, modifierName } from "./game.js?v=0.26.0";
-import { GameRenderer } from "./render.js?v=0.26.0";
-import { GameAudio } from "./audio.js?v=0.26.0";
-import { FaceStudio } from "./face-studio.js?v=0.26.0";
-import { CHARACTER_UNLOCKS, PROGRESS_KEY, TOKEN_SCORE_STEP, characterLock, countMastered, countStars, isMastered, readProgress, hintOffer, purchaseHint, recordStreak, rewardSuccess, medalText } from "./progress.js?v=0.26.0";
-import { STREAK_MAX_SHOTS, STREAK_MIN_POOL, canStartStreak, clearStreakMission, createStreakRun, drawStreakMission, spendStreakShot, streakSummary } from "./streak.js?v=0.26.0";
-import { CHAPTERS } from "./levels.js?v=0.26.0";
+import { GameModel, GameMode, GamePhase, LEVELS, modifierName } from "./game.js?v=0.27.0";
+import { GameRenderer } from "./render.js?v=0.27.0";
+import { GameAudio } from "./audio.js?v=0.27.0";
+import { FaceStudio } from "./face-studio.js?v=0.27.0";
+import { CHARACTER_UNLOCKS, PROGRESS_KEY, TOKEN_SCORE_STEP, characterLock, countMastered, countStars, isMastered, readProgress, hintOffer, purchaseHint, recordStreak, rewardSuccess, medalText } from "./progress.js?v=0.27.0";
+import { STREAK_MAX_SHOTS, STREAK_MIN_POOL, canStartStreak, clearStreakMission, createStreakRun, drawStreakMission, spendStreakShot, streakSummary } from "./streak.js?v=0.27.0";
+import { CHAPTERS } from "./levels.js?v=0.27.0";
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -58,6 +58,10 @@ const elements = {
   faceStylePreview: $("#faceStylePreview"),
   faceStyleStrength: $("#faceStyleStrength"),
   faceStyleValue: $("#faceStyleValue"),
+  faceMimic: $("#faceMimic"),
+  faceMimicStrip: $("#faceMimicStrip"),
+  faceMimicStrength: $("#faceMimicStrength"),
+  faceMimicValue: $("#faceMimicValue"),
   faceStyleHeading: $("#faceStyleHeading"),
   faceStyleNote: $("#faceStyleNote"),
   facePipelineStep: $("#facePipelineStep"),
@@ -101,7 +105,7 @@ let progress = loadProgress();
 let highestUnlockedLevel = progress.highestUnlockedLevel;
 let mapChapterIndex = 0;
 let lastReward = null;
-const FULLSCREEN_TIP_KEY = "slingtoon-fullscreen-tip-0.26.0";
+const FULLSCREEN_TIP_KEY = "slingtoon-fullscreen-tip-0.27.0";
 
 function loadProgress() {
   try {
@@ -389,6 +393,10 @@ const faceStudio = new FaceStudio(
     styleCanvas: elements.faceStylePreview,
     styleStrength: elements.faceStyleStrength,
     styleValue: elements.faceStyleValue,
+    mimic: elements.faceMimic,
+    mimicStrip: elements.faceMimicStrip,
+    mimicStrength: elements.faceMimicStrength,
+    mimicValue: elements.faceMimicValue,
     styleHeading: elements.faceStyleHeading,
     styleNote: elements.faceStyleNote,
     pipelineStep: elements.facePipelineStep,
@@ -935,7 +943,7 @@ window.addEventListener("keydown", (event) => {
 
 window.addEventListener("load", () => {
   if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
-    navigator.serviceWorker.register("./sw.js?v=0.26.0").catch(() => {});
+    navigator.serviceWorker.register("./sw.js?v=0.27.0").catch(() => {});
   }
   scheduleFullscreenSuggestion();
   syncGameViewport();
