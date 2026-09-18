@@ -426,4 +426,30 @@ for (const file of requiredFiles.filter((file) => !file.startsWith(".github") &&
 }
 
 for (const file of ["campaign", "campaign-routes", "physics", "progress", "streak", "interactions-renderer", "world-renderer"]) assert.ok(worker.includes(`./src/${file}.js?v=${version}`));
+
+// A real phone in fullscreen landscape (iPhone SE-sized: 568x320) had its
+// mission-map button completely unclickable, and separately its mission name
+// squeezed to 0 width and vanished — both confirmed by hit-testing and
+// measuring the live page, neither visible from reading the CSS in isolation.
+// Both were two independent media queries, each reasonable alone, fighting
+// over the same 42px strip. Pinning the fix here in words, since the test
+// suite has no layout engine to re-run the actual hit-test.
+{
+  const tinyLandscape = css.slice(css.indexOf("@media (orientation: landscape) and (max-height: 370px)"));
+  const topActionsRule = tinyLandscape.slice(0, tinyLandscape.indexOf("\n}\n") + 3);
+  assert.doesNotMatch(topActionsRule, /\.top-actions\s*\{[^}]*width:\s*100%/,
+    "`.top-actions` must not stretch to 100% width: in fullscreen it becomes a `pointer-events: auto` overlay, " +
+    "and a full-width box blocks taps across its own empty margins — confirmed to make #levelIndicator unclickable");
+  assert.match(css, /\.mission-kicker\s*\{[^}]*white-space:\s*nowrap/,
+    "the mission kicker needs its own single-line truncation, or it overflows a squeezed strip and collides with " +
+    "whatever sits next to it instead of just being unreadable");
+  const compactLandscape = css.slice(css.indexOf("/* iPhone and other short landscape screens"));
+  const compactBlock = compactLandscape.slice(0, compactLandscape.indexOf("\n}\n") + 3);
+  assert.match(compactBlock, /\.mission-badges\s*\{[^}]*display:\s*none/,
+    "on a real small phone `.level-nav` (a 44px touch target, not shrinkable) plus `.mission-badges` add up to " +
+    "more than the strip has room for, and `.mission-copy` — the mission's own name — was the only flexible box " +
+    "left to absorb the overflow, so it was squeezed to 0 width and vanished; the badges are informational, not " +
+    "controls, and fullscreen already hides them for the same reason");
+}
+
 console.log(`SlingToon ${version}: campaign schema, privacy, mobile viewport and offline assets validated.`);

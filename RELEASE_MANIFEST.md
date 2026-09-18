@@ -1,7 +1,7 @@
-# SlingToon Web 0.28.0 — Release Manifest
+# SlingToon Web 0.29.0 — Release Manifest
 
-Data: 17 września 2026. Format: HTML5 Canvas / PWA, statyczny hosting GitHub Pages.
-Pakiet kandydujący 0.28.0. Publikacja wymaga osobnej zgody właściciela po obejrzeniu wersji roboczej.
+Data: 18 września 2026. Format: HTML5 Canvas / PWA, statyczny hosting GitHub Pages.
+Pakiet kandydujący 0.29.0. Publikacja wymaga osobnej zgody właściciela po obejrzeniu wersji roboczej.
 
 ## Zawartość
 
@@ -22,10 +22,12 @@ Face Studio ma dwa tryby głowy: domyślny wycinek zdjęcia bez przerysowania or
 Szczegółowe wyniki i granice weryfikacji: [QA 0.16](docs/QA_0_16_PL.md).
 Rendery plansz nie zastępują testu przeglądarki ani urządzenia. Pełny test dotykowy, dźwięku, instalacji i aktualizacji PWA pozostaje do wykonania przed uznaniem wersji za produkcyjnie sprawdzoną.
 
+Playtest dotykowy potwierdzony na prawdziwym rozmiarze telefonu (hit-testing, nie tylko odczyt CSS): manewry FIK i KAMIEŃ mają 48-pikselowe cele dotyku i działają na `touchscreen.tap`, ślad poprzedniej próby jest czytelny na małym ekranie, a siedem misji o najciaśniejszej tolerancji (±5: 22, 35, 63, 67, 71, 75, 86) kończy się sukcesem swoją zmierzoną trasą i wygląda jak uczciwa łamigłówka. Po drodze znaleziony i naprawiony błąd: na najmniejszym prawdziwym telefonie (iPhone SE, pełny ekran) przycisk mapy misji był całkiem niekliknięty, a nazwa misji znikała ściśnięta do zera szerokości — oba potwierdzone testem trafień na żywej stronie, oba mają teraz strażnika w `scripts/validate.mjs`.
+
 ## Publikacja
 
-Publikować po zgodzie właściciela do istniejącego repozytorium i GitHub Pages. Sprawdzić po wdrożeniu wersję `0.28.0`, mapę rozdziałów oraz aktualizację cache poprzedniej instalacji.
+Publikować po zgodzie właściciela do istniejącego repozytorium i GitHub Pages. Sprawdzić po wdrożeniu wersję `0.29.0`, mapę rozdziałów oraz aktualizację cache poprzedniej instalacji.
 
 ## Dalszy rozwój
 
-Najpierw playtest dwóch manewrów w locie palcem na telefonie, czytelności śladu poprzedniej próby na małym ekranie, jakości wycinka twarzy na prawdziwych zdjęciach oraz misji 38, 44, 58, 72, 74 i 78, które mają najmniejsze zmierzone okno tolerancji (±5–6). Płatności, reklamy, chmura i multiplayer pozostają poza zakresem.
+Jakość wycinka twarzy na prawdziwych zdjęciach (ludzkich, nie testowych) wciąż czeka na realny playtest. Płatności, reklamy, chmura i multiplayer pozostają poza zakresem.

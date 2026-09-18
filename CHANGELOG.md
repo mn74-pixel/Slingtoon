@@ -1,5 +1,35 @@
 # Changelog
 
+## 0.29.0 — Mapa misji, której nie dało się otworzyć na telefonie
+
+Kolejny etap playtestu dotykowego z 0.16: manewry w locie, ślad poprzedniej próby i najciaśniejsze misje. Znalazłem coś poważniejszego po drodze.
+
+### Na najmniejszym prawdziwym telefonie przycisk mapy misji nie reagował wcale
+
+Na iPhonie SE (568×320 w pełnym ekranie) `#levelIndicator` — jedyny sposób otwarcia mapy misji — nie dawał się kliknąć. Nie zgadywanka z CSS: potwierdzone rzeczywistym testem trafień (hit-testing) na żywej stronie.
+
+Przyczyna: `.top-actions` (pasek z charakterem, dźwiękiem, pełnym ekranem) dostawał `width: 100%` na bardzo niskich ekranach, żeby ładnie się wyśrodkować. W pełnym ekranie ten sam element staje się nakładką (`position: absolute`, `pointer-events: auto`) nad grą — i przy pełnej szerokości blokuje dotyk w całym swoim pustym marginesie, nie tylko na widocznych przyciskach. Dwie osobno rozsądne reguły, nigdy nie sprawdzone razem. Usunięcie `width: 100%` nie zmienia wyglądu (`.topbar` i tak wyśrodkowuje jedyne dziecko), tylko przestaje kraść dotyk.
+
+### Nazwa misji znikała zupełnie na skompresowanym pasku
+
+Po drodze: na tym samym telefonie tytuł misji ("MISJA 17 · BĄBEL UNOSI / Pierwszy oddech pod wodą") był ściśnięty do **0 pikseli szerokości** i znikał całkiem. `.level-nav` (strzałki + numer, sztywny cel dotyku 44px — to nie błąd, to podłoga dostępności) i `.mission-badges` (licznik strzałów, wynik) razem były szersze niż cały pasek, a `.mission-copy` było jedynym elastycznym elementem, więc pochłaniało cały deficyt aż do zera.
+
+Odznaki są informacyjne, nie sterujące — pełny ekran już je ukrywa z tego samego powodu. Rozszerzyłem to na każdy skompresowany widok poziomy, nie tylko pełny ekran. `.mission-kicker` dostał też własne obcinanie do jednej linii z wielokropkiem — bez tego pierwsza łatka tylko ukrywała przepełnienie zamiast oddać miejsce nazwie misji.
+
+### Sprawdzone tym samym pomiarem co dziura, nie samym czytaniem CSS
+
+Trzy media queries o identycznym warunku (`orientation: landscape, max-height: 560px`) żyły w trzech różnych miejscach pliku, nie wiedząc o sobie nawzajem — jedna z nich cicho przywracała `.level-nav__indicator` do widoczności w pełnym ekranie, choć inna reguła go ukrywała. Zostawiłem to: gracz może dzięki temu otworzyć mapę misji bez wychodzenia z pełnego ekranu, co jest lepszym wynikiem niż oryginalny zamysł.
+
+### Reszta playtestu z 0.16
+
+- **Manewry FIK/KAMIEŃ dotykiem**: oba przyciski 48px wysokości (próg dotykowy), własne kolory (mięta/fiolet), etykieta + licznik ładunków. Zadziałały od razu przy prawdziwym dotyku (`touchscreen.tap`) na iPhonie SE 2020.
+- **Ślad poprzedniej próby na małym ekranie**: przerywana kremowa linia, czytelna na tle sceny, nie ginie i niczego nie zasłania.
+- **Siedem misji z tolerancją ±5** (22, 35, 63, 67, 71, 75, 86 — nowy zestaw po przebudowie 0.28.0 rozstawienia): każda odtworzona ich własną zmierzoną trasą, wszystkie kończą się sukcesem i wyglądają jak prawdziwa, czytelna łamigłówka, nie sztuczka na granicy błędu pomiaru.
+
+### Strażnicy
+
+Trzy nowe asercje w `scripts/validate.mjs` pilnują dokładnie tych trzech błędów CSS — każda sprawdzona sabotażem (przywrócenie błędu i potwierdzenie, że test go łapie) przed wpisaniem na stałe.
+
 ## 0.28.0 — Gra przestaje siedzieć w lewej połowie ekranu
 
 „Nadal wszystko jest bardzo wąsko rozstawione na ekranie". Zmierzone — i rzeczywiście, z dwóch niezależnych powodów naraz.
