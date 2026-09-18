@@ -1,7 +1,7 @@
-# SlingToon Web 0.29.0 — Release Manifest
+# SlingToon Web 0.30.0 — Release Manifest
 
-Data: 18 września 2026. Format: HTML5 Canvas / PWA, statyczny hosting GitHub Pages.
-Pakiet kandydujący 0.29.0. Publikacja wymaga osobnej zgody właściciela po obejrzeniu wersji roboczej.
+Data: 18 września 2026 (wieczorem). Format: HTML5 Canvas / PWA, statyczny hosting GitHub Pages.
+Pakiet kandydujący 0.30.0. Publikacja wymaga osobnej zgody właściciela po obejrzeniu wersji roboczej.
 
 ## Zawartość
 
@@ -24,9 +24,11 @@ Rendery plansz nie zastępują testu przeglądarki ani urządzenia. Pełny test 
 
 Playtest dotykowy potwierdzony na prawdziwym rozmiarze telefonu (hit-testing, nie tylko odczyt CSS): manewry FIK i KAMIEŃ mają 48-pikselowe cele dotyku i działają na `touchscreen.tap`, ślad poprzedniej próby jest czytelny na małym ekranie, a siedem misji o najciaśniejszej tolerancji (±5: 22, 35, 63, 67, 71, 75, 86) kończy się sukcesem swoją zmierzoną trasą i wygląda jak uczciwa łamigłówka. Po drodze znaleziony i naprawiony błąd: na najmniejszym prawdziwym telefonie (iPhone SE, pełny ekran) przycisk mapy misji był całkiem niekliknięty, a nazwa misji znikała ściśnięta do zera szerokości — oba potwierdzone testem trafień na żywej stronie, oba mają teraz strażnika w `scripts/validate.mjs`.
 
+Cel reaguje na uderzenie w pobliżu — prawdziwa odległość do celu razy siła uderzenia, z zanikiem, zamiast reguły `event.x > 1010`, która nigdy nie działała dla budzika z misji 1 (stoi przy x=890) i działała po niewłaściwej stronie dla misji 5. Efekt objął teraz wszystkie 88 misji, nie tylko pierwsze osiem ręcznie rysowanych obiektów.
+
 ## Publikacja
 
-Publikować po zgodzie właściciela do istniejącego repozytorium i GitHub Pages. Sprawdzić po wdrożeniu wersję `0.29.0`, mapę rozdziałów oraz aktualizację cache poprzedniej instalacji.
+Publikować po zgodzie właściciela do istniejącego repozytorium i GitHub Pages. Sprawdzić po wdrożeniu wersję `0.30.0`, mapę rozdziałów oraz aktualizację cache poprzedniej instalacji.
 
 ## Dalszy rozwój
 

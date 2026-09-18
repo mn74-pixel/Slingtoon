@@ -197,12 +197,16 @@ export function drawCampaignScene(ctx, level) {
 }
 
 const GOALS = new Set(["sandwich", "umbrella", "buoy", "suitcase", "bottle", "fish", "shell", "octopus", "treasure", "submarine", "ticket", "balloon", "bear", "rocket", "helmet", "flag", "satellite", "alien", "bell"]);
-export function drawCampaignGoal(ctx, model, time, pulse = 0) {
+export function drawCampaignGoal(ctx, model, time, pulse = 0, wobble = 0) {
   const kind = model.level.goal.kind;
   if (!GOALS.has(kind)) return false;
   const happy = model.phase === "succeeded", pos = model.goalCentre;
-  ctx.save(); ctx.translate(pos.x, pos.y); ctx.rotate(Math.sin(time * 3) * .025 + (happy ? Math.sin(pulse * 12) * pulse * .12 : 0));
-  const size = .9 + pulse * .12; ctx.scale(size, size); ctx.lineCap = "round"; ctx.lineJoin = "round";
+  ctx.save(); ctx.translate(pos.x, pos.y);
+  // A nearby bounce reads as the target noticing the danger: a fast startled
+  // shudder, not the slow victory sway `pulse` already owns. `wobble` decays on
+  // its own in render.js, so this only ever multiplies zero back to nothing.
+  ctx.rotate(Math.sin(time * 3) * .025 + (happy ? Math.sin(pulse * 12) * pulse * .12 : 0) + Math.sin(time * 30) * wobble * .05);
+  const size = .9 + pulse * .12 - wobble * .05; ctx.scale(size, size); ctx.lineCap = "round"; ctx.lineJoin = "round";
   oval(ctx, 0, 61, 62, 10, "rgba(25,20,45,.18)", 0);
   if (kind === "sandwich") {
     box(ctx, -55, -36, 110, 88, "#da8d69", 22); box(ctx, -59, -30, 118, 65, C.cream, 22);

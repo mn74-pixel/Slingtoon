@@ -452,4 +452,15 @@ for (const file of ["campaign", "campaign-routes", "physics", "progress", "strea
     "controls, and fullscreen already hides them for the same reason");
 }
 
+// The goal used to flinch on a nearby bounce only for the first eight
+// hand-drawn missions, and only past a hardcoded x=1010 that mission 1's own
+// alarm clock (x=890) could never cross. A real distance-to-goal replaces it,
+// shared by every mission through one field on the renderer — these guards
+// make sure the magic number and the mission-count split cannot quietly come
+// back; tests/goal-wobble.test.mjs covers the actual math.
+assert.doesNotMatch(render, /event\.x > 1010/, "the goal's flinch must react to real distance from the goal, not a hardcoded world x-coordinate");
+assert.match(render, /GOAL_WOBBLE_RADIUS/, "the flinch radius needs a named constant, not a number buried in the event handler");
+assert.match(render, /goalWobble/, "goalWobble replaced the alarm-clock-only clockWobble name; it now drives every mission's goal, not just the first eight");
+assert.match(world, /drawCampaignGoal\(ctx, model, time, pulse = 0, wobble = 0\)/, "drawCampaignGoal must accept the wobble so missions 9-88 react too, not only the eight hand-drawn ones");
+
 console.log(`SlingToon ${version}: campaign schema, privacy, mobile viewport and offline assets validated.`);
