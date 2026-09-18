@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.30.0 — Cel, który wreszcie zauważa, że coś go trąciło
+
+Poproszony o kreatywność, przejrzałem grę pod kątem miejsc, gdzie coś już było zbudowane w połowie. Znalazłem jedno: cel od dawna umie zadrżeć po uderzeniu w pobliżu — `this.clockWobble` istnieje w kodzie od pierwszych ośmiu misji — ale nikt nigdy nie sprawdził tej reguły na drugiej misji, a co dopiero na pozostałych osiemdziesięciu.
+
+### Reguła, która nigdy nie działała dla obiektu, od którego wzięła nazwę
+
+`this.clockWobble = event.x > 1010 ? 1 : this.clockWobble;` — cel drgał, jeśli uderzenie wypadło dalej niż x=1010 w świecie. **Budzik z misji 1, ten sam obiekt, od którego zmienna wzięła nazwę, stoi przy x=890.** Żadne uderzenie w tej misji nigdy nie mogło przekroczyć progu, więc budzik nigdy nie drgał, choć wyglądało to jak działająca funkcja. Dla misji 5 (toster przy x=1040) próg działał w drugą stronę: uderzenie 300 pikseli od celu w pionie, ale po niewłaściwej stronie x=1010, też potrafiło je uruchomić.
+
+Zastąpione prawdziwą odległością do celu (uwzględniającą ruchome cele) razy siła uderzenia, z zanikiem w czasie — dokładnie taką samą matematyką, jakiej reszta gry używa wszędzie indziej. Sprawdzone bezpośrednio: budzik z misji 1 teraz drga.
+
+### Efekt istniał tylko dla 8 z 88 misji
+
+Osiem ręcznie rysowanych obiektów (budzik, kubek, skarpetka, pilot, toster, krasnal, lody, kaczka) już czytało `clockWobble` we własnym rysowaniu. Pozostałe osiemdziesiąt — `drawCampaignGoal`, cała reszta kampanii — nigdy nie dostawało tej wartości. Renamed na `goalWobble` i doprowadzone jako piąty parametr do `drawCampaignGoal`: szybkie, spadające drgnienie obrotu i lekkie skurczenie, osobne od wolnego kołysania zwycięstwa, które ta funkcja już miała. Zero nowych rysunków — każdy z 19 kształtów celu dostaje to za darmo przez wspólną transformację.
+
+Sprawdzone renderem: seria klatek przy tej samej chwili gry i rosnącym `wobble` pokazuje narastające, spójne drgnięcie; seria klatek przez cały moment zwycięstwa pokazuje, że drgnięcie gaśnie płynnie i nie kłóci się z istniejącą celebracją.
+
+### Strażnicy
+
+Siedem nowych testów w `tests/goal-wobble.test.mjs` ćwiczy prawdziwy handler zdarzenia `impact`, nie wzór w izolacji — w tym test odtwarzający dokładnie błąd budzika z misji 1. Sześć z siedmiu łapie natychmiast powrót starej reguły `event.x > 1010`. Cztery dodatkowe asercje w `scripts/validate.mjs` pilnują, żeby magiczna liczba i podział „8 z 88” nie wróciły po cichu — każda sprawdzona sabotażem.
+
 ## 0.29.0 — Mapa misji, której nie dało się otworzyć na telefonie
 
 Kolejny etap playtestu dotykowego z 0.16: manewry w locie, ślad poprzedniej próby i najciaśniejsze misje. Znalazłem coś poważniejszego po drodze.

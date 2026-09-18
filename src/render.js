@@ -1,7 +1,7 @@
-import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.29.0";
-import { clientPointToWorld, createCropFreeViewport } from "./viewport.js?v=0.29.0";
-import { drawInteractions, drawObjective } from "./interactions-renderer.js?v=0.29.0";
-import { drawCampaignGoal, drawCampaignScene, drawWorldCompanion, setSceneBleed } from "./world-renderer.js?v=0.29.0";
+import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.30.0";
+import { clientPointToWorld, createCropFreeViewport } from "./viewport.js?v=0.30.0";
+import { drawInteractions, drawObjective } from "./interactions-renderer.js?v=0.30.0";
+import { drawCampaignGoal, drawCampaignScene, drawWorldCompanion, setSceneBleed } from "./world-renderer.js?v=0.30.0";
 
 const PALETTE = Object.freeze({
   ink: "#19142d",
@@ -21,6 +21,10 @@ const PALETTE = Object.freeze({
 
 const clamp = (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value));
 const lerp = (a, b, amount) => a + (b - a) * amount;
+// How far a bounce can be from the goal and still make it flinch. Small enough
+// that a hazard on the far side of the level never rattles a target it did not
+// touch; big enough that an obstacle guarding the goal still reads as a near miss.
+const GOAL_WOBBLE_RADIUS = 260;
 // Keep the face readable after the complete 1280×640 room is reduced to a
 // phone screen. This is deliberately visual-only: GameModel still uses the
 // original avatar radius for aiming and collisions.
@@ -88,7 +92,7 @@ export class GameRenderer {
     this.flightPath = [];
     this.ghost = null;
     this.shake = 0;
-    this.clockWobble = 0;
+    this.goalWobble = 0;
     this.successPulse = 0;
     this.fanAngle = 0;
     this.time = 0;
@@ -169,7 +173,16 @@ export class GameRenderer {
     if (event.type === "impact") {
       const intensity = clamp(event.speed / 620, 0.25, 1);
       this.shake = Math.max(this.shake, 1 + intensity * 5);
-      this.clockWobble = event.x > 1010 ? 1 : this.clockWobble;
+      // The goal used to flinch only past x=1010 — a stand-in for "near the
+      // goal" that was never actually measured against one. Mission 1's own
+      // alarm clock sits at x=890, so the object this was named after could
+      // never trigger it; a hit on mission 5's toaster at x=1015 could trigger
+      // it from 300 px away in y. Real distance to the real (possibly moving)
+      // goal, scaled by how hard the hit was, replaces the guess — and now
+      // reaches every mission, not just the first eight hand-drawn ones.
+      const goalDistance = Math.hypot(event.x - this.model.goalCentre.x, event.y - this.model.goalCentre.y);
+      const proximity = clamp(1 - goalDistance / GOAL_WOBBLE_RADIUS, 0, 1);
+      this.goalWobble = Math.max(this.goalWobble, proximity * intensity * 1.6);
       this.spawnImpact(event.x, event.y, 12 + Math.round(intensity * 16));
       this.callouts.push({
         x: event.x,
@@ -183,7 +196,7 @@ export class GameRenderer {
 
     if (event.type === "success") {
       this.shake = 7;
-      this.clockWobble = 1.6;
+      this.goalWobble = 1.6;
       this.successPulse = 1;
       // The hero used to freeze wherever the collision happened, stuck to the
       // side of the phone or the ice cream like a sprite that lost its update.
@@ -244,7 +257,7 @@ export class GameRenderer {
     }
     this.fanAngle += dt * (this.model.modifier === Modifier.STRONGER_FAN ? 15 : 7.5);
     this.shake = Math.max(0, this.shake - dt * 42);
-    this.clockWobble = Math.max(0, this.clockWobble - dt * 3.1);
+    this.goalWobble = Math.max(0, this.goalWobble - dt * 3.1);
     this.successPulse = Math.max(0, this.successPulse - dt * 0.7);
 
     if (this.model.phase === GamePhase.FLYING) {
@@ -646,7 +659,7 @@ export class GameRenderer {
   }
 
   drawGoalTarget(ctx) {
-    if (drawCampaignGoal(ctx, this.model, this.time, this.successPulse)) return;
+    if (drawCampaignGoal(ctx, this.model, this.time, this.successPulse, this.goalWobble)) return;
     const drawers = {
       alarm: () => this.drawAlarmClock(ctx),
       coffee: () => this.drawCoffee(ctx),
@@ -687,7 +700,7 @@ export class GameRenderer {
   drawAlarmClock(ctx) {
     const centre = this.model.goalCentre;
     const displayScale = this.model.level.goal.displayScale ?? 1;
-    const wobble = Math.sin(this.time * 26) * (0.025 + this.clockWobble * 0.11);
+    const wobble = Math.sin(this.time * 26) * (0.025 + this.goalWobble * 0.11);
     const pulse = 1 + Math.sin(this.time * 5) * 0.015 + this.successPulse * 0.08;
     ctx.save();
     ctx.translate(centre.x, centre.y);
@@ -753,7 +766,7 @@ export class GameRenderer {
   drawCoffee(ctx) {
     const centre = this.model.goalCentre;
     const displayScale = this.model.level.goal.displayScale ?? 1;
-    const wobble = Math.sin(this.time * 5.4) * 0.018 + this.clockWobble * 0.04;
+    const wobble = Math.sin(this.time * 5.4) * 0.018 + this.goalWobble * 0.04;
     ctx.save();
     ctx.translate(centre.x, centre.y);
     ctx.rotate(wobble);
@@ -807,7 +820,7 @@ export class GameRenderer {
     const float = Math.sin(this.time * 3.1) * 8;
     ctx.save();
     ctx.translate(centre.x, centre.y + float);
-    ctx.rotate(-0.22 + Math.sin(this.time * 2.4) * 0.08 + this.clockWobble * 0.06);
+    ctx.rotate(-0.22 + Math.sin(this.time * 2.4) * 0.08 + this.goalWobble * 0.06);
     ctx.scale(displayScale, displayScale);
     ctx.shadowColor = "rgba(17, 10, 28, 0.42)";
     ctx.shadowBlur = 17;
@@ -845,7 +858,7 @@ export class GameRenderer {
     const displayScale = this.model.level.goal.displayScale ?? 1;
     ctx.save();
     ctx.translate(centre.x, centre.y);
-    ctx.rotate(0.16 + Math.sin(this.time * 4) * 0.02 + this.clockWobble * 0.05);
+    ctx.rotate(0.16 + Math.sin(this.time * 4) * 0.02 + this.goalWobble * 0.05);
     ctx.scale(displayScale, displayScale);
     ctx.shadowColor = "rgba(17, 10, 28, 0.5)";
     ctx.shadowBlur = 19;
@@ -875,7 +888,7 @@ export class GameRenderer {
     const angry = this.model.phase !== GamePhase.SUCCEEDED;
     ctx.save();
     ctx.translate(centre.x, centre.y);
-    ctx.rotate(Math.sin(this.time * 15) * (angry ? 0.018 : 0.006) + this.clockWobble * 0.05);
+    ctx.rotate(Math.sin(this.time * 15) * (angry ? 0.018 : 0.006) + this.goalWobble * 0.05);
     ctx.scale(displayScale, displayScale);
     ctx.shadowColor = "rgba(17, 10, 28, 0.5)";
     ctx.shadowBlur = 20;
