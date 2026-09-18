@@ -314,7 +314,10 @@ main {
 
 .mission-kicker {
   display: block;
+  overflow: hidden;
   color: var(--coral);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .mission-copy h1 {
@@ -1577,6 +1580,15 @@ noscript {
     margin-top: 1px;
     font-size: 12px;
   }
+  /* The level indicator keeps its 44px touch target (a later rule restores
+     it — correctly, that is an accessibility floor, not a bug), so on a real
+     small phone `.level-nav` plus `.mission-badges` add up to more than the
+     strip has to give, and `.mission-copy` — the mission's own name — was the
+     only flexible box, so it was squeezed to 0 width and vanished rather than
+     wrapping. Confirmed on iPhone SE-sized viewports by measuring the live
+     boxes, not by reading the CSS. The badges are informational, not
+     controls, and fullscreen already hides them for the same reason. */
+  .mission-badges { display: none; }
   .mission-badge {
     min-width: 58px;
     padding: 5px 7px;
@@ -1769,8 +1781,15 @@ noscript {
 @media (orientation: landscape) and (max-height: 370px) {
   .brand-block { display: none; }
   .topbar { justify-content: center; }
+  /* `.top-actions` centres itself inside `.topbar`, which already centres a
+     shrink-to-fit child — the same result without `width: 100%`. That width
+     mattered once, but in fullscreen `.topbar` becomes an absolute overlay
+     with `.top-actions` set to `pointer-events: auto`, and a full-width box
+     intercepts taps across its own empty margins. On the smallest real
+     landscape height (iPhone SE 1st gen, 568×320) that invisible strip sat
+     directly over `#levelIndicator` and the mission map could not be opened
+     at all — confirmed by hit-testing the live page, not by reading the CSS. */
   .top-actions {
-    width: 100%;
     justify-content: center;
   }
 }
