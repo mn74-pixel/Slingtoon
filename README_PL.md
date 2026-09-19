@@ -1,4 +1,4 @@
-# SlingToon Web 0.32.0 — 88 misji kontrolowanego chaosu
+# SlingToon Web 0.33.0 — 88 misji kontrolowanego chaosu
 
 Samodzielna gra webowa przygotowana w tym samym modelu publikacji co Castle Conflict. Do uruchomienia i wdrożenia nie potrzeba JUCE, Projucera ani Xcode.
 

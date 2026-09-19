@@ -1,5 +1,40 @@
 # Changelog
 
+## 0.33.0 — Bohater przestaje być łapany za twarz, proca przestaje być niewidzialna
+
+Gracz nazwał obie rzeczy w jednym zdaniu: bohater jest łapany za twarz, a jeśli ktoś widzi tę grę pierwszy raz, nie wie co robić, bo **bohater zakrywa ciałem procę**. Obie obserwacje były trafne i obie miały przyczynę w kodzie, nie w rysunku.
+
+### Gumy kończyły się na szyi
+
+`drawSlingFront` prowadził gumę do `avatarPosition` — a to jest **kark bohatera**, nie jego dłonie i nie rzemyk. Koralowa guma była rysowana w poprzek twarzy; na wgranym zdjęciu biegła od czoła do ust.
+
+Proca ma teraz skórzany rzemyk, a rzemyk trzyma bohatera **za siedzenie**. Dla zdjęcia rzemyk wisi niżej niż dla postaci domyślnej (84 px zamiast 62): fotografowany bohater to duża głowa na małym ciele, a przy jednej wartości dla obu rzemyk wisiał pod brodą jak szalik.
+
+### Żadna geometria tego nie załatwia — załatwia to kolejność warstw
+
+Zmierzone: **nie istnieje** przesunięcie rzemyka, przy którym prosta guma omija głowę przy każdym naciągu. Wystarczy pociągnąć dość daleko, a bohater sam mija końcówki procy. Gwarancją czystej twarzy jest **kolejność rysowania**: wszystko, co mogłoby przeciąć bohatera — obie gumy, widelec, tył rzemyka — idzie na płótno **przed nim**. Po nim rysowana jest wyłącznie przednia klapka rzemyka, na wysokości siedzenia.
+
+### Proca stała tam, gdzie bohater ją zasłaniał
+
+Cała proca leżała w warstwie tła. Domyślna głowa ma 76 px szerokości, głowa ze zdjęcia **184 px** i sięga 125 px nad punkt zaczepienia, więc bohater po prostu stawał przed procą. Pomiar: **zasłaniał 74% procy** (36% widoczne dla postaci domyślnej). Dwa ramiona i guma to jedyny obrazek, który mówi „proca" — bez nich pierwszy kontakt z grą to postać obok brązowego patyka.
+
+Proca stoi teraz tam, gdzie stoi naprawdę: **między bohaterem a celem**, otwarta w prawo, z obiema końcówkami po stronie wystrzału. Końcówki są jedna nad drugą, nie po bokach — tak wygląda proca patrząc wzdłuż linii strzału i tylko tak cały widelec zostaje poza obrysem głowy.
+
+### Proca w spoczynku jest naciągnięta
+
+Proca przy zerowym naciągu trzyma rzemyk przy widelcu — więc bohater stojący dokładnie na punkcie zaczepienia stoi **na procy**, niezależnie od jej kształtu. Teraz odchyla się do tyłu w gumę, tak jak naprawdę wygląda załadowana proca. Przy złapaniu odchylenie wygasa w ~0,06 s, więc nic nie przeskakuje. To decyzja rysunkowa: punkt, z którego liczy się wystrzał, nie drgnął o piksel — pilnuje tego test.
+
+Wynik pomiaru: **z 26% widocznej procy zrobiło się 82%** (ze zdjęciem; 36% → 85% dla postaci domyślnej).
+
+### Drobne z tej samej przebudowy
+- Guma jest rysowana także w spoczynku, z lekkim zwisem. Wcześniej pojawiała się dopiero, gdy gracz już trzymał bohatera — czyli wtedy, gdy nie była mu już potrzebna.
+- Końcówki rzemyka dobierane są z geometrii; sparowane odwrotnie, obie gumy krzyżowały się w X w połowie drogi do widelca.
+- Po wystrzale pusty rzemyk odskakuje i kołysze się przy widelcu zamiast zniknąć.
+
+### Zabezpieczenia
+
+Nowy `tests/sling-art.test.mjs` nagrywa **każdą współrzędną** rysowaną po bohaterze i sprawdza ją względem jego twarzy — na siatce wszystkich dozwolonych naciągów, dla obu rodzajów głowy. Do tego: widoczność procy, brak krzyżowania gum i to, że odchylenie w spoczynku nie rusza fizyki. `scripts/validate.mjs` mierzy to samo na wszystkich 88 misjach. Sprawdzone trzema sabotażami — przywrócenie każdego z trzech oryginalnych błędów zapala właściwego strażnika.
+
 ## 0.32.0 — Złota gwiazdka przestaje być naklejką na scenografii
 
 Rozstawienie obiektów mierzy od 0.31.0 rysunki, a nie punkty. Opcjonalna gwiazdka była stawiana **zupełnie inną regułą**, starszą i znacznie uboższą — i nikt jej nigdy nie sprawdził tą nową miarą.

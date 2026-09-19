@@ -1,7 +1,8 @@
-import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.32.0";
-import { clientPointToWorld, createCropFreeViewport } from "./viewport.js?v=0.32.0";
-import { drawInteractions, drawObjective } from "./interactions-renderer.js?v=0.32.0";
-import { drawCampaignGoal, drawCampaignScene, drawWorldCompanion, setSceneBleed } from "./world-renderer.js?v=0.32.0";
+import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.33.0";
+import { clientPointToWorld, createCropFreeViewport } from "./viewport.js?v=0.33.0";
+import { POUCH_HALF, REST_LEAN, pouchEnds, restPosition, restingGrip, slingFrame, slingGrip } from "./sling-art.js?v=0.33.0";
+import { drawInteractions, drawObjective } from "./interactions-renderer.js?v=0.33.0";
+import { drawCampaignGoal, drawCampaignScene, drawWorldCompanion, setSceneBleed } from "./world-renderer.js?v=0.33.0";
 
 const PALETTE = Object.freeze({
   ink: "#19142d",
@@ -85,6 +86,9 @@ export class GameRenderer {
     this.faceMetadata = null;
     this.particles = [];
     this.callouts = [];
+    // How far the hero is still leaning back into the pouch. 1 at rest, eased
+    // to 0 the moment the player takes hold, so grabbing him does not pop.
+    this.restEase = 1;
     this.trail = [];
     this.lastTrailPoint = null;
     // The path of the last finished attempt, kept so a retry corrects a shot
@@ -257,6 +261,8 @@ export class GameRenderer {
     }
     this.fanAngle += dt * (this.model.modifier === Modifier.STRONGER_FAN ? 15 : 7.5);
     this.shake = Math.max(0, this.shake - dt * 42);
+    const leaning = this.model.phase === GamePhase.READY ? 1 : 0;
+    this.restEase += (leaning - this.restEase) * Math.min(1, dt * 16);
     this.goalWobble = Math.max(0, this.goalWobble - dt * 3.1);
     this.successPulse = Math.max(0, this.successPulse - dt * 0.7);
 
@@ -1010,50 +1016,117 @@ export class GameRenderer {
     ctx.restore();
   }
 
+  // The sling is drawn in two passes around the hero. Everything that could
+  // ever cross his face — both bands, the fork, the back of the pouch — goes
+  // down BEFORE he does, so his head paints over it. Only the pouch's front
+  // lip, which sits at his seat, is drawn afterwards. That is what keeps the
+  // band off the face at every pull: no offset can do it, because a deep pull
+  // carries the hero past the fork tips himself.
   drawSlingBack(ctx) {
-    const avatar = this.model.avatarPosition;
-    const aiming = this.model.phase === GamePhase.AIMING;
+    const model = this.model;
+    const frame = slingFrame(model.anchor);
+    const loaded = model.phase === GamePhase.READY || model.phase === GamePhase.AIMING;
+    const grip = loaded ? slingGrip(this.heroPosition(), model.avatarRadius / 35, Boolean(this.faceImage)) : this.emptyGrip(frame);
+    const ends = pouchEnds(grip, frame, model.avatarRadius / 35);
+
     ctx.save();
     ctx.lineCap = "round";
-    if (aiming) {
-      ctx.strokeStyle = "#2b1833";
-      ctx.lineWidth = 11;
-      ctx.beginPath();
-      ctx.moveTo(154, 442);
-      ctx.lineTo(avatar.x, avatar.y);
-      ctx.stroke();
-      ctx.strokeStyle = PALETTE.coral;
-      ctx.lineWidth = 5;
-      ctx.stroke();
-    }
+    ctx.lineJoin = "round";
+
+    // The fork: post to crotch, then both prongs.
     ctx.strokeStyle = PALETTE.ink;
-    ctx.lineWidth = 18;
+    ctx.lineWidth = 21;
     ctx.beginPath();
-    ctx.moveTo(131, 551);
-    ctx.lineTo(150, 446);
-    ctx.lineTo(168, 405);
-    ctx.moveTo(150, 446);
-    ctx.lineTo(121, 415);
+    ctx.moveTo(frame.base.x, frame.base.y);
+    ctx.lineTo(frame.crotch.x, frame.crotch.y);
+    ctx.lineTo(frame.farTip.x, frame.farTip.y);
+    ctx.moveTo(frame.crotch.x, frame.crotch.y);
+    ctx.lineTo(frame.nearTip.x, frame.nearTip.y);
     ctx.stroke();
     ctx.strokeStyle = "#b86647";
-    ctx.lineWidth = 10;
+    ctx.lineWidth = 13;
     ctx.stroke();
+    // A lit edge on the wood, so the fork reads against a dark hero instead of
+    // merging into his outline.
+    ctx.strokeStyle = "rgba(255, 222, 180, 0.34)";
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(frame.base.x - 3, frame.base.y - 8);
+    ctx.lineTo(frame.crotch.x - 3, frame.crotch.y - 6);
+    ctx.lineTo(frame.farTip.x + 2, frame.farTip.y + 4);
+    ctx.stroke();
+
+    // The bands run from each tip to the pouch's two ends. At rest they are
+    // slack and still drawn: two prongs plus a band is the only picture that
+    // says "slingshot", and the game used to show no band at all until the
+    // player already had hold of the hero.
+    const slack = model.phase === GamePhase.READY ? 9 : 0;
+    ctx.strokeStyle = "#2b1833";
+    ctx.lineWidth = 13;
+    ctx.beginPath();
+    this.bandPath(ctx, frame.farTip, ends.far, slack);
+    this.bandPath(ctx, frame.nearTip, ends.near, slack);
+    ctx.stroke();
+    ctx.strokeStyle = PALETTE.coral;
+    ctx.lineWidth = 7;
+    ctx.stroke();
+
+    // The back of the pouch, which the hero then sits into.
+    ctx.save();
+    ctx.translate(grip.x, grip.y);
+    ctx.rotate(ends.angle + Math.PI / 2);
+    roundedRect(ctx, -POUCH_HALF - 3, -13, (POUCH_HALF + 3) * 2, 27, 11);
+    strokeFill(ctx, "#6b3f2c", PALETTE.ink, 5);
+    ctx.restore();
     ctx.restore();
   }
 
+  // Where the empty pouch hangs once the hero has gone: it snaps back past the
+  // fork and settles, so the launch leaves something behind instead of the
+  // bands simply vanishing.
+  emptyGrip(frame) {
+    const rest = restingGrip(frame);
+    const settle = Math.max(0, 1 - this.model.flightTime * 2.6);
+    const wobble = Math.sin(this.model.flightTime * 34) * 26 * settle;
+    return { x: rest.x + wobble, y: rest.y + wobble * 0.22 };
+  }
+
+  // A band under tension is straight; a slack one sags. `slack` is the sag in
+  // pixels, used only at rest.
+  bandPath(ctx, from, to, slack) {
+    ctx.moveTo(from.x, from.y);
+    if (!slack) { ctx.lineTo(to.x, to.y); return; }
+    ctx.quadraticCurveTo((from.x + to.x) / 2, (from.y + to.y) / 2 + slack, to.x, to.y);
+  }
+
+  // Only the pouch's front lip, at the hero's seat. Nothing here is ever drawn
+  // near the head — tests/sling-art.test.mjs records every coordinate this
+  // paints and fails if one lands on the face.
   drawSlingFront(ctx) {
-    if (this.model.phase !== GamePhase.AIMING) return;
-    const avatar = this.model.avatarPosition;
+    const model = this.model;
+    if (model.phase !== GamePhase.READY && model.phase !== GamePhase.AIMING) return;
+    const scale = model.avatarRadius / 35;
+    const frame = slingFrame(model.anchor);
+    const grip = slingGrip(this.heroPosition(), scale, Boolean(this.faceImage));
+    const ends = pouchEnds(grip, frame, scale);
+
     ctx.save();
     ctx.lineCap = "round";
-    ctx.strokeStyle = "#2b1833";
-    ctx.lineWidth = 11;
+    ctx.translate(grip.x, grip.y);
+    ctx.rotate(ends.angle + Math.PI / 2);
+    // The lip wraps over his lap: a strap across, and a stitched edge.
     ctx.beginPath();
-    ctx.moveTo(169, 409);
-    ctx.lineTo(avatar.x, avatar.y);
+    ctx.moveTo(-POUCH_HALF - 3, -11);
+    ctx.quadraticCurveTo(0, 15, POUCH_HALF + 3, -11);
+    ctx.lineWidth = 12;
+    ctx.strokeStyle = PALETTE.ink;
     ctx.stroke();
-    ctx.strokeStyle = PALETTE.coral;
-    ctx.lineWidth = 5;
+    ctx.lineWidth = 7;
+    ctx.strokeStyle = "#8d5238";
+    ctx.stroke();
+    ctx.setLineDash([4, 5]);
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = "rgba(255, 226, 190, 0.5)";
     ctx.stroke();
     ctx.restore();
   }
@@ -1100,9 +1173,27 @@ export class GameRenderer {
     ctx.restore();
   }
 
+  // Where the hero is DRAWN, which at rest is not where he launches from.
+  // A slingshot at zero draw keeps its pouch at the fork, so a hero standing
+  // exactly on the anchor stands on top of the slingshot and hides it — the
+  // thing a player described as "the hero covers the sling with his body".
+  // He leans back into the band instead. The anchor the physics launches from
+  // is untouched: this only moves pixels.
+  heroPosition() {
+    const model = this.model;
+    if (model.phase === GamePhase.READY) return restPosition(model.anchor, this.restEase);
+    if (model.phase === GamePhase.AIMING && this.restEase > 0.002) {
+      return {
+        x: model.avatarPosition.x + REST_LEAN.x * this.restEase,
+        y: model.avatarPosition.y + REST_LEAN.y * this.restEase,
+      };
+    }
+    return model.avatarPosition;
+  }
+
   drawAvatarShadow(ctx) {
     const landed = this.landingPose();
-    const avatar = landed ?? this.model.avatarPosition;
+    const avatar = landed ?? this.heroPosition();
     const distance = Math.max(0, this.model.groundY - avatar.y);
     const scale = clamp(1 - distance / 700, 0.28, 1);
     ctx.save();
@@ -1161,7 +1252,7 @@ export class GameRenderer {
 
   drawAvatar(ctx) {
     const model = this.model;
-    const position = model.avatarPosition;
+    const position = this.heroPosition();
     const speed = Math.hypot(model.avatarVelocity.x, model.avatarVelocity.y);
     const baseScale = model.avatarRadius / 35;
     const motionStretch = model.phase === GamePhase.FLYING ? clamp(speed / 1350, 0, 0.18) : 0;
@@ -1877,7 +1968,8 @@ export class GameRenderer {
     ctx.beginPath();
     const hintRadius = this.faceImage ? this.model.avatarGrabRadius : this.model.avatarRadius + 15;
     const hintLift = this.faceImage ? -9 : 0;
-    ctx.arc(this.model.anchor.x, this.model.anchor.y + hintLift, hintRadius, 0, Math.PI * 2);
+    const held = this.heroPosition();
+    ctx.arc(held.x, held.y + hintLift, hintRadius, 0, Math.PI * 2);
     ctx.stroke();
 
     const tutorial = this.model.level.tutorial;

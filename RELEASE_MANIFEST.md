@@ -1,7 +1,7 @@
-# SlingToon Web 0.32.0 — Release Manifest
+# SlingToon Web 0.33.0 — Release Manifest
 
 Data: 19 września 2026. Format: HTML5 Canvas / PWA, statyczny hosting GitHub Pages.
-Pakiet kandydujący 0.32.0. Publikacja wymaga osobnej zgody właściciela po obejrzeniu wersji roboczej.
+Pakiet kandydujący 0.33.0. Publikacja wymaga osobnej zgody właściciela po obejrzeniu wersji roboczej.
 
 ## Zawartość
 
@@ -12,6 +12,8 @@ Po trafieniu bohater ląduje w celu łukiem, z tłumionym odbiciem i lekkim odch
 Rozstawienie obiektów liczone jest na prostokątach, które renderer naprawdę maluje (`src/prop-art.js`), nie na jednym punkcie środkowym na obiekt. Poprzednia reguła nie widziała ani szerokości rzeczy, ani drugiej części obiektu złożonego — portal zgłaszał tylko swoje wejście — przez co szesnaście misji miało rysunki nachodzące na siebie. Teraz w całej grze jest zero nachodzeń i minimum 30 px powietrza, przy zachowanym rozrzucie długości lotu.
 
 Opcjonalna gwiazdka odpowiada przed tym samym opisem rysunków, w obu osiach. Poprzednia reguła znała cztery z dziewięciu typów obiektów i mierzyła portal promieniem pierścienia, więc w 25 misjach złoty znaczek był narysowany na scenografii — w jednej przechodziła przez niego lina wahadła. Gwiazdka jest zbierana w promieniu od linii lotu, więc narzędzie może ją odsunąć w bok o kilkadziesiąt pikseli i potwierdzić symulacją, że wciąż da się ją zdobyć.
+
+Proca trzyma bohatera skórzanym rzemykiem za siedzenie, nie za twarz — gumy kończyły się na `avatarPosition`, czyli na karku, i na wgranym zdjęciu biegły od czoła do ust. Czystej twarzy pilnuje kolejność warstw: wszystko, co mogłoby przeciąć bohatera, rysowane jest przed nim, a po nim wyłącznie przednia klapka rzemyka. Sama proca stoi między bohaterem a celem, z obiema końcówkami po stronie wystrzału, a w spoczynku bohater odchyla się w gumę, więc jej nie zasłania: z 26% widocznej procy (ze zdjęciem) zrobiło się 82%. Punkt, z którego liczony jest wystrzał, nie zmienił się.
 
 Kampania używa całej szerokości ekranu: najciaśniejsza para sąsiednich obiektów — z celem włącznie — to 165 px zamiast 40, misji kończących się przed 70% szerokości jest czternaście zamiast trzydziestu jeden, a cztery scenerie domowe, które nie miały nic za połową kadru, sięgają teraz prawej krawędzi.
 
@@ -32,7 +34,7 @@ Cel reaguje na uderzenie w pobliżu — prawdziwa odległość do celu razy sił
 
 ## Publikacja
 
-Publikować po zgodzie właściciela do istniejącego repozytorium i GitHub Pages. Sprawdzić po wdrożeniu wersję `0.32.0`, mapę rozdziałów oraz aktualizację cache poprzedniej instalacji.
+Publikować po zgodzie właściciela do istniejącego repozytorium i GitHub Pages. Sprawdzić po wdrożeniu wersję `0.33.0`, mapę rozdziałów oraz aktualizację cache poprzedniej instalacji.
 
 ## Dalszy rozwój
 
