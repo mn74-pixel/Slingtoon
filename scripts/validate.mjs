@@ -5,6 +5,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { LEVELS } from "../src/levels.js";
 import { PROP_CLEARANCE, STAR_CLEARANCE, clearanceBetween, goalParts, propParts, starClearance } from "../src/prop-art.js";
+import { headKeepOut, pouchEnds, restPosition, slingFrame, slingGrip, visibleFraction } from "../src/sling-art.js";
 import { FLIGHT_STYLES } from "../src/game.js";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -21,6 +22,7 @@ const requiredFiles = [
   "src/campaign-routes.js",
   "src/physics.js",
   "src/prop-art.js",
+  "src/sling-art.js",
   "src/progress.js",
   "src/interactions-renderer.js",
   "src/world-renderer.js",
@@ -299,6 +301,23 @@ for (const level of LEVELS) {
   assert.ok(leftmost - level.anchor.x >= 120,
     `mission ${level.number}: artwork sits ${Math.round(leftmost - level.anchor.x)} px from the sling and boxes the hero in`);
 }
+// The slingshot itself, checked against the hero who sits in it. A player
+// reported both faults: bands drawn across his face, and a hero who covered
+// the sling so completely that a first-timer could not tell what to do.
+for (const level of LEVELS) {
+  const rest = restPosition(level.anchor);
+  for (const photo of [true, false]) {
+    const seen = visibleFraction(level.anchor, rest, 1, photo);
+    assert.ok(seen >= 0.75,
+      `mission ${level.number}: only ${Math.round(seen * 100)}% of the slingshot is visible at rest with a ${photo ? "photographed" : "stock"} head`);
+    const head = headKeepOut(level.anchor, 1, photo);
+    const ends = pouchEnds(slingGrip(level.anchor, 1, photo), slingFrame(level.anchor), 1);
+    for (const end of [ends.far, ends.near]) {
+      assert.ok(Math.hypot(end.x - head.x, end.y - head.y) - head.radius > 20,
+        `mission ${level.number}: a band ends on the hero's head instead of the pouch`);
+    }
+  }
+}
 assert.ok(/function relaxGaps/.test(campaign) && /const SLING_CLEARANCE/.test(campaign),
   "crowding is local: nudge the objects apart in place instead of stretching the whole flight to the reach cap");
 assert.ok(/propParts/.test(campaign) && !/function itemCentre/.test(campaign),
@@ -455,7 +474,7 @@ for (const file of requiredFiles.filter((file) => !file.startsWith(".github") &&
   }
 }
 
-for (const file of ["campaign", "campaign-routes", "physics", "prop-art", "progress", "streak", "interactions-renderer", "world-renderer"]) assert.ok(worker.includes(`./src/${file}.js?v=${version}`));
+for (const file of ["campaign", "campaign-routes", "physics", "prop-art", "sling-art", "progress", "streak", "interactions-renderer", "world-renderer"]) assert.ok(worker.includes(`./src/${file}.js?v=${version}`));
 
 // A real phone in fullscreen landscape (iPhone SE-sized: 568x320) had its
 // mission-map button completely unclickable, and separately its mission name
