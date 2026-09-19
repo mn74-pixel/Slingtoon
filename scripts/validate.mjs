@@ -463,6 +463,20 @@ assert.ok(baseTile >= 0 && masteredTile > baseTile, "the mastered tile must be d
 assert.ok(hoverTile > masteredTile, "hover and current must still outrank mastery: gold is history, mint is where you are");
 assert.ok(/\.mission-tile\.mission-tile--mastered span:first-of-type/.test(css), "the gilded eyebrow needs two classes to beat `.mission-tile span`");
 
+// A short, wide window used to stack the mission strip and the status row above
+// and below the stage, starving it of height: on a 2000x815 window the game
+// filled 61% of the canvas width and the rest was painted wall. The strips move
+// into columns beside the stage there, and the stage stops at the world's own
+// 2:1 so the surplus width becomes interface instead of scenery.
+const wideLayout = css.slice(css.indexOf("@media (min-width: 1200px) and (min-aspect-ratio: 19/10)"));
+assert.ok(wideLayout.length > 0, "the wide-window layout must stay gated on both a minimum width and a wide aspect");
+assert.ok(/grid-template-areas:\s*"strip stage status"/.test(wideLayout),
+  "on a wide window the mission strip and the status row belong beside the stage, not above and below it");
+assert.ok(/aspect-ratio:\s*1280 \/ 640/.test(wideLayout),
+  "the stage stops at the world's aspect; past it the viewport only reveals more scenery");
+assert.ok(/white-space:\s*normal/.test(wideLayout),
+  "the title and instruction clamps exist for a horizontal strip and must be released in a column");
+
 for (const file of requiredFiles.filter((file) => !file.startsWith(".github") && !file.startsWith("docs/"))) {
   if (["package.json", ".gitignore", ".gitattributes"].includes(file)) continue;
   if (file === ".nojekyll") continue;

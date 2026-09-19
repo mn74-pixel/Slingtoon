@@ -2031,3 +2031,86 @@ button:focus-visible, canvas:focus-visible { outline: 3px solid #ffd35f; outline
   body.is-fullscreen-active .status-row { height: calc(48px + env(safe-area-inset-bottom)); min-height: calc(48px + env(safe-area-inset-bottom)); }
   body.is-fullscreen-active .flight-moves { bottom: calc(62px + env(safe-area-inset-bottom)); }
 }
+
+/* A short, wide window starves the stage of height: the topbar, the mission
+   strip and the status row stack above and below it, so the canvas gets 480 px
+   of an 815 px window and the world — which is only twice as wide as it is
+   tall — is scaled to fit that height. Everything to the left and right of the
+   play area is then painted scenery. Measured on a 2000x815 window: the game
+   filled 61% of the canvas width and 563 px were scenery.
+
+   On a window wide enough to afford them, the strip and the status row move
+   into columns beside the stage. The stage gets the full height of the card,
+   the game grows with it, and the space at the sides holds the interface
+   instead of nothing. */
+@media (min-width: 1200px) and (min-aspect-ratio: 19/10) {
+  .app-shell { width: min(2300px, 100%); }
+
+  .game-card {
+    display: grid;
+    /* The columns get a width they can actually hold their text in — squeezed
+       below this, "TWARZ: TYLKO LOKALNIE" is cut off at the card's edge. The
+       stage takes everything left over, capped at its own 2:1 so the surplus
+       never becomes painted scenery. */
+    grid-template-columns: clamp(190px, 13vw, 292px) minmax(0, 1fr) clamp(190px, 13vw, 292px);
+    grid-template-areas: "strip stage status";
+    align-items: stretch;
+  }
+
+  .mission-strip {
+    grid-area: strip;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: 13px;
+    padding: 16px 18px;
+  }
+
+  .mission-copy { flex: 0 0 auto; }
+  .mission-badges { display: flex; flex-wrap: wrap; gap: 6px; }
+
+  /* Past the world's own 2:1 the viewport only reveals more scenery, so the
+     stage stops there and the width goes to the columns instead. Nothing is
+     cropped — the game is exactly as large, and what was painted wall is now
+     the interface. */
+  .stage {
+    grid-area: stage;
+    aspect-ratio: 1280 / 640;
+    width: auto;
+    max-width: 100%;
+    height: 100%;
+    justify-self: center;
+  }
+
+  .status-row {
+    grid-area: status;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 13px;
+    padding: 16px 18px;
+  }
+
+  .instruction { flex: 0 0 auto; align-items: flex-start; }
+
+  /* These clamps exist because the title and the instruction normally sit in a
+     horizontal strip with no room to grow. A column has height to spare, and a
+     mission called "Ucisz budzik. Bez dramatu." must not arrive as
+     "Ucisz budzik. Be...". */
+  .mission-copy h1 {
+    font-size: clamp(17px, 1.25vw, 22px);
+    -webkit-line-clamp: 5;
+  }
+
+  .mission-kicker { white-space: normal; overflow: visible; text-overflow: clip; }
+
+  .instruction strong,
+  .instruction span:last-child {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+  }
+
+  .hint-button,
+  .restart-button { justify-content: center; }
+}
