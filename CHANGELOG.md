@@ -1,5 +1,44 @@
 # Changelog
 
+## 0.34.0 — Koniec marnowania boków ekranu
+
+„Zobacz ile miejsca jest marnowane po obu stronach ekranu" — przy zrzucie z misji 31 na szerokim oknie. Pomiar potwierdził: na oknie 2000×815 **gra zajmowała 61% szerokości płótna**, a 563 px po bokach to była sama scenografia.
+
+### Przyczyna nie leżała po bokach, tylko u góry i na dole
+
+Świat ma 1280×640 i jest wykorzystany niemal w całości (x 49..1247) — więc marnotrawstwo nie brało się z pustych marginesów planszy. Brało się stąd, że **pasek misji i pasek statusu stoją nad i pod sceną**. Na niskim, szerokim oknie zabierały 208 px wysokości, scena dostawała 480 px z 815, a skala liczona jest z wysokości — więc świat malał, a viewport odsłaniał po bokach dodatkową scenografię zamiast powiększyć grę.
+
+### Paski idą na boki
+
+Na oknie dość szerokim, żeby na to stać (od 1200 px i proporcji 1,9:1), pasek misji i pasek statusu przenoszą się do kolumn **obok** sceny. Scena dostaje pełną wysokość karty, gra rośnie razem z nią, a miejsce po bokach zajmuje interfejs zamiast niczego.
+
+Scena zatrzymuje się na własnych proporcjach świata 2:1 — dalej viewport odsłania już tylko scenografię, więc nadmiar szerokości idzie do kolumn. Nic nie jest przycinane: gra jest dokładnie tak duża, jak pozwala wysokość.
+
+Zmierzone:
+
+| okno | skala | gra wypełnia płótno |
+|---|---|---|
+| 2000×815 | 0,75 → **0,963** (×1,28) | 61% → **94%** |
+| 2560×1080 | 1,14 → **1,31** (×1,15) | → **94%** |
+| 1600×760 | 0,75 → **0,88** (×1,17) | → **94%** |
+| 1920×1080, 1440×900, telefony | bez zmian | — |
+
+Telefony i ekrany 16:9 nie mają szerokości na kolumny, więc reguła ich nie dotyczy. Na telefonie w poziomie kolumny **pogorszyłyby** sprawę — sprawdzone: scena straciłaby więcej na szerokości, niż zyskała na wysokości.
+
+### Przy okazji: malowane tła nie sięgały krawędzi
+
+Sceny proceduralne malują niebo, wodę i ziemię przez całą odsłoniętą przestrzeń. Tła rysowane z pliku SVG (sypialnia, pralnia) były rysowane **dokładnie na prostokącie świata** i kończyły się ostrą pionową krawędzią, za którą widać było kolor czyszczenia płótna — dwa ciemne pasy po bokach. Ten sam szew pojawiał się u góry i na dole na telefonie w pionie.
+
+Krawędzie tła są teraz rozciągane na margines: ściana, podłoga albo niebo po prostu trwają dalej. Rogi też — bez nich szeroki pionowy ekran pokazywał cztery prostokąty pustego koloru.
+
+### Drobne
+- Tytuł misji i instrukcja mają w kolumnie miejsce, żeby się zawinąć. Ich obcięcia istnieją dla poziomego paska; w kolumnie „Ucisz budzik. Bez wstawania." przychodziło jako „Ucisz budzik. Be…".
+- Kolumny mają gwarantowaną szerokość — ściśnięte poniżej niej gubiły „TWARZ: TYLKO LOKALNIE" za krawędzią karty. Sprawdzone też w pełnym ekranie.
+
+### Zabezpieczenia
+
+Nowy test przechodzi siatką po całej widocznej klatce i sprawdza, czy każdy jej punkt — razem z rogami — dostaje tło. Sabotaż (powrót do rysowania na prostokącie świata) zgłasza **5832 punkty bez tła**. `scripts/validate.mjs` pilnuje, że układ kolumnowy zostaje przypisany do szerokiego okna, że scena trzyma się proporcji 2:1 i że obcięcia tekstu są w kolumnie zwolnione.
+
 ## 0.33.0 — Bohater przestaje być łapany za twarz, proca przestaje być niewidzialna
 
 Gracz nazwał obie rzeczy w jednym zdaniu: bohater jest łapany za twarz, a jeśli ktoś widzi tę grę pierwszy raz, nie wie co robić, bo **bohater zakrywa ciałem procę**. Obie obserwacje były trafne i obie miały przyczynę w kodzie, nie w rysunku.

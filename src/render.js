@@ -1,8 +1,8 @@
-import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.33.0";
-import { clientPointToWorld, createCropFreeViewport } from "./viewport.js?v=0.33.0";
-import { POUCH_HALF, REST_LEAN, pouchEnds, restPosition, restingGrip, slingFrame, slingGrip } from "./sling-art.js?v=0.33.0";
-import { drawInteractions, drawObjective } from "./interactions-renderer.js?v=0.33.0";
-import { drawCampaignGoal, drawCampaignScene, drawWorldCompanion, setSceneBleed } from "./world-renderer.js?v=0.33.0";
+import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.34.0";
+import { clientPointToWorld, createCropFreeViewport } from "./viewport.js?v=0.34.0";
+import { POUCH_HALF, REST_LEAN, pouchEnds, restPosition, restingGrip, slingFrame, slingGrip } from "./sling-art.js?v=0.34.0";
+import { drawInteractions, drawObjective } from "./interactions-renderer.js?v=0.34.0";
+import { drawCampaignGoal, drawCampaignScene, drawWorldCompanion, setSceneBleed } from "./world-renderer.js?v=0.34.0";
 
 const PALETTE = Object.freeze({
   ink: "#19142d",
@@ -336,9 +336,48 @@ export class GameRenderer {
     ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
   }
 
+  // A painted backdrop is an SVG drawn at the world rectangle. The procedural
+  // scenes bleed into whatever the screen reveals; this one stopped dead at
+  // x=1280, so a wide window put two hard vertical seams on screen with the
+  // clear colour beyond them — and a portrait phone got the same seams top and
+  // bottom. The edges are stretched outward into the margin instead, which
+  // continues a wall, a floor or a sky without inventing anything.
+  drawBackdropImage(ctx) {
+    const image = this.background;
+    ctx.drawImage(image, 0, 0, WORLD.width, WORLD.height);
+    const left = Math.ceil(this.viewport.offsetX);
+    const top = Math.ceil(this.viewport.offsetY);
+    if (left <= 0 && top <= 0) return;
+    const width = image.naturalWidth || image.width || WORLD.width;
+    const height = image.naturalHeight || image.height || WORLD.height;
+    // One pixel of source would shimmer as the image scales, so a thin slice
+    // is taken and stretched.
+    const sliceX = Math.max(1, Math.round(width * 0.004));
+    const sliceY = Math.max(1, Math.round(height * 0.004));
+    if (left > 0) {
+      ctx.drawImage(image, 0, 0, sliceX, height, -left, 0, left, WORLD.height);
+      ctx.drawImage(image, width - sliceX, 0, sliceX, height, WORLD.width, 0, left, WORLD.height);
+    }
+    if (top > 0) {
+      ctx.drawImage(image, 0, 0, width, sliceY, 0, -top, WORLD.width, top);
+      ctx.drawImage(image, 0, height - sliceY, width, sliceY, 0, WORLD.height, WORLD.width, top);
+    }
+    // The four corners belong to neither band, so they are clamped from the
+    // image's own corners. Without them a wide portrait screen shows four
+    // rectangles of clear colour.
+    if (left > 0 && top > 0) {
+      for (const [sx, sy, dx, dy] of [
+        [0, 0, -left, -top],
+        [width - sliceX, 0, WORLD.width, -top],
+        [0, height - sliceY, -left, WORLD.height],
+        [width - sliceX, height - sliceY, WORLD.width, WORLD.height],
+      ]) ctx.drawImage(image, sx, sy, sliceX, sliceY, dx, dy, left, top);
+    }
+  }
+
   drawBackground(ctx) {
     if (this.background) {
-      ctx.drawImage(this.background, 0, 0, WORLD.width, WORLD.height);
+      this.drawBackdropImage(ctx);
     } else {
       this.drawProceduralScene(ctx);
     }
