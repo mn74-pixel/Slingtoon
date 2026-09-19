@@ -1,13 +1,15 @@
-# SlingToon Web 0.30.0 — Release Manifest
+# SlingToon Web 0.31.0 — Release Manifest
 
-Data: 18 września 2026 (wieczorem). Format: HTML5 Canvas / PWA, statyczny hosting GitHub Pages.
-Pakiet kandydujący 0.30.0. Publikacja wymaga osobnej zgody właściciela po obejrzeniu wersji roboczej.
+Data: 19 września 2026. Format: HTML5 Canvas / PWA, statyczny hosting GitHub Pages.
+Pakiet kandydujący 0.31.0. Publikacja wymaga osobnej zgody właściciela po obejrzeniu wersji roboczej.
 
 ## Zawartość
 
 88 misji w 11 rozdziałach. Pierwsze osiem pozostaje bez zmian, a 72 dalsze prowadzą przez plażę, podwodne światy, port, lunapark i kosmos. Reguły obejmują prądy, wyporność, pola przyciągania, wieloprzyciskowe bramki, zmienną grawitację oraz dwie nowe: ruchomą przeszkodę i strefę zakazaną kończącą lot od dotknięcia. Mapa wyświetla rozdziały po osiem misji i wznawia aktualny etap.
 
 Po trafieniu bohater ląduje w celu łukiem, z tłumionym odbiciem i lekkim odchyleniem w stronę nadlotu, po czym oddycha i kołysze się zamiast zastygnąć. Głowa ze zdjęcia nie dostaje żadnego akcentu na wysokości twarzy. Tryb Seria prowadzi przez losowe ukończone misje ze wspólnym budżetem strzałów i zapisuje własny rekord, nie zmieniając postępu kampanii. Mimika bohatera odpowiada na zdarzenia w locie: bliską strefę zakazaną, cel w zasięgu i serię odbić. Gwiazdki odblokowują charaktery (Zen ★3, Panic ★9, Tough Guy ★18), a każdy charakter to inny zestaw manewrów w locie. Misja z kompletem trzech medali jest oznaczona jako opanowana w mapie misji.
+
+Rozstawienie obiektów liczone jest na prostokątach, które renderer naprawdę maluje (`src/prop-art.js`), nie na jednym punkcie środkowym na obiekt. Poprzednia reguła nie widziała ani szerokości rzeczy, ani drugiej części obiektu złożonego — portal zgłaszał tylko swoje wejście — przez co szesnaście misji miało rysunki nachodzące na siebie. Teraz w całej grze jest zero nachodzeń i minimum 30 px powietrza, przy zachowanym rozrzucie długości lotu.
 
 Kampania używa całej szerokości ekranu: najciaśniejsza para sąsiednich obiektów — z celem włącznie — to 165 px zamiast 40, misji kończących się przed 70% szerokości jest czternaście zamiast trzydziestu jeden, a cztery scenerie domowe, które nie miały nic za połową kadru, sięgają teraz prawej krawędzi.
 
@@ -28,7 +30,7 @@ Cel reaguje na uderzenie w pobliżu — prawdziwa odległość do celu razy sił
 
 ## Publikacja
 
-Publikować po zgodzie właściciela do istniejącego repozytorium i GitHub Pages. Sprawdzić po wdrożeniu wersję `0.30.0`, mapę rozdziałów oraz aktualizację cache poprzedniej instalacji.
+Publikować po zgodzie właściciela do istniejącego repozytorium i GitHub Pages. Sprawdzić po wdrożeniu wersję `0.31.0`, mapę rozdziałów oraz aktualizację cache poprzedniej instalacji.
 
 ## Dalszy rozwój
 

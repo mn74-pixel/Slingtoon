@@ -4,6 +4,7 @@ import { access, readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { LEVELS } from "../src/levels.js";
+import { PROP_CLEARANCE, clearanceBetween, goalParts, propParts } from "../src/prop-art.js";
 import { FLIGHT_STYLES } from "../src/game.js";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -19,6 +20,7 @@ const requiredFiles = [
   "src/campaign.js",
   "src/campaign-routes.js",
   "src/physics.js",
+  "src/prop-art.js",
   "src/progress.js",
   "src/interactions-renderer.js",
   "src/world-renderer.js",
@@ -253,32 +255,50 @@ assert.ok(/short: \{ high:/.test(campaign) && /mid: \{ high:/.test(campaign),
   "each distance band needs its own heights; the interception window narrows with distance");
 assert.ok(!/long: \{[^}]*high:/.test(campaign), "a long shot cannot also be a high one: no trajectory reaches there");
 
-// The layout guard used to look only at the interactions, never at the target
-// they guard, and seventeen missions shipped with a pair closer than the minimum
-// — mission 88 had an obstacle 40 px from the goal. Measured on the real levels,
-// because a regex cannot see where the objects ended up.
-const MIN_NEIGHBOUR_GAP = 160;
-const itemColumn = (item) => item.entry ? item.entry.x
-  : item.a ? (item.a.x + item.b.x) / 2
-    : item.pendulum ? item.pendulum.x : item.x + (item.width ?? 0) / 2;
-for (const level of LEVELS.slice(8)) {
-  const columns = [...level.interactions.map(itemColumn), level.goal.x].sort((a, b) => a - b);
-  for (let i = 1; i < columns.length; i += 1) {
-    const gap = columns[i] - columns[i - 1];
-    assert.ok(gap >= MIN_NEIGHBOUR_GAP,
-      `mission ${level.number}: two objects ${Math.round(gap)} px apart read as one lump, goal included`);
+// Crowding is measured on the artwork, not on one point per object.
+//
+// The previous guard demanded 160 px between centre points. That is blind
+// twice over: a centre says nothing about how wide a thing is, and for an item
+// with several parts it described only one of them. `itemColumn` returned a
+// portal's ENTRY, so its exit ring — 160 px of cream box, often hundreds of
+// pixels away — was never checked at all. Sixteen missions shipped with
+// drawings physically on top of each other while this assertion passed:
+// mission 70 had the DZYŃ! button painted over the exit portal.
+const goalArtOf = (level) => goalParts(level.goal);
+for (const level of LEVELS) {
+  const groups = level.interactions
+    .map((item) => ({ id: item.id ?? item.type, parts: propParts(item) }))
+    .filter((group) => group.parts.length);
+  groups.push({ id: "goal", parts: goalArtOf(level) });
+  for (let i = 0; i < groups.length; i += 1) {
+    for (let j = i + 1; j < groups.length; j += 1) {
+      const air = clearanceBetween(groups[i].parts, groups[j].parts);
+      if (!Number.isFinite(air)) continue;
+      assert.ok(air >= PROP_CLEARANCE - 0.5,
+        `mission ${level.number}: ${groups[i].id} and ${groups[j].id} leave ${Math.round(air)} px of air; under ${PROP_CLEARANCE} they read as one lump`);
+    }
   }
-  assert.ok(columns[0] - level.anchor.x >= 140,
-    `mission ${level.number}: an object sits ${Math.round(columns[0] - level.anchor.x)} px from the sling and boxes the hero in`);
+  // A portal's own two rings are one puzzle, so the layout never pulls them
+  // apart — which means the authored pair has to stand clear by itself.
+  for (const item of level.interactions.filter((entry) => entry.type === "portal")) {
+    const parts = propParts(item);
+    assert.ok(clearanceBetween(parts.slice(0, 2), parts.slice(2)) >= PROP_CLEARANCE - 0.5,
+      `mission ${level.number}: the two rings of ${item.id} sit on top of each other and nothing will separate them`);
+  }
+  const leftmost = Math.min(level.goal.x, ...level.interactions.flatMap((item) => propParts(item).map((part) => part.left)));
+  assert.ok(leftmost - level.anchor.x >= 120,
+    `mission ${level.number}: artwork sits ${Math.round(leftmost - level.anchor.x)} px from the sling and boxes the hero in`);
 }
 assert.ok(/function relaxGaps/.test(campaign) && /const SLING_CLEARANCE/.test(campaign),
   "crowding is local: nudge the objects apart in place instead of stretching the whole flight to the reach cap");
+assert.ok(/propParts/.test(campaign) && !/function itemCentre/.test(campaign),
+  "the layout must place objects by the rectangles they paint, not by one centre point per item");
 
 // The campaign has to use the screen it is given. Twelve missions used to end
 // before 60% of the width and thirty-one before 70%, which reads as a game
 // squeezed into the left half whatever the obstacle spacing says.
 const reachFractions = LEVELS.slice(8).map((level) => {
-  const right = Math.max(level.goal.x, ...level.interactions.map(itemColumn));
+  const right = Math.max(level.goal.x, ...level.interactions.flatMap((item) => propParts(item).map((part) => part.right)));
   return right / 1280;
 }).sort((a, b) => a - b);
 assert.ok(reachFractions[0] >= 0.55,
@@ -425,7 +445,7 @@ for (const file of requiredFiles.filter((file) => !file.startsWith(".github") &&
   }
 }
 
-for (const file of ["campaign", "campaign-routes", "physics", "progress", "streak", "interactions-renderer", "world-renderer"]) assert.ok(worker.includes(`./src/${file}.js?v=${version}`));
+for (const file of ["campaign", "campaign-routes", "physics", "prop-art", "progress", "streak", "interactions-renderer", "world-renderer"]) assert.ok(worker.includes(`./src/${file}.js?v=${version}`));
 
 // A real phone in fullscreen landscape (iPhone SE-sized: 568x320) had its
 // mission-map button completely unclickable, and separately its mission name

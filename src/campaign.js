@@ -1,6 +1,7 @@
 // Authored campaign layouts. Coordinates describe actual colliders, not decoration.
 // Routes are measured offline with the same solver used by the game.
-import { CAMPAIGN_ROUTES } from "./campaign-routes.js?v=0.30.0";
+import { CAMPAIGN_ROUTES } from "./campaign-routes.js?v=0.31.0";
+import { PROP_CLEARANCE, clearanceBetween, goalParts, propParts, spansVertically } from "./prop-art.js?v=0.31.0";
 
 export const CHAPTERS = Object.freeze([
   { id: "home", name: "Domowy chaos", subtitle: "Od drzemki do pierwszej kaczki", scene: "bedroom" },
@@ -19,7 +20,11 @@ export const CHAPTERS = Object.freeze([
 const p = (x, y) => ({ x, y });
 const crate = (id, x, y = 190, height = 396, label = "OSTROŻNIE: ZAWARTOŚĆ") => ({ id, type: "breakable", x, y, width: 60, height, label });
 const wall = (id, x, y, width = 80, height = 586 - y, label = "OMIŃ") => ({ id, type: "solid", x, y, width, height, label });
-const portal = (id, x, y, ex, ey, turn = 0) => ({ id, type: "portal", entry: p(x, y), exit: p(ex, ey), radius: 68, turn });
+// Mission 30 asks for four rings and a treasure chest inside one flight, and at
+// the standard 68 px radius that is 640 px of cream box in a 776 px corridor —
+// it cannot be spaced, only stacked. A narrower pipe is the one lever that buys
+// width without moving the puzzle.
+const portal = (id, x, y, ex, ey, turn = 0, radius = 68) => ({ id, type: "portal", entry: p(x, y), exit: p(ex, ey), radius, turn });
 const wind = (id, x, y, width, height, fx, fy, label = "PODMUCH") => ({ id, type: "steam", x, y, width, height, force: p(fx, fy), label });
 const current = (id, x, y, width, height, fx, fy, label = "PRĄD") => ({ id, type: "current", x, y, width, height, force: p(fx, fy), drag: .12, label });
 const bubble = (id, x, y, radius = 140, fy = -530) => ({ id, type: "bubble", x, y, radius, force: p(110, fy), drag: .22, label: "BĄBEL ↑" });
@@ -199,31 +204,101 @@ function shiftItem(item, dx) {
 // Nothing is pushed closer than this to the sling — a hero boxed in by an
 // obstacle at launch cannot read its own shot.
 const SLING_CLEARANCE = 150;
-function relaxGaps(items, goalX, gap = MIN_OBSTACLE_GAP) {
-  const order = items.map((item, index) => ({ index, centre: itemCentre(item) }))
-    .sort((a, b) => a.centre - b.centre);
+
+// The first version of this compared one centre point per item and demanded
+// 165 px between them. That is blind twice over. It could not see how wide a
+// thing is, so a 136 px portal ring and a 130 px button were "165 apart" while
+// their artwork overlapped; and it could not see an item's other parts at all,
+// because `itemCentre` returned a portal's ENTRY and nothing else. Mission 70
+// shipped with the DZYŃ! button 14 px from the exit ring it was drawn on top
+// of, and the rule reported the nearest object as 337 px away.
+//
+// So the rule now works on the rectangles the renderer will really paint. An
+// item may own several of them — a portal's two rings, a caption wider than the
+// box under it — and they all move together, because a portal is one puzzle.
+// Two items must leave PROP_CLEARANCE of air wherever their artwork shares a
+// row of pixels; where it does not, they are free to sit in the same column.
+function itemBounds(item, parts) {
+  return {
+    left: Math.min(...parts.map((part) => part.left)),
+    right: Math.max(...parts.map((part) => part.right)),
+  };
+}
+
+// How far left `mover` has to go to clear `fixed` — zero when nothing overlaps.
+function overlapPush(moverParts, fixedParts, clearance) {
+  let push = 0;
+  for (const mover of moverParts) {
+    for (const blocker of fixedParts) {
+      if (!spansVertically(mover, blocker)) continue;
+      // Only the neighbour on the right pushes: the sweep runs right to left,
+      // so anything already placed is to this item's right.
+      if (mover.right + clearance <= blocker.left) continue;
+      if (mover.left >= blocker.right) continue;
+      push = Math.max(push, mover.right + clearance - blocker.left);
+    }
+  }
+  return push;
+}
+
+// The tightest air between two different items' artwork. Negative means their
+// drawings overlap; a small positive number still reads as one lump.
+function worstClearance(items, goal) {
+  const groups = items.map((item) => propParts(item)).filter((parts) => parts.length);
+  groups.push(goalParts(goal));
+  let worst = Infinity;
+  for (let i = 0; i < groups.length; i += 1) {
+    for (let j = i + 1; j < groups.length; j += 1) {
+      const air = clearanceBetween(groups[i], groups[j]);
+      if (air < worst) worst = air;
+    }
+  }
+  return worst;
+}
+
+// The largest square of artwork two different items share. Zero means the
+// mission reads as separate objects; anything else is a lump.
+function worstOverlap(items, goal) {
+  const groups = items.map((item) => propParts(item)).filter((parts) => parts.length);
+  groups.push(goalParts(goal));
+  let worst = 0;
+  for (let i = 0; i < groups.length; i += 1) {
+    for (let j = i + 1; j < groups.length; j += 1) {
+      for (const a of groups[i]) {
+        for (const b of groups[j]) {
+          const width = Math.min(a.right, b.right) - Math.max(a.left, b.left);
+          const height = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
+          if (width > 0 && height > 0) worst = Math.max(worst, width * height);
+        }
+      }
+    }
+  }
+  return worst;
+}
+
+function relaxGaps(items, goal, clearance = PROP_CLEARANCE) {
+  const drawn = items.map((item) => propParts(item));
+  const order = items
+    .map((item, index) => ({ index, parts: drawn[index] }))
+    .filter((entry) => entry.parts.length > 0)
+    .sort((a, b) => itemBounds(items[a.index], a.parts).right - itemBounds(items[b.index], b.parts).right);
   const shifted = [...items];
-  const columns = order.map((entry) => entry.centre);
+  const moved = new Map();
   const floor = ANCHOR_X + SLING_CLEARANCE;
-  // Right to left first, so nothing crowds the goal.
-  let limit = goalX;
-  for (let i = columns.length - 1; i >= 0; i -= 1) {
-    columns[i] = Math.max(floor, Math.min(columns[i], limit - gap));
-    limit = columns[i];
+  // Right to left: the goal stands still and everything else makes room.
+  let placed = goalParts(goal);
+  for (let i = order.length - 1; i >= 0; i -= 1) {
+    const { index, parts } = order[i];
+    const dx = -overlapPush(parts, placed, clearance);
+    const bounds = itemBounds(items[index], parts);
+    // Never pushed into the sling's lap, even if that leaves an overlap the
+    // author has to solve by hand — silently stacking on the hero is worse.
+    const limited = Math.max(dx, floor - bounds.left);
+    const settled = parts.map((part) => ({ ...part, left: part.left + limited, right: part.right + limited }));
+    moved.set(index, limited);
+    placed = placed.concat(settled);
   }
-  // Then left to right, because pulling left alone cannot help a layout whose
-  // objects are already bunched by the sling: mission 27 had two of them 114 px
-  // apart with a quarter of the flight standing empty to their right.
-  let previous = floor - gap;
-  for (let i = 0; i < columns.length; i += 1) {
-    const headroom = goalX - gap * (columns.length - i);
-    columns[i] = Math.min(Math.max(columns[i], previous + gap), Math.max(floor, headroom));
-    previous = columns[i];
-  }
-  for (let i = 0; i < order.length; i += 1) {
-    const { index, centre } = order[i];
-    if (columns[i] !== centre) shifted[index] = shiftItem(shifted[index], columns[i] - centre);
-  }
+  for (const [index, dx] of moved) if (dx) shifted[index] = shiftItem(shifted[index], dx);
   return shifted;
 }
 
@@ -254,7 +329,7 @@ function scaleItem(item, factor) {
 // added when the campaign moved right: a longer flight spends more of the launch
 // power, which leaves less room for both a forgiving window and a second route
 // to hang the optional star on.
-const SHOT_OVERRIDES = Object.freeze({ 12: { reach: "short", height: "low" }, 13: { reach: "mid", height: "mid" }, 16: { reach: "long", height: "low" }, 20: { reach: "mid", height: "high" }, 30: { reach: "long", height: "mid" }, 35: { reach: "long", height: "mid" }, 39: { reach: "mid", height: "mid" }, 45: { reach: "short", height: "low" }, 47: { reach: "mid", height: "mid" }, 56: { reach: "short", height: "high" }, 58: { reach: "mid", height: "high" }, 59: { reach: "long", height: "mid" }, 62: { reach: "mid", height: "high" }, 66: { reach: "long", height: "mid" }, 70: { reach: "long", height: "mid" }, 72: { reach: "mid", height: "high" }, 74: { reach: "mid", height: "mid" }, 75: { reach: "short", height: "high" }, 76: { reach: "mid", height: "mid" }, 86: { reach: "long", height: "mid" } });
+const SHOT_OVERRIDES = Object.freeze({ 12: { reach: "short", height: "low" }, 13: { reach: "mid", height: "mid" }, 16: { reach: "long", height: "low" }, 20: { reach: "mid", height: "high" }, 22: { reach: "long", height: "mid" }, 30: { reach: "long", height: "mid" }, 35: { reach: "long", height: "mid" }, 39: { reach: "mid", height: "mid" }, 45: { reach: "short", height: "low" }, 47: { reach: "mid", height: "mid" }, 56: { reach: "short", height: "high" }, 58: { reach: "mid", height: "high" }, 59: { reach: "long", height: "mid" }, 62: { reach: "mid", height: "high" }, 66: { reach: "long", height: "mid" }, 70: { reach: "long", height: "low" }, 72: { reach: "mid", height: "high" }, 74: { reach: "mid", height: "mid" }, 75: { reach: "short", height: "high" }, 76: { reach: "mid", height: "high" }, 86: { reach: "long", height: "mid" } });
 const HONEST_GOAL_RADIUS = 56;
 function goalRadius(number, local) {
   const base = Math.max(HONEST_GOAL_RADIUS, Math.round(84 - (number - 9) * 0.72));
@@ -271,27 +346,37 @@ function mission(number, name, kind, authoredX, authoredY, mechanic, clue, win, 
   // shape decides where the mission actually sits in the sling's reach, and the
   // obstacles ride along so their place in the flight is unchanged.
   const shot = shotFor(number, SHOT_OVERRIDES[number]);
-  // The shot may still have to grow, but only by as much as the object count
-  // actually needs: clearance from the sling plus one minimum gap per object.
-  // The old rule scaled the shortfall by the authored layout's proportions,
-  // which over-stretched — twenty-three missions ended up pinned to the far
-  // reach cap, all in one column, which is "one shot repeated" arriving through
-  // a side door. Dropping the rule entirely was worse: relaxGaps then ran out of
-  // room against the sling clearance and the tightest pair fell to 113 px.
-  const needed = SLING_CLEARANCE + authoredInteractions.length * MIN_OBSTACLE_GAP;
+  // The shot may still have to grow, but only by as much as the artwork really
+  // needs. Counting objects and multiplying by a fixed gap was the previous
+  // answer and it measured the wrong thing twice: a count says nothing about
+  // how wide a portal ring or a caption is, and the old gap was between centre
+  // points anyway. So the layout is simply laid out and looked at — if the
+  // drawings still overlap after being nudged apart, the flight grows a step
+  // and the whole thing is tried again, up to the reach cap.
   const authoredReach = authoredX - ANCHOR_X;
-  const x = Math.round(ANCHOR_X + Math.min(Math.max(shot.x - ANCHOR_X, needed), MAX_REACH));
-  // The height has to follow where the mission actually ended up, not the band
-  // it asked for. When the spacing rule stretched a short shot out to the reach
-  // cap, its "high" target stayed high — mission 56 sat at x=1173, y=209, which
-  // no free flight reaches. It was solvable only through the mission's own
-  // furniture, which is a trap dressed as a target.
-  // The clamp keeps its own jitter, or every mission the spacing rule pushed to
-  // the reach cap lands on the same pixel: five pairs of missions ended up with
-  // byte-identical target positions, which reads as the same shot twice.
-  const y = Math.round(Math.max(shot.y, reachFloor(x) + 30 + Math.abs(jitter(number + 17, 34))));
-  const factor = (x - ANCHOR_X) / authoredReach;
-  const interactions = relaxGaps(authoredInteractions.map((item) => scaleItem(item, factor)), x);
+  const radius = options.radius ?? goalRadius(number, local);
+  const layoutFor = (reach) => {
+    const at = Math.round(ANCHOR_X + Math.min(reach, MAX_REACH));
+    // The height has to follow where the mission actually ended up, not the
+    // band it asked for. When the spacing rule stretched a short shot out to
+    // the reach cap, its "high" target stayed high — mission 56 sat at x=1173,
+    // y=209, which no free flight reaches. It was solvable only through the
+    // mission's own furniture, which is a trap dressed as a target. The clamp
+    // keeps its own jitter, or every mission pushed to the cap lands on the
+    // same pixel: five pairs once had byte-identical target positions.
+    const height = Math.round(Math.max(shot.y, reachFloor(at) + 30 + Math.abs(jitter(number + 17, 34))));
+    const target = { kind, shape: "circle", x: at, y: height, radius, scale: 1, motion: options.motion };
+    const scale = (at - ANCHOR_X) / authoredReach;
+    return { goal: target, factor: scale, interactions: relaxGaps(authoredInteractions.map((item) => scaleItem(item, scale)), target) };
+  };
+  let reach = Math.max(shot.x - ANCHOR_X, SLING_CLEARANCE);
+  let layout = layoutFor(reach);
+  while (worstClearance(layout.interactions, layout.goal) < PROP_CLEARANCE && reach < MAX_REACH) {
+    reach = Math.min(reach + 40, MAX_REACH);
+    layout = layoutFor(reach);
+  }
+  const { goal, factor, interactions } = layout;
+  const { x, y } = goal;
   const route = CAMPAIGN_ROUTES[number];
   const required = options.required ?? interactions.filter((item) => !["solid", "gate", "hazard", "pendulum"].includes(item.type)).map((item) => item.id);
   const surface = interactions.find((item) => item.type === "water");
@@ -305,7 +390,7 @@ function mission(number, name, kind, authoredX, authoredY, mechanic, clue, win, 
     chapterId: chapter.id, chapter: chapter.name.toUpperCase(), scene: options.scene ?? chapter.scene,
     environment: options.environment ?? chapter.environment, background: options.background ?? null,
     mechanic, title: name, clue, direction, pull,
-    goal: { kind, shape: "circle", x, y, radius: options.radius ?? goalRadius(number, local), scale: 1, motion: options.motion },
+    goal,
     star: route?.star ?? p(scaleX(740, factor), 280), starPull: route?.starPull,
     interactions, required, requirement: options.requirement ?? "Najpierw odwiedź oznaczone obiekty. Cel czeka na zakończenie Twojej misji.",
     water: surface ? { ...surface, enabled: true } : { enabled: false },
@@ -325,7 +410,7 @@ export const EXTRA_LEVELS = [
   mission(13, "Lody zanim się rozmyślą", "ice-cream", 930, 385, "LEŻAK JAK TRAMPOLINA", "Opadnij na ukośny leżak. Kąt zrobi resztę — to przerwa, nie egzamin.", "Lody wybrały podróż w towarzystwie.", [ramp("lounger", 430, 465, 770, 545, "LEŻAK = KIERUNEK")], { motion: move("x", 32, .8) }),
   mission(14, "Dzwonek do kapitana kaczki", "duck", 1080, 455, "WIATR I PRZYCISK", "Złap boczny wiatr i naciśnij dzwonek przed zamkniętym pomostem.", "Kapitan mówi, że to był kontrolowany kwak.", [wind("sail", 320, 185, 300, 365, 350, -380, "WIATR →"), button("bell", 690, 350), gate("pier", 900, "bell")]),
   mission(15, "Poczta butelkowa ekspres", "bottle", 1080, 450, "KARTON I ŚLIZG", "Najpierw przebij lekką paczkę, potem przesuń się płasko nad taflą.", "Wiadomość odczytano. Papier jest mokry.", [crate("post", 355, 270, 316, "LIST POLECONY"), water("sea", 520, 480)]),
-  mission(16, "Ostatni autobus to ponton", "buoy", 1070, 430, "TUNEL I BRAMKA", "Skrót prowadzi przez przebieralnię. Po wyjściu zadzwoń do pontonu.", "Odjazd opóźniony przez falę entuzjazmu.", [portal("shortcut", 430, 390, 760, 300), button("boarding", 875, 350), gate("ramp", 975, "boarding", 160)], { tag: "REJS!" }),
+  mission(16, "Ostatni autobus to ponton", "buoy", 1070, 430, "TUNEL I BRAMKA", "Skrót prowadzi przez przebieralnię. Po wyjściu zadzwoń do pontonu.", "Odjazd opóźniony przez falę entuzjazmu.", [portal("shortcut", 430, 390, 695, 300), button("boarding", 885, 350), gate("ramp", 985, "boarding", 160)], { tag: "REJS!" }),
 
   // 17–24: real drag and buoyancy. The first bubble is broad and easy to discover.
   mission(17, "Pierwszy oddech pod wodą", "fish", 1000, 335, "BĄBEL UNOSI", "W dużym bąblu zwalniasz i wypływasz w górę. Woda zmienia opór całego lotu.", "Ryba pyta, czy umiesz pływać służbowo.", [bubble("air", 580, 410, 175, -530)]),
@@ -343,7 +428,7 @@ export const EXTRA_LEVELS = [
   mission(27, "Minibar uciekł rurą", "bottle", 1060, 435, "PACZKA I PORTAL", "Przebij plombę minibaru, a potem wskocz do rury.", "Do rachunku dopisano akrobatykę.", [crate("seal", 360, 195, 391, "MINIBAR"), portal("drain", 590, 400, 850, 335)]),
   mission(28, "Serwis pokojowy pod prąd", "sandwich", 1030, 345, "PRĄD I BĄBEL", "Prąd dostarcza do bąbla. Bąbel dostarcza śniadanie piętro wyżej.", "Śniadanie w łóżku. Łóżko w morzu.", [current("service", 300, 275, 280, 275, 580, -30), bubble("room-lift", 780, 380, 150, -520)]),
   mission(29, "Basen w basenie", "duck", 920, 450, "SPOKOJNY NURT", "Hotelowy nurt jest szeroki i łagodny. Wpłyń w niego i daj się ponieść.", "Kaczka odmówiła pracy w mokrych warunkach.", [current("pool-jet", 400, 300, 400, 255, 480, -90, "NURT →")], { motion: move("x", 42, .75) }),
-  mission(30, "Schody nieczynne od 1912", "treasure", 1090, 380, "DWIE RURY", "Dwa oznaczone wejścia prowadzą na wyższe piętro. Pęd przechodzi razem z Tobą.", "Znaleziono schody. Nadal nieczynne.", [portal("stairs-a", 405, 415, 650, 360), portal("stairs-b", 805, 350, 950, 325)]),
+  mission(30, "Schody nieczynne od 1912", "treasure", 1090, 380, "DWIE RURY", "Dwa oznaczone wejścia prowadzą na wyższe piętro. Pęd przechodzi razem z Tobą.", "Znaleziono schody. Nadal nieczynne.", [portal("stairs-a", 405, 415, 620, 360, 0, 54), portal("stairs-b", 820, 350, 990, 325, 0, 54)]),
   mission(31, "Ręcznik z zabezpieczeniem", "suitcase", 1070, 420, "ZAWÓR I PLOMBA", "Traf w zawór, potem przebij lekką plombę. Drzwi otworzą się po drodze.", "Ręcznik liczy teraz kilometry lotnicze.", [button("tap", 415, 380), crate("laundry", 680, 200, 386, "RĘCZNIKI"), gate("exit", 900, "tap")]),
   mission(32, "Wymeldowanie awaryjne", "submarine", 1080, 350, "BĄBEL, DZWONEK, WYJŚCIE", "Unieś się w bąblu, zadzwoń na pożegnanie i dopłyń do łodzi.", "Hotel poleca się przy następnym zatonięciu.", [bubble("goodbye", 470, 405, 150, -480), button("checkout", 760, 330), gate("airlock", 920, "checkout")], { tag: "WYMELDOWANY!" }),
 
@@ -404,7 +489,7 @@ export const EXTRA_LEVELS = [
   mission(76, "Powrót przez pas złomu", "alien", 1080, 405, "SKRÓT MIĘDZY ZŁOMEM", "Skrót wyprowadza przed pas złomu. Strefy nie da się przebić — można ją tylko ominąć.", "Nawigacja mówi: zawróć przy najbliższym wszechświecie.", [portal("side-route", 405, 410, 715, 345), hazard("debris", 870, 424, 74, 162, "ZŁOM!", "Kosmiczny złom przerwał lot. Poprowadź tor ponad pasem.")]),
   mission(77, "Ostatnia kawa w kosmosie", "coffee", 950, 435, "BĄBEL Z OGONA KOMETY", "Ostatni bąbel podróży. Szeroki, spokojny, bez niespodzianek.", "Kawa dopiła pasażera. Role się odwróciły.", [bubble("comet-bubble", 590, 395, 180, -420)], { motion: move("x", 30, .65) }),
   mission(78, "Ziemia prosi najpierw zadzwonić", "bell", 1080, 410, "PRZYCISK, PACZKA, POWRÓT", "Naciśnij dzwonek Ziemi, przebij opakowanie pamiątki i przeleć przez otwartą bramkę.", "Ziemia mówi: wytrzyj buty z pyłu księżycowego.", [button("earth-bell", 405, 390), hazard("re-entry", 530, 440, 70, 146, "GORĄCO!", "Osłona termiczna nie wybacza. Poprowadź tor ponad strefą."), crate("gift", 680, 190, 396, "DLA DOMOWNIKÓW"), gate("earth-door", 925, "earth-bell")]),
-  mission(79, "Lądowanie w pralni", "sock", 1070, 425, "PORTAL Z POWROTEM", "Pralnia przywraca ziemską grawitację. Wejdź do rury, potem otwórz drzwiczki.", "Po całej podróży nadal brakuje jednej skarpetki.", [portal("home-washer", 440, 390, 770, 295), button("laundry-button", 895, 355), gate("washer-door", 985, "laundry-button")], { scene: "laundry", environment: { gravity: 1, drag: 0 } }),
+  mission(79, "Lądowanie w pralni", "sock", 1070, 425, "PORTAL Z POWROTEM", "Pralnia przywraca ziemską grawitację. Wejdź do rury, potem otwórz drzwiczki.", "Po całej podróży nadal brakuje jednej skarpetki.", [portal("home-washer", 440, 390, 700, 295), button("laundry-button", 895, 355), gate("washer-door", 995, "laundry-button")], { scene: "laundry", environment: { gravity: 1, drag: 0 } }),
   mission(80, "Jeszcze pięć minut. Tym razem serio.", "alarm", 1040, 440, "OSTATNI DZWONEK", "Zadzwoń do sypialni, potem wskocz do domowego skrótu. Budzik czeka od pierwszej misji.", "Budzik: gdzie byłeś przez te pięć minut?!", [button("home-bell", 405, 355), portal("pillow-tunnel", 615, 370, 835, 285), gate("bedroom-door", 950, "home-bell")], { scene: "bedroom", background: "assets/stage_morning_mayhem.svg", environment: { gravity: 1, drag: 0 }, radius: 62, tag: "DOBRANOC, WSZECHŚWIECIE!", gag: "DRZEMKA: 80 MISJI PÓŹNIEJ", gagX: 650, gagY: 90 }),
   // Chapter 11 is the school lab: every mission names one thing that is true
   // about the world and then makes you use it. The jokes carry the lesson, so
@@ -412,7 +497,7 @@ export const EXTRA_LEVELS = [
   mission(81, "Pani od fizyki wiesza salami", "sandwich", 980, 380, "WAHADŁO: CZEKAJ NA MOMENT", "Salami wisi na sznurku i wraca zawsze w tym samym rytmie. Policz do trzech i przeleć, kiedy odpływa.", "Pierwsza lekcja: cierpliwość jest darmowa.", [pendulum("salami", 620, 120, 250, .8)], { scene: "laundry", tag: "ZDANE!" }),
   mission(82, "Trampolina pamięta wszystko", "coffee", 900, 300, "SPRĘŻYNA: JAKI PRZYLOT, TAKI WYSTRZAŁ", "Sprężyna oddaje tyle, ile jej dasz. Wejdź w nią miękko, a ledwie odpowie. Wejdź mocno, a wyrzuci Cię wysoko.", "Kawa na regale. Kubek nie pytał o zgodę.", [spring("board", 470, 520, 660, 520, .55)], { scene: "kitchen", tag: "WYSOKI LOT!" }),
   mission(83, "Salami kontra trampolina", "sock", 1000, 440, "WAHADŁO I SPRĘŻYNA", "Odbij się mocno, a potem przeczekaj wahadło. Kolejność ma znaczenie, bo sprężyna nie czeka.", "Skarpetka widziała wszystko i nic nie powie.", [spring("launch", 400, 540, 560, 540), pendulum("ham", 730, 130, 230, .75, 1.1)], { scene: "laundry" }),
-  mission(84, "Długi sznurek, krótki sznurek", "bell", 1010, 350, "DŁUGOŚĆ DECYDUJE O RYTMIE", "Dwa wahadła, dwie różne długości. Krótsze wraca szybciej. Nie zgadujesz — możesz to policzyć.", "Dzwonek ogłasza koniec lekcji. Lekcja się nie zgadza.", [pendulum("short-rope", 520, 110, 150, .9), pendulum("long-rope", 680, 110, 300, .7, .6)], { scene: "living-room", tag: "RYTM ZŁAPANY!" }),
+  mission(84, "Długi sznurek, krótki sznurek", "bell", 1010, 350, "DŁUGOŚĆ DECYDUJE O RYTMIE", "Dwa wahadła, dwie różne długości. Krótsze wraca szybciej. Nie zgadujesz — możesz to policzyć.", "Dzwonek ogłasza koniec lekcji. Lekcja się nie zgadza.", [pendulum("short-rope", 455, 110, 150, .6), pendulum("long-rope", 800, 110, 300, .6, .6)], { scene: "living-room", tag: "RYTM ZŁAPANY!" }),
   mission(85, "Przerwa na kanapkę", "sandwich", 700, 300, "SPOKOJNY ODBIÓR", "Jedna sprężyna, żadnego pośpiechu. Sprawdź, jak mocne wejście daje jak wysoki wyskok.", "Kanapka skorzystała z przerwy wcześniej niż Ty.", [spring("break-pad", 400, 530, 580, 530, .6)], { scene: "garden", tag: "SMACZNEGO!" }),
   mission(86, "Eksperyment wymknął się spod kontroli", "toaster", 990, 460, "SPRĘŻYNA NAD STREFĄ", "Sprężyna wyrzuci Cię ponad gorącą płytę, ale tylko jeśli wejdziesz w nią z prędkością. Miękko znaczy prosto w kłopoty.", "Toster przyznaje się do współudziału.", [spring("hot-launch", 380, 545, 540, 545, 1.15), hazard("hotplate", 620, 470, 90, 116, "GORĄCE!", "Płyta grzewcza kończy eksperyment. Przeleć nad nią, nie przez nią.")], { scene: "kitchen" }),
   mission(87, "Dzwonek, wahadło, drzwi", "remote", 1005, 400, "PRZYCISK PRZED WAHADŁEM", "Zadzwoń, zanim wahadło zamknie drogę. Bramka otworzy się dopiero po sygnale.", "Pilot znaleziony. Pod wahadłem, oczywiście.", [button("lab-bell", 430, 400), pendulum("swinging-lamp", 700, 120, 220, .8, .4), gate("lab-door", 890, "lab-bell")], { scene: "living-room" }),
