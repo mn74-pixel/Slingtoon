@@ -10,7 +10,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { drawInteractions } from "../src/interactions-renderer.js";
 import { LEVELS } from "../src/levels.js";
-import { PROP_CLEARANCE, clearanceBetween, goalParts, propParts } from "../src/prop-art.js";
+import { GameModel } from "../src/game.js";
+import { PROP_CLEARANCE, STAR_CLEARANCE, clearanceBetween, gapBetween, goalParts, propParts, starClearance } from "../src/prop-art.js";
 
 function recordingContext() {
   const points = [];
@@ -175,4 +176,40 @@ test("the goal's artwork is reserved, not just its hit circle", () => {
     assert.ok(body.right - body.left >= 148,
       `mission ${level.number}: the goal reserved only ${Math.round(body.right - body.left)} px, narrower than the art it draws`);
   }
+});
+
+// The optional star was placed by a rule of its own that listed four of the
+// nine interaction types by name and measured a portal by its ring radius. It
+// never saw the cream box around that ring, the WEJŚCIE caption above it or a
+// pendulum's rope, so 25 of 60 missions drew the gold badge on top of artwork —
+// on mission 88 the rope ran straight through it. It is measured here against
+// the same drawings as everything else.
+test("no mission draws its optional star on top of artwork", () => {
+  for (const level of LEVELS) {
+    if (!level.star) continue;
+    const { air, against } = starClearance(level.star, level);
+    assert.ok(air >= STAR_CLEARANCE,
+      `mission ${level.number}: the star leaves ${Math.round(air)} px of air to ${against}, under the ${STAR_CLEARANCE} px floor`);
+  }
+});
+
+// A star that reads well but cannot be reached is worse than no star. The
+// authoring tool proves each one by simulation; this holds the shipped result.
+test("every shipped star still sits on a route that collects it", () => {
+  for (const level of LEVELS) {
+    if (!level.star || !level.starPull) continue;
+    const model = new GameModel(() => {}, level);
+    assert.ok(model.simulate(level.starPull).star,
+      `mission ${level.number}: the stored star route no longer collects the star`);
+  }
+});
+
+// Two rectangles that share no rows cannot crowd each other sideways, but a
+// badge dropped from above can still land on them — which is why the star is
+// measured in both axes and the layout sweep is not.
+test("the star's clearance is measured in both axes, not just sideways", () => {
+  const badge = { left: 0, top: 0, right: 54, bottom: 54 };
+  const directlyBelow = { left: 10, top: 60, right: 40, bottom: 90 };
+  assert.equal(Math.round(gapBetween(badge, directlyBelow)), 6);
+  assert.ok(gapBetween(badge, { left: 20, top: 20, right: 70, bottom: 70 }) < 0, "an overlap must read as negative");
 });

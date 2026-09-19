@@ -2,7 +2,8 @@
 // --write stores measured pulls and reachable optional stars after all layouts pass.
 import { writeFile } from "node:fs/promises";
 import { GameModel, LEVELS } from "../src/game.js";
-import { segmentDistance, contains } from "../src/physics.js";
+import { segmentDistance } from "../src/physics.js";
+import { STAR_CLEARANCE, starClearance } from "../src/prop-art.js";
 
 const routes = {}, report = [];
 const selected = process.argv.find((arg) => arg.startsWith("--level="))?.split("=")[1];
@@ -17,26 +18,27 @@ function starIsReadable(point, level) {
   // star candidates all fell outside it and two missions reported "no room" for
   // a star that was simply off the end of the ruler.
   if (point.x < 340 || point.x > 1215 || point.y < 115 || point.y > 480) return false;
-  if (pointDistance(point, level.goal) < level.goal.radius + 85) return false;
-  return level.interactions.every((item) => {
-    // A star inside a hazard could never be collected, and a moving obstacle
-    // sweeps a whole band, not just its resting rectangle.
-    if (["solid", "gate", "breakable", "hazard"].includes(item.type)) {
-      const reach = item.motion?.amplitude ?? 0;
-      const spreadX = item.motion?.axis === "x" ? reach : 0;
-      const spreadY = item.motion?.axis === "y" ? reach : 0;
-      return !contains({
-        x: item.x - 30 - spreadX,
-        y: item.y - 30 - spreadY,
-        width: item.width + 60 + spreadX * 2,
-        height: item.height + 60 + spreadY * 2,
-      }, point);
+  // Everything else is one question asked of the drawings themselves. The rule
+  // this replaced listed four interaction types by name and measured a portal
+  // by its ring radius, so a star could be — and in 25 missions was — dropped
+  // on a cream portal box, a DZYN! caption or a pendulum's rope.
+  return starClearance(point, level).air >= STAR_CLEARANCE;
+}
+// The star is collected within `avatarRadius + 19` of the flight line, so it
+// does not have to sit exactly on a path point — it can step aside into clean
+// air and still be won. Five missions (27, 30, 36, 70, 72) thread every winning
+// route between the props: on the line itself, their best spot touched artwork.
+// Offsets stay well inside the collection reach, and the simulation below is
+// what actually proves each chosen star is collectible.
+const SPOT_OFFSETS = [0, 14, 26, 36];
+function* nearbySpots(point) {
+  for (const reach of SPOT_OFFSETS) {
+    if (!reach) { yield point; continue; }
+    for (let i = 0; i < 8; i += 1) {
+      const angle = (i * Math.PI) / 4;
+      yield { x: point.x + Math.cos(angle) * reach, y: point.y + Math.sin(angle) * reach };
     }
-    if (item.type === "portal") return [item.entry, item.exit].every((p) => pointDistance(point, p) > item.radius + 35);
-    if (item.type === "switch") return pointDistance(point, item) > item.radius + 35;
-    if (item.type === "gravity") return pointDistance(point, item) > item.coreRadius + 40;
-    return true;
-  });
+  }
 }
 for (const level of LEVELS.slice(8).filter((l) => !selected || l.number === Number(selected))) {
   const model = new GameModel(() => {}, level), winners = [], seen = new Set();
@@ -85,11 +87,16 @@ for (const level of LEVELS.slice(8).filter((l) => !selected || l.number === Numb
   for (const candidate of winners) {
     if (pointDistance(candidate.pull, best.pull) < 15) continue;
     for (const point of candidate.shot.points) {
-      if (!starIsReadable(point, level)) continue;
-      const distance = distanceToPath(point, best.shot.points);
-      if (distance < 63) continue;
-      const score = Math.min(distance, 130) - Math.abs(point.x - 650) * .07;
-      if (!starChoice || score > starChoice.score) starChoice = { point, pull: candidate.pull, score };
+      for (const spot of nearbySpots(point)) {
+        if (!starIsReadable(spot, level)) continue;
+        const distance = distanceToPath(spot, best.shot.points);
+        if (distance < 63) continue;
+        // Air first, then distance from the easy route: a star that is readable
+        // but a little closer to the hint path beats one buried in the scenery.
+        const score = Math.min(starClearance(spot, level).air, 60) * 1.5
+          + Math.min(distance, 130) - Math.abs(spot.x - 650) * .07;
+        if (!starChoice || score > starChoice.score) starChoice = { point: spot, pull: candidate.pull, score };
+      }
     }
   }
   if (!starChoice) {

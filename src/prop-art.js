@@ -117,6 +117,53 @@ export function goalParts(goal) {
   ];
 }
 
+// The optional gold star is not placed by the layout sweep at all — the
+// authoring tool drops it onto a point of a real alternate flight path. So it
+// needs the full two-dimensional distance: a sweep that only spreads things
+// sideways says nothing about a badge dropped from above.
+//
+// It was checked by an older rule that knew four of the nine interaction types
+// and asked a portal for its ring radius, so it never saw the cream box, the
+// WEJŚCIE caption or a pendulum's rope. In 25 of 60 missions the star was drawn
+// on top of something; on mission 88 the rope ran straight through it.
+export const STAR_RADIUS = 27; // outer points at 25, under a 4 px outline
+
+// Less air than two obstacles need — the star is small and the only gold thing
+// on screen — but enough that it never touches artwork. Measured: at 16 px
+// every mission still finds a spot; the star reads as a prize, not a sticker.
+export const STAR_CLEARANCE = 16;
+
+export const starParts = (star) => [rect(star.x - STAR_RADIUS, star.y - STAR_RADIUS, star.x + STAR_RADIUS, star.y + STAR_RADIUS)];
+
+// Distance between two rectangles in both axes at once: 0 when they touch,
+// negative by the shallower overlap when they cross.
+export function gapBetween(a, b) {
+  const dx = a.right <= b.left ? b.left - a.right
+    : b.right <= a.left ? a.left - b.right
+    : -Math.min(a.right - b.left, b.right - a.left);
+  const dy = a.bottom <= b.top ? b.top - a.bottom
+    : b.bottom <= a.top ? a.top - b.bottom
+    : -Math.min(a.bottom - b.top, b.bottom - a.top);
+  if (dx >= 0 && dy >= 0) return Math.hypot(dx, dy);
+  return dx >= 0 ? dx : dy >= 0 ? dy : Math.max(dx, dy);
+}
+
+// Every rectangle a mission paints that the star has to stay clear of.
+export const missionParts = (level) =>
+  level.interactions.flatMap((item) => propParts(item).map((part) => ({ id: item.id ?? item.type, part })))
+    .concat(goalParts(level.goal).map((part) => ({ id: "goal", part })));
+
+// How close the star comes to the nearest artwork, and to what.
+export function starClearance(star, level) {
+  const [badge] = starParts(star);
+  let worst = Infinity, who = null;
+  for (const { id, part } of missionParts(level)) {
+    const air = gapBetween(badge, part);
+    if (air < worst) { worst = air; who = id; }
+  }
+  return { air: worst, against: who };
+}
+
 export const spansVertically = (a, b) => a.top < b.bottom && b.top < a.bottom;
 export const horizontalGap = (a, b) => (a.right <= b.left ? b.left - a.right : a.left - b.right);
 

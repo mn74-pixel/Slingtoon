@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.32.0 — Złota gwiazdka przestaje być naklejką na scenografii
+
+Rozstawienie obiektów mierzy od 0.31.0 rysunki, a nie punkty. Opcjonalna gwiazdka była stawiana **zupełnie inną regułą**, starszą i znacznie uboższą — i nikt jej nigdy nie sprawdził tą nową miarą.
+
+### Reguła, która znała cztery z dziewięciu typów
+
+`starIsReadable` wymieniała po nazwie `solid`, `gate`, `breakable` i `hazard`, dokładając 30 px marginesu. Portal pytała o **promień pierścienia** — więc kremowe pudełko wokół niego i podpis WEJŚCIE nad nim były niewidzialne. Poduszki, sprężyny i wahadła nie były sprawdzane wcale.
+
+Pomiar na rysunkach: **w 25 z 88 misji gwiazdka była narysowana na czymś**. W misji 88 lina wahadła przechodziła przez nią na wylot; w 16, 80 i 79 złoty znaczek wystawał zza rogu portalu jak naklejka.
+
+### Gwiazdka odpowiada teraz przed tymi samymi rysunkami
+
+Jedno pytanie zamiast listy typów: `starClearance` zwraca odległość do najbliższej namalowanej rzeczy — łącznie z podpisami, łukiem wahadła i grafiką celu. Próg to 16 px; mniej niż 30 px między przeszkodami, bo gwiazdka jest mała i jako jedyna na ekranie złota, ale dość, żeby niczego nie dotykała.
+
+Mierzona jest **w obu osiach**. Rozstawienie obiektów liczy tylko odstęp poziomy, bo przesuwa je na boki — ale znaczek spadający z góry potrafi wylądować na czymś, co reguła pozioma uznaje za odległe.
+
+### Gwiazdka może teraz zejść z toru lotu
+
+Pięć misji (27, 30, 36, 70, 72) ma tory przeciskające się między przeszkodami — **żaden punkt żadnej zwycięskiej trajektorii** nie miał tam czystego powietrza. Zamiast obniżać próg: gwiazdka jest zbierana w promieniu `avatarRadius + 19` od linii lotu, więc nie musi na niej leżeć. Narzędzie szuka teraz miejsca do 36 px w bok, a to, że gwiazdka jest zbieralna, potwierdza jak dotąd **symulacja**, nie geometria.
+
+Wynik: **zero nachodzeń w 88 misjach**, najmniejszy odstęp 16 px. Misja 3 (samouczek, gwiazdka leży na głównym torze) przesunięta ręcznie z 940,290 na 972,305 — poza pudełko portalu, wciąż na trasie.
+
+### Zabezpieczenia
+
+Dwa nowe strażniki — w testach i w `scripts/validate.mjs` — mierzą gwiazdkę tą samą funkcją co resztę. Oba sprawdzone sabotażem: po cofnięciu poprawki misji 3 zgłaszają `-10 px`.
+
 ## 0.31.0 — Koniec ściskania: rozstawienie liczone na rysunkach, nie na punktach
 
 „Zobacz, że są bardzo ściśnięte" — o przeszkodach w misji 12. Po pomiarze: **szesnaście z osiemdziesięciu ośmiu misji miało rysunki fizycznie nachodzące na siebie**, a reguła odstępów z 0.28.0 przepuszczała to bez mrugnięcia.
