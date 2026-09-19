@@ -1,5 +1,35 @@
 # Changelog
 
+## 0.35.0 — Bohater nie znika już z ekranu
+
+Po poprzedniej poprawce scena kończy się dokładnie na krawędziach świata — więc to, co wylatuje poza kadr, naprawdę znika. Zmierzyłem, jak często to się dzieje.
+
+**Na 12 672 strzałach przepuszczonych przez prawdziwy solver: 34% mija prawą krawędź świata, 16% wylatuje nad górną, 3% ucieka w lewo.** Mediana czasu, przez który bohatera nie ma na ekranie: **1,58 s**. Dziewiąty decyl: 3,76 s. Rekord: 5,23 s i 1731 px nad kadrem.
+
+Gracz nie nauczy się niczego ze strzału, którego nie widzi — a „jeszcze raz" wymaga zrozumienia, co się przed chwilą stało.
+
+### Znacznik przy krawędzi
+
+Kiedy bohater opuszcza kadr, przy krawędzi, którą przekroczył, pojawia się **jego twarz** — ta sama, którą wgrał gracz, albo domyślna buźka — ze strzałką wskazującą, dokąd poleciał. Znacznik trzyma jego pozycję wzdłuż krawędzi, więc widać, gdzie spadnie, a **maleje z odległością**, więc dystans czyta się bez liczby.
+
+Minimalny rozmiar dobrany pod telefon, nie pod monitor: telefon rysuje świat w skali ~0,5, więc znacznik o promieniu 17 px docierałby jako 9 px i był plamką. Teraz najmniejszy to 12 px na najmniejszym ekranie.
+
+Widoczność liczona jest z **rzeczywistego viewportu**, nie ze stałego prostokąta świata: na szerokim ekranie, gdzie widać więcej świata, bohater w odsłoniętym pasie nadal jest widoczny i znacznik się nie pojawia.
+
+### Dymek ustępuje
+
+Dymek z tekstem jest dociskany do kadru, więc przy bohaterze poza ekranem wisiał u góry, wskazując na nikogo — dokładnie w miejscu, gdzie trafia znacznik. Teraz czeka, aż bohater wróci. Znacznik i tak niesie jego twarz.
+
+### Czego NIE zmieniłem, choć sprawdzałem
+
+Zmierzyłem też czas trwania nieudanej próby: mediana **2,01 s**, 22% ponad 3 s, a **215 prób dobija do limitu 6 s**. Postawiłem hipotezę, że to bohater utknął i bez sensu każe na siebie czekać. **Pomiar jej nie potwierdził** — tylko 5 z 215 przypadków to wolne dryfowanie, reszta to prawdziwe, długie loty, które przelatują nad celem. Skracanie ich wymagałoby zgadywania, że próba jest przegrana, a to ucina ratunek manewrem w locie. Zostawiam jak jest.
+
+Sprawdziłem też telefon w poziomie: interfejs zajmuje tam tylko 13% wysokości, a w pełnym ekranie 0%. Kolumny z 0.34.0 **pogorszyłyby** sprawę. Reszta kadru to uczciwy koszt proporcji świata 2:1, nie marnotrawstwo.
+
+### Zabezpieczenia
+
+`tests/offscreen-marker.test.mjs` nagrywa każdą współrzędną znacznika i sprawdza, że mieści się w kadrze, siedzi przy właściwej krawędzi, maleje z odległością i nie pojawia się, gdy bohater jest widoczny. Plus test okablowania: pierwszy sabotaż (usunięcie wywołania z pętli rysowania) **przeszedł niezauważony**, bo testy wołały metodę wprost — dołożyłem sprawdzenie, że `render()` naprawdę ją wywołuje, po bohaterze. Trzy sabotaże, trzech właściwych strażników.
+
 ## 0.34.0 — Koniec marnowania boków ekranu
 
 „Zobacz ile miejsca jest marnowane po obu stronach ekranu" — przy zrzucie z misji 31 na szerokim oknie. Pomiar potwierdził: na oknie 2000×815 **gra zajmowała 61% szerokości płótna**, a 563 px po bokach to była sama scenografia.

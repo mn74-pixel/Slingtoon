@@ -1,7 +1,7 @@
-# SlingToon Web 0.34.0 — Release Manifest
+# SlingToon Web 0.35.0 — Release Manifest
 
 Data: 19 września 2026. Format: HTML5 Canvas / PWA, statyczny hosting GitHub Pages.
-Pakiet kandydujący 0.34.0. Publikacja wymaga osobnej zgody właściciela po obejrzeniu wersji roboczej.
+Pakiet kandydujący 0.35.0. Publikacja wymaga osobnej zgody właściciela po obejrzeniu wersji roboczej.
 
 ## Zawartość
 
@@ -16,6 +16,8 @@ Opcjonalna gwiazdka odpowiada przed tym samym opisem rysunków, w obu osiach. Po
 Proca trzyma bohatera skórzanym rzemykiem za siedzenie, nie za twarz — gumy kończyły się na `avatarPosition`, czyli na karku, i na wgranym zdjęciu biegły od czoła do ust. Czystej twarzy pilnuje kolejność warstw: wszystko, co mogłoby przeciąć bohatera, rysowane jest przed nim, a po nim wyłącznie przednia klapka rzemyka. Sama proca stoi między bohaterem a celem, z obiema końcówkami po stronie wystrzału, a w spoczynku bohater odchyla się w gumę, więc jej nie zasłania: z 26% widocznej procy (ze zdjęciem) zrobiło się 82%. Punkt, z którego liczony jest wystrzał, nie zmienił się.
 
 Na niskim, szerokim oknie pasek misji i pasek statusu przenoszą się do kolumn obok sceny: wcześniej stały nad i pod nią, zabierały 208 px wysokości, a skala liczona z wysokości kurczyła grę do 61% szerokości płótna — reszta była scenografią. Scena zatrzymuje się na proporcjach świata 2:1, więc nadmiar szerokości idzie do interfejsu, nie na malowaną ścianę. Na oknie 2000×815 gra jest o 28% większa i wypełnia 94% płótna; telefony i ekrany 16:9 zostają bez zmian. Tła rysowane z plików SVG rozciągają teraz swoje krawędzie na odsłonięty margines, więc nie kończą się ostrym szwem.
+
+Gdy bohater opuszcza kadr — 34% strzałów mija prawą krawędź świata, 16% wylatuje nad górną — przy tej krawędzi pojawia się jego twarz ze strzałką wskazującą kierunek lotu, malejąca z odległością. Widoczność liczona jest z rzeczywistego viewportu, więc na szerokim ekranie odsłonięty pas świata nadal liczy się jako widoczny. Dymek z tekstem, dociskany do kadru, ustępuje wtedy znacznikowi.
 
 Kampania używa całej szerokości ekranu: najciaśniejsza para sąsiednich obiektów — z celem włącznie — to 165 px zamiast 40, misji kończących się przed 70% szerokości jest czternaście zamiast trzydziestu jeden, a cztery scenerie domowe, które nie miały nic za połową kadru, sięgają teraz prawej krawędzi.
 
@@ -36,7 +38,7 @@ Cel reaguje na uderzenie w pobliżu — prawdziwa odległość do celu razy sił
 
 ## Publikacja
 
-Publikować po zgodzie właściciela do istniejącego repozytorium i GitHub Pages. Sprawdzić po wdrożeniu wersję `0.34.0`, mapę rozdziałów oraz aktualizację cache poprzedniej instalacji.
+Publikować po zgodzie właściciela do istniejącego repozytorium i GitHub Pages. Sprawdzić po wdrożeniu wersję `0.35.0`, mapę rozdziałów oraz aktualizację cache poprzedniej instalacji.
 
 ## Dalszy rozwój
 
