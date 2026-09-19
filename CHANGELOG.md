@@ -1,5 +1,49 @@
 # Changelog
 
+## 0.31.0 — Koniec ściskania: rozstawienie liczone na rysunkach, nie na punktach
+
+„Zobacz, że są bardzo ściśnięte" — o przeszkodach w misji 12. Po pomiarze: **szesnaście z osiemdziesięciu ośmiu misji miało rysunki fizycznie nachodzące na siebie**, a reguła odstępów z 0.28.0 przepuszczała to bez mrugnięcia.
+
+### Reguła była ślepa na dwa sposoby naraz
+
+Mierzyła odległość **między punktami środkowymi** i żądała 165 px. To nie wie nic o tym, jak szeroki jest obiekt: pierścień portalu ma 160 px, przycisk 130 px — „165 px odstępu" znaczyło, że ich rysunki na siebie wchodzą.
+
+Gorzej: dla obiektu złożonego z kilku części brała pod uwagę **tylko jedną**. `itemCentre` zwracał dla portalu jego **wejście**, więc wyjście — drugie 160 px kremowego pudełka, często kilkaset pikseli dalej — było dla reguły niewidzialne. Misja 70 pojechała z przyciskiem DZYŃ! **14 px od środka wyjścia portalu**, narysowanym dokładnie na nim, podczas gdy reguła raportowała najbliższy obiekt 337 px dalej.
+
+### Nowy moduł: co naprawdę zostanie namalowane
+
+`src/prop-art.js` opisuje prostokąty, które renderer faktycznie maluje — razem z kolcami hazardu wystającymi 15 px poza krawędź, z łukiem, jaki zakreśla wahadło, i z podpisami szerszymi od obiektów pod nimi. Obie części portalu są widziane, ale przesuwają się razem, bo portal to jedna zagadka, nie dwa rekwizyty do rozsunięcia.
+
+Reguła żąda teraz **30 px powietrza tam, gdzie rysunki dzielą te same wiersze pikseli**. Gdy ich nie dzielą, mogą stać w tej samej kolumnie — pionowe rozsunięcie kupuje poziome miejsce.
+
+Kiedy po rozsunięciu wciąż jest ciasno, **lot rośnie o tyle, ile geometria wymaga**, i układ liczony jest od nowa. Stara reguła mnożyła liczbę obiektów przez stały odstęp; liczba obiektów nie mówi nic o tym, jak szeroki jest portal albo podpis.
+
+Wynik: **zero nachodzeń w całej grze, minimum 30 px powietrza, mediana 55 px.** Rozrzut długości lotu przeżył bez zmian (1,75×), a przy limicie zasięgu stoją cztery misje zamiast dwudziestu trzech, które produkowała poprzednia reguła.
+
+### Cztery misje wymagały decyzji autorskiej, nie regulaminowej
+
+- **84** („Długi sznurek, krótki sznurek") nie mieściła dwóch wahadeł z łukami ±163 i ±239 px. Wyrównałem im wychylenie zamiast je skracać — i to **wyostrza lekcję**, bo teraz różni je wyłącznie długość sznurka, czyli dokładnie to, o czym misja jest.
+- **16** i **79** miały przycisk 115–125 px od wyjścia portalu; rozsunięte w danych autorskich.
+- **30** („Schody nieczynne od 1912") prosi o cztery pierścienie i skrzynię w korytarzu 776 px szerokim — 640 px samych pudełek. Dostała węższe rury (54 px zamiast 68). Tolerancja bez zmian: ±12.
+
+Sprawdziłem też wariant ładniejszy kompozycyjnie — schody rozłożone pionowo — i **odrzuciłem go**: dawał ±6 tolerancji zamiast ±12. Grywalność przed kompozycją.
+
+### Trzy pomiary po drodze mierzyły nie to co trzeba
+
+Warte zapisania, bo każdy wyglądał wiarygodnie:
+
+- **portal jako jedna bryła od wejścia do wyjścia** — kolumna stojąca między jego pierścieniami wychodziła jako „nachodzenie" na 250 px,
+- **pola siłowe liczone jak rekwizyty** — bąbel i grawitacja mają w sobie coś trzymać, to tło, nie kolizja; bez tego wyłączenia 32 misje wyglądały na zepsute,
+- **odstęp mierzony tylko w poziomie** — dwa obiekty w tej samej kolumnie, ale na różnych wysokościach, wcale się nie tłoczą.
+
+Do tego mój własny skrypt strojenia zostawiał po sobie testowany wariant strzału, przez co misja 30 przez kilka prób raportowała zero przejść. Nie schody były winne, tylko narzędzie.
+
+### Strażnicy
+
+`tests/prop-art.test.mjs` nagrywa **każdą współrzędną**, której dotyka renderer dla danego obiektu, i sprawdza, czy mieści się w prostokącie zadeklarowanym przez układ — bo dwa opisy tej samej rzeczy się rozjeżdżają, a wtedy ciasnota wraca po cichu. Rekorder musiał nauczyć się macierzy przekształceń (obrót portalu), przycinania (`clip` hazardu) i łuków po kątach (tor wahadła) — każdy z tych braków najpierw zgłosił fałszywy alarm.
+
+Dodatkowo: żadne dwa obiekty w żadnej misji bliżej niż 30 px, dwa pierścienie jednego portalu też nie, i nic bliżej niż 120 px od procy. Wszystko mierzone na prawdziwych poziomach i sprawdzone sabotażem.
+
 ## 0.30.0 — Cel, który wreszcie zauważa, że coś go trąciło
 
 Poproszony o kreatywność, przejrzałem grę pod kątem miejsc, gdzie coś już było zbudowane w połowie. Znalazłem jedno: cel od dawna umie zadrżeć po uderzeniu w pobliżu — `this.clockWobble` istnieje w kodzie od pierwszych ośmiu misji — ale nikt nigdy nie sprawdził tej reguły na drugiej misji, a co dopiero na pozostałych osiemdziesięciu.

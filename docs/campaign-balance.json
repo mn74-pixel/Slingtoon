@@ -26,8 +26,8 @@
   {
     "number": 12,
     "id": "beach-12",
-    "margin": 8,
-    "winningGridShots": 59,
+    "margin": 10,
+    "winningGridShots": 73,
     "gridShots": 620,
     "required": 1
   },
@@ -59,7 +59,7 @@
     "number": 16,
     "id": "beach-16",
     "margin": 12,
-    "winningGridShots": 117,
+    "winningGridShots": 124,
     "gridShots": 620,
     "required": 2
   },
@@ -106,8 +106,8 @@
   {
     "number": 22,
     "id": "reef-22",
-    "margin": 5,
-    "winningGridShots": 39,
+    "margin": 8,
+    "winningGridShots": 63,
     "gridShots": 620,
     "required": 2
   },
@@ -123,7 +123,7 @@
     "number": 24,
     "id": "reef-24",
     "margin": 16,
-    "winningGridShots": 155,
+    "winningGridShots": 136,
     "gridShots": 620,
     "required": 2
   },
@@ -147,7 +147,7 @@
     "number": 27,
     "id": "wreck-27",
     "margin": 20,
-    "winningGridShots": 283,
+    "winningGridShots": 218,
     "gridShots": 620,
     "required": 2
   },
@@ -171,7 +171,7 @@
     "number": 30,
     "id": "wreck-30",
     "margin": 12,
-    "winningGridShots": 105,
+    "winningGridShots": 87,
     "gridShots": 620,
     "required": 2
   },
@@ -187,7 +187,7 @@
     "number": 32,
     "id": "wreck-32",
     "margin": 16,
-    "winningGridShots": 151,
+    "winningGridShots": 163,
     "gridShots": 620,
     "required": 2
   },
@@ -203,7 +203,7 @@
     "number": 34,
     "id": "harbour-34",
     "margin": 20,
-    "winningGridShots": 142,
+    "winningGridShots": 145,
     "gridShots": 620,
     "required": 2
   },
@@ -211,7 +211,7 @@
     "number": 35,
     "id": "harbour-35",
     "margin": 5,
-    "winningGridShots": 60,
+    "winningGridShots": 56,
     "gridShots": 620,
     "required": 1
   },
@@ -219,7 +219,7 @@
     "number": 36,
     "id": "harbour-36",
     "margin": 20,
-    "winningGridShots": 164,
+    "winningGridShots": 162,
     "gridShots": 620,
     "required": 2
   },
@@ -234,8 +234,8 @@
   {
     "number": 38,
     "id": "harbour-38",
-    "margin": 10,
-    "winningGridShots": 109,
+    "margin": 8,
+    "winningGridShots": 93,
     "gridShots": 620,
     "required": 2
   },
@@ -251,7 +251,7 @@
     "number": 40,
     "id": "harbour-40",
     "margin": 10,
-    "winningGridShots": 87,
+    "winningGridShots": 85,
     "gridShots": 620,
     "required": 2
   },
@@ -290,8 +290,8 @@
   {
     "number": 45,
     "id": "fairground-45",
-    "margin": 10,
-    "winningGridShots": 162,
+    "margin": 12,
+    "winningGridShots": 178,
     "gridShots": 620,
     "required": 1
   },
@@ -314,8 +314,8 @@
   {
     "number": 48,
     "id": "fairground-48",
-    "margin": 12,
-    "winningGridShots": 123,
+    "margin": 10,
+    "winningGridShots": 99,
     "gridShots": 620,
     "required": 2
   },
@@ -339,7 +339,7 @@
     "number": 51,
     "id": "spaceport-51",
     "margin": 12,
-    "winningGridShots": 94,
+    "winningGridShots": 92,
     "gridShots": 620,
     "required": 2
   },
@@ -363,7 +363,7 @@
     "number": 54,
     "id": "spaceport-54",
     "margin": 8,
-    "winningGridShots": 111,
+    "winningGridShots": 105,
     "gridShots": 620,
     "required": 2
   },
@@ -379,7 +379,7 @@
     "number": 56,
     "id": "spaceport-56",
     "margin": 12,
-    "winningGridShots": 124,
+    "winningGridShots": 143,
     "gridShots": 620,
     "required": 2
   },
@@ -442,8 +442,8 @@
   {
     "number": 64,
     "id": "moon-64",
-    "margin": 16,
-    "winningGridShots": 125,
+    "margin": 12,
+    "winningGridShots": 114,
     "gridShots": 620,
     "required": 2
   },
@@ -475,7 +475,7 @@
     "number": 68,
     "id": "station-68",
     "margin": 6,
-    "winningGridShots": 120,
+    "winningGridShots": 117,
     "gridShots": 620,
     "required": 2
   },
@@ -490,8 +490,8 @@
   {
     "number": 70,
     "id": "station-70",
-    "margin": 12,
-    "winningGridShots": 93,
+    "margin": 6,
+    "winningGridShots": 42,
     "gridShots": 620,
     "required": 2
   },
@@ -506,8 +506,8 @@
   {
     "number": 72,
     "id": "station-72",
-    "margin": 20,
-    "winningGridShots": 221,
+    "margin": 12,
+    "winningGridShots": 110,
     "gridShots": 620,
     "required": 2
   },
@@ -522,8 +522,8 @@
   {
     "number": 74,
     "id": "homebound-74",
-    "margin": 6,
-    "winningGridShots": 52,
+    "margin": 5,
+    "winningGridShots": 50,
     "gridShots": 620,
     "required": 2
   },
@@ -538,8 +538,8 @@
   {
     "number": 76,
     "id": "homebound-76",
-    "margin": 12,
-    "winningGridShots": 122,
+    "margin": 20,
+    "winningGridShots": 223,
     "gridShots": 620,
     "required": 1
   },
@@ -555,7 +555,7 @@
     "number": 78,
     "id": "homebound-78",
     "margin": 6,
-    "winningGridShots": 45,
+    "winningGridShots": 40,
     "gridShots": 620,
     "required": 2
   },
@@ -563,7 +563,7 @@
     "number": 79,
     "id": "homebound-79",
     "margin": 12,
-    "winningGridShots": 107,
+    "winningGridShots": 132,
     "gridShots": 620,
     "required": 2
   },
@@ -571,7 +571,7 @@
     "number": 80,
     "id": "homebound-80",
     "margin": 6,
-    "winningGridShots": 32,
+    "winningGridShots": 40,
     "gridShots": 620,
     "required": 2
   },
@@ -603,7 +603,7 @@
     "number": 84,
     "id": "lab-84",
     "margin": 20,
-    "winningGridShots": 226,
+    "winningGridShots": 222,
     "gridShots": 620,
     "required": 0
   },
@@ -634,8 +634,8 @@
   {
     "number": 88,
     "id": "lab-88",
-    "margin": 12,
-    "winningGridShots": 55,
+    "margin": 6,
+    "winningGridShots": 66,
     "gridShots": 620,
     "required": 2
   }
