@@ -1,5 +1,5 @@
-import { CHAPTERS, EXTRA_LEVELS } from "./campaign.js?v=0.31.0";
-export { CHAPTERS } from "./campaign.js?v=0.31.0";
+import { CHAPTERS, EXTRA_LEVELS } from "./campaign.js?v=0.32.0";
+export { CHAPTERS } from "./campaign.js?v=0.32.0";
 const point = (x, y) => ({ x, y });
 function freeze(value) {
   if (value && typeof value === "object") {
@@ -70,7 +70,9 @@ export const LEVELS = freeze([
     title: "Wskocz do pralki i złap uciekiniera", clue: "Miętowe wejście prowadzi do fioletowego wyjścia. Pęd zostaje z Tobą.",
     direction: "Traf w okrągłe drzwi po lewej. Nie musisz przelatywać całego pokoju.", pull: point(100, 495),
     goal: { kind: "sock", shape: "circle", x: 1080, y: 465, radius: 90, scale: 1.02 },
-    star: point(940, 290), required: ["laundry-tunnel"], requirement: "Skarpetka uznaje tylko podróże przez pralkę.",
+    // Clear of the exit portal's cream box, which the old star overlapped by
+    // 10 px; still on the tutorial route, so this one is collected on the way.
+    star: point(972, 305), required: ["laundry-tunnel"], requirement: "Skarpetka uznaje tylko podróże przez pralkę.",
     interactions: [{ id: "laundry-tunnel", type: "portal", entry: point(455, 390), exit: point(845, 285), radius: 66 }],
     visual: { accent: "#5ce1bd", gag: "PROGRAM: ZNIKANIE 30°", wash: "rgba(92,225,189,.03)" },
     win: ["PARA!", "Pralka oddała skarpetkę. To precedens."], lose: "Pralka zaprzecza istnieniu drugiej skarpetki.",

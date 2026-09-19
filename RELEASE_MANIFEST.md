@@ -1,7 +1,7 @@
-# SlingToon Web 0.31.0 — Release Manifest
+# SlingToon Web 0.32.0 — Release Manifest
 
 Data: 19 września 2026. Format: HTML5 Canvas / PWA, statyczny hosting GitHub Pages.
-Pakiet kandydujący 0.31.0. Publikacja wymaga osobnej zgody właściciela po obejrzeniu wersji roboczej.
+Pakiet kandydujący 0.32.0. Publikacja wymaga osobnej zgody właściciela po obejrzeniu wersji roboczej.
 
 ## Zawartość
 
@@ -10,6 +10,8 @@ Pakiet kandydujący 0.31.0. Publikacja wymaga osobnej zgody właściciela po obe
 Po trafieniu bohater ląduje w celu łukiem, z tłumionym odbiciem i lekkim odchyleniem w stronę nadlotu, po czym oddycha i kołysze się zamiast zastygnąć. Głowa ze zdjęcia nie dostaje żadnego akcentu na wysokości twarzy. Tryb Seria prowadzi przez losowe ukończone misje ze wspólnym budżetem strzałów i zapisuje własny rekord, nie zmieniając postępu kampanii. Mimika bohatera odpowiada na zdarzenia w locie: bliską strefę zakazaną, cel w zasięgu i serię odbić. Gwiazdki odblokowują charaktery (Zen ★3, Panic ★9, Tough Guy ★18), a każdy charakter to inny zestaw manewrów w locie. Misja z kompletem trzech medali jest oznaczona jako opanowana w mapie misji.
 
 Rozstawienie obiektów liczone jest na prostokątach, które renderer naprawdę maluje (`src/prop-art.js`), nie na jednym punkcie środkowym na obiekt. Poprzednia reguła nie widziała ani szerokości rzeczy, ani drugiej części obiektu złożonego — portal zgłaszał tylko swoje wejście — przez co szesnaście misji miało rysunki nachodzące na siebie. Teraz w całej grze jest zero nachodzeń i minimum 30 px powietrza, przy zachowanym rozrzucie długości lotu.
+
+Opcjonalna gwiazdka odpowiada przed tym samym opisem rysunków, w obu osiach. Poprzednia reguła znała cztery z dziewięciu typów obiektów i mierzyła portal promieniem pierścienia, więc w 25 misjach złoty znaczek był narysowany na scenografii — w jednej przechodziła przez niego lina wahadła. Gwiazdka jest zbierana w promieniu od linii lotu, więc narzędzie może ją odsunąć w bok o kilkadziesiąt pikseli i potwierdzić symulacją, że wciąż da się ją zdobyć.
 
 Kampania używa całej szerokości ekranu: najciaśniejsza para sąsiednich obiektów — z celem włącznie — to 165 px zamiast 40, misji kończących się przed 70% szerokości jest czternaście zamiast trzydziestu jeden, a cztery scenerie domowe, które nie miały nic za połową kadru, sięgają teraz prawej krawędzi.
 
@@ -30,7 +32,7 @@ Cel reaguje na uderzenie w pobliżu — prawdziwa odległość do celu razy sił
 
 ## Publikacja
 
-Publikować po zgodzie właściciela do istniejącego repozytorium i GitHub Pages. Sprawdzić po wdrożeniu wersję `0.31.0`, mapę rozdziałów oraz aktualizację cache poprzedniej instalacji.
+Publikować po zgodzie właściciela do istniejącego repozytorium i GitHub Pages. Sprawdzić po wdrożeniu wersję `0.32.0`, mapę rozdziałów oraz aktualizację cache poprzedniej instalacji.
 
 ## Dalszy rozwój
 

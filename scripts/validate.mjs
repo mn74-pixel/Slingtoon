@@ -4,7 +4,7 @@ import { access, readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { LEVELS } from "../src/levels.js";
-import { PROP_CLEARANCE, clearanceBetween, goalParts, propParts } from "../src/prop-art.js";
+import { PROP_CLEARANCE, STAR_CLEARANCE, clearanceBetween, goalParts, propParts, starClearance } from "../src/prop-art.js";
 import { FLIGHT_STYLES } from "../src/game.js";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -284,6 +284,16 @@ for (const level of LEVELS) {
     const parts = propParts(item);
     assert.ok(clearanceBetween(parts.slice(0, 2), parts.slice(2)) >= PROP_CLEARANCE - 0.5,
       `mission ${level.number}: the two rings of ${item.id} sit on top of each other and nothing will separate them`);
+  }
+  // The optional star was dropped in by a rule that knew four interaction types
+  // and measured a portal by its ring radius, so it landed on cream boxes,
+  // captions and one pendulum rope in 25 of 60 missions. It answers to the same
+  // drawings now, in both axes, because a badge dropped from above can land on
+  // something the sideways sweep says is nowhere near it.
+  if (level.star) {
+    const { air, against } = starClearance(level.star, level);
+    assert.ok(air >= STAR_CLEARANCE,
+      `mission ${level.number}: the optional star leaves ${Math.round(air)} px of air to ${against}; under ${STAR_CLEARANCE} it reads as a sticker on the scenery`);
   }
   const leftmost = Math.min(level.goal.x, ...level.interactions.flatMap((item) => propParts(item).map((part) => part.left)));
   assert.ok(leftmost - level.anchor.x >= 120,
