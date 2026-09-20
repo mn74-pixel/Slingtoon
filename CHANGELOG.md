@@ -1,5 +1,35 @@
 # Changelog
 
+## 0.37.0 — Audyt fizyki: cztery kryteria briefu dostają strażników, dwa pomysły odpadają na pomiarze
+
+Wydanie bez zmiany rozgrywki. Po poprawce celowania przeszedłem przez fizykę i ruch szukając kolejnych usterek — **nie znalazłem żadnej**. Za to cztery kryteria odbioru z briefu były sprawdzane wyłącznie ręcznie. Teraz mają testy.
+
+### Co sprawdziłem i co wyszło
+
+| kryterium briefu | wynik |
+|---|---|
+| Identyczny strzał przy 30/60/120 Hz | **0,0000 px** różnicy na 264 strzałach |
+| Każdą gwiazdkę da się zebrać i ukończyć tę samą próbę | **80 z 80** tras OK |
+| Woda nie pompuje energii | najszybciej w całej kampanii **1567 px/s** przy starcie 855 px/s |
+| Zerowy ruch nie zużywa wyzwania | puszczenie bez naciągu: 0 prób, stan `ready` |
+| Ponowienie odtwarza obiekty | po resecie **zero** zmienionych obiektów |
+
+Jedna rzecz warta odnotowania: **16 z 25 pól przepływu** (para, prąd) nie ma własnego oporu, więc w środku przyspieszenie jest z zasady nieograniczone. Dziś nie boli — najdłuższy pobyt w polu to 3,37 s przy 291 px/s — ale to pułapka czekająca na przyszłą misję. Strażnik pilnuje i pobytu, i prędkości.
+
+### Dwa pomysły, które odpadły na pomiarze
+
+**Wzmocnienie celowania** (im wolniej ciągniesz, tym drobniejsza korekta). Brzmiało dobrze, zmierzone: **97% → 19%** trafionych celowań. Sterowanie względne zrywa bezpośrednie odwzorowanie palca na naciąg — celownik przestaje trafiać tam, gdzie pokazujesz. Nie wchodzi.
+
+**Podgląd toru nie do odróżnienia od scenografii.** Postawiłem hipotezę po zrzucie z misji 31. Zmierzona odległość kolorów: **180–227** — kropki podglądu są wyraźnie odrębne. Hipoteza fałszywa.
+
+Przy okazji ustaliłem, dlaczego celowanie jest trudne: `predictShot` **wyłącza** informację o trafieniu poza misją 1 i wykupioną pełną podpowiedzią, więc w 87 z 88 misji podgląd to 8 kropek na 0,65 s, sięgających 42% drogi do celu. To świadoma decyzja z briefu („stały zielony podgląd rozwiązuje zagadkę za gracza") — zostawiam.
+
+### Zabezpieczenia
+
+`tests/physics-invariants.test.mjs` — sześć testów, 0,94 s, 528 pełnych lotów przez prawdziwy solver. Cztery sabotaże: pompujące pole, zdjęty limit lotu, reset nieodtwarzający obiektów i trasa gwiazdki mijająca cel.
+
+Pierwsza wersja testu „każdy lot się kończy" **przepuściła** sabotaż ze zdjętym limitem 6 s — bo prawie każdy lot kończy się wcześniej sam, opuszczając ekran. Doszedł konkretny strzał (misja 5, naciąg 115,450), który kończy się **wyłącznie** dzięki limitowi.
+
 ## 0.36.0 — Strzał leci z celowania, które trzymałeś, nie z drgnięcia palca
 
 Przegląd fizyki, ruchu i precyzji. Fizyka okazała się w porządku, precyzja nie.
