@@ -1,7 +1,7 @@
-# SlingToon Web 0.36.0 — Release Manifest
+# SlingToon Web 0.37.0 — Release Manifest
 
 Data: 19 września 2026. Format: HTML5 Canvas / PWA, statyczny hosting GitHub Pages.
-Pakiet kandydujący 0.36.0. Publikacja wymaga osobnej zgody właściciela po obejrzeniu wersji roboczej.
+Pakiet kandydujący 0.37.0. Publikacja wymaga osobnej zgody właściciela po obejrzeniu wersji roboczej.
 
 ## Zawartość
 
@@ -40,7 +40,7 @@ Cel reaguje na uderzenie w pobliżu — prawdziwa odległość do celu razy sił
 
 ## Publikacja
 
-Publikować po zgodzie właściciela do istniejącego repozytorium i GitHub Pages. Sprawdzić po wdrożeniu wersję `0.36.0`, mapę rozdziałów oraz aktualizację cache poprzedniej instalacji.
+Publikować po zgodzie właściciela do istniejącego repozytorium i GitHub Pages. Sprawdzić po wdrożeniu wersję `0.37.0`, mapę rozdziałów oraz aktualizację cache poprzedniej instalacji.
 
 ## Dalszy rozwój
 

@@ -1,6 +1,6 @@
 {
   "name": "slingtoon-web",
-  "version": "0.36.0",
+  "version": "0.37.0",
   "private": true,
   "type": "module",
   "description": "SlingToon HTML5 Canvas PWA",
