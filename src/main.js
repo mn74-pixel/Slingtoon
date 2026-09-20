@@ -1,10 +1,11 @@
-import { GameModel, GameMode, GamePhase, LEVELS, modifierName } from "./game.js?v=0.35.0";
-import { GameRenderer } from "./render.js?v=0.35.0";
-import { GameAudio } from "./audio.js?v=0.35.0";
-import { FaceStudio } from "./face-studio.js?v=0.35.0";
-import { CHARACTER_UNLOCKS, PROGRESS_KEY, TOKEN_SCORE_STEP, characterLock, countMastered, countStars, isMastered, readProgress, hintOffer, purchaseHint, recordStreak, rewardSuccess, medalText } from "./progress.js?v=0.35.0";
-import { STREAK_MAX_SHOTS, STREAK_MIN_POOL, canStartStreak, clearStreakMission, createStreakRun, drawStreakMission, spendStreakShot, streakSummary } from "./streak.js?v=0.35.0";
-import { CHAPTERS } from "./levels.js?v=0.35.0";
+import { GameModel, GameMode, GamePhase, LEVELS, modifierName } from "./game.js?v=0.36.0";
+import { GameRenderer } from "./render.js?v=0.36.0";
+import { GameAudio } from "./audio.js?v=0.36.0";
+import { FaceStudio } from "./face-studio.js?v=0.36.0";
+import { CHARACTER_UNLOCKS, PROGRESS_KEY, TOKEN_SCORE_STEP, characterLock, countMastered, countStars, isMastered, readProgress, hintOffer, purchaseHint, recordStreak, rewardSuccess, medalText } from "./progress.js?v=0.36.0";
+import { STREAK_MAX_SHOTS, STREAK_MIN_POOL, canStartStreak, clearStreakMission, createStreakRun, drawStreakMission, spendStreakShot, streakSummary } from "./streak.js?v=0.36.0";
+import { CHAPTERS } from "./levels.js?v=0.36.0";
+import { settledAim, trimAimTrail } from "./aim-settle.js?v=0.36.0";
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -105,7 +106,7 @@ let progress = loadProgress();
 let highestUnlockedLevel = progress.highestUnlockedLevel;
 let mapChapterIndex = 0;
 let lastReward = null;
-const FULLSCREEN_TIP_KEY = "slingtoon-fullscreen-tip-0.35.0";
+const FULLSCREEN_TIP_KEY = "slingtoon-fullscreen-tip-0.36.0";
 
 function loadProgress() {
   try {
@@ -481,6 +482,15 @@ model.onEvent = (event) => {
   updateUi();
 };
 
+// Where the finger has been, in CSS pixels, so the shot can be fired from the
+// aim the player was holding rather than from the slide their finger makes as
+// it leaves the glass. Measured: that slide was losing 11% of winning aims.
+const aimTrail = [];
+const recordAim = (event) => {
+  aimTrail.push({ x: event.clientX, y: event.clientY, t: event.timeStamp ?? performance.now() });
+  trimAimTrail(aimTrail, aimTrail[aimTrail.length - 1].t);
+};
+
 function pointFromPointer(event) {
   return renderer.clientPoint(event.clientX, event.clientY);
 }
@@ -642,6 +652,8 @@ function beginPointer(event) {
   else return;
 
   activePointer = event.pointerId;
+  aimTrail.length = 0;
+  if (interaction === "sling") recordAim(event);
   elements.canvas.setPointerCapture(event.pointerId);
   elements.canvas.classList.add("is-dragging");
   updateUi();
@@ -652,14 +664,22 @@ function movePointer(event) {
   event.preventDefault();
   const point = pointFromPointer(event);
   if (interaction === "object") model.dragObject(point);
-  if (interaction === "sling") model.dragSling(point);
+  // The live aim still follows every pixel: 14 of 88 missions have no spot
+  // more forgiving than ±8 world px of pull, so no movement is filtered here.
+  if (interaction === "sling") { model.dragSling(point); recordAim(event); }
 }
 
 function endPointer(event) {
   if (event.pointerId !== activePointer) return;
   event.preventDefault();
   if (interaction === "object") model.endObjectMove();
-  if (interaction === "sling") model.releaseSling();
+  if (interaction === "sling") {
+    recordAim(event);
+    // Rewind to the aim the finger was holding, unless it was sweeping.
+    const held = settledAim(aimTrail);
+    if (held) model.dragSling(renderer.clientPoint(held.x, held.y));
+    model.releaseSling();
+  }
   if (elements.canvas.hasPointerCapture(event.pointerId)) elements.canvas.releasePointerCapture(event.pointerId);
   activePointer = null;
   interaction = null;
@@ -943,7 +963,7 @@ window.addEventListener("keydown", (event) => {
 
 window.addEventListener("load", () => {
   if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
-    navigator.serviceWorker.register("./sw.js?v=0.35.0").catch(() => {});
+    navigator.serviceWorker.register("./sw.js?v=0.36.0").catch(() => {});
   }
   scheduleFullscreenSuggestion();
   syncGameViewport();

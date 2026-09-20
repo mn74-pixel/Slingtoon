@@ -1,5 +1,5 @@
-import { FaceVision } from "./face-vision.js?v=0.35.0";
-import { DEFAULT_MIMIC_STRENGTH, MAX_MIMIC_STRENGTH, MIMIC_EXPRESSIONS } from "./face-mimic.js?v=0.35.0";
+import { FaceVision } from "./face-vision.js?v=0.36.0";
+import { DEFAULT_MIMIC_STRENGTH, MAX_MIMIC_STRENGTH, MIMIC_EXPRESSIONS } from "./face-mimic.js?v=0.36.0";
 import {
   DEFAULT_OUTLINE_STRENGTH,
   DEFAULT_PORTRAIT_MODE,
@@ -12,7 +12,7 @@ import {
   normalizeOutlineStrength,
   normalizePortraitMode,
   normalizePortraitStyle,
-} from "./portrait.js?v=0.35.0";
+} from "./portrait.js?v=0.36.0";
 
 export const MODE_COPY = Object.freeze({
   [PORTRAIT_MODES.CUTOUT]: {

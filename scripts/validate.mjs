@@ -23,6 +23,7 @@ const requiredFiles = [
   "src/physics.js",
   "src/prop-art.js",
   "src/sling-art.js",
+  "src/aim-settle.js",
   "src/progress.js",
   "src/interactions-renderer.js",
   "src/world-renderer.js",
@@ -488,7 +489,7 @@ for (const file of requiredFiles.filter((file) => !file.startsWith(".github") &&
   }
 }
 
-for (const file of ["campaign", "campaign-routes", "physics", "prop-art", "sling-art", "progress", "streak", "interactions-renderer", "world-renderer"]) assert.ok(worker.includes(`./src/${file}.js?v=${version}`));
+for (const file of ["campaign", "campaign-routes", "physics", "prop-art", "sling-art", "aim-settle", "progress", "streak", "interactions-renderer", "world-renderer"]) assert.ok(worker.includes(`./src/${file}.js?v=${version}`));
 
 // A real phone in fullscreen landscape (iPhone SE-sized: 568x320) had its
 // mission-map button completely unclickable, and separately its mission name

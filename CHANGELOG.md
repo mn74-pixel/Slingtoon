@@ -1,5 +1,43 @@
 # Changelog
 
+## 0.36.0 — Strzał leci z celowania, które trzymałeś, nie z drgnięcia palca
+
+Przegląd fizyki, ruchu i precyzji. Fizyka okazała się w porządku, precyzja nie.
+
+### Fizyka: sprawdzona, nic do poprawy
+
+264 strzały porównane przy 120, 60 i 30 Hz: **różnica lądowania 0,0000 px**, zero rozbieżnych wyników. Stały krok 1/120 s trzyma, a test już to pilnuje.
+
+### Precyzja: gra wymagała od palca dokładności, której palec nie ma
+
+Cały zakres celowania to koło o promieniu 132 px świata — na telefonie w poziomie **140 px CSS średnicy**. Każdy strzał w grze wybiera się wewnątrz tego kółka.
+
+Zmierzone na prawdziwym solverze, na pełnej siatce naciągów: **14 z 88 misji nie ma ani jednego miejsca wygodniejszego niż ±8 px świata**, a dwie najtrudniejsze (75 i 86) mają ±4 px — czyli **±2,1 px CSS na telefonie**. Brief mówi wprost: „Nie wymagaj refleksu ani precyzji myszy do zwykłego przejścia".
+
+### Co konkretnie kradło strzały
+
+Palec, schodząc ze szkła, przesuwa się o 1–3 px. Każde `pointermove` szło prosto do celowania — razem z tym ostatnim. Pomiar na **12 896 wygrywających naciągach**:
+
+| drgnięcie przy puszczeniu | tracone wygrywające celowania |
+|---|---|
+| 1 px CSS | **6%** |
+| 2 px CSS | **11%** |
+| 3 px CSS | **16%** |
+
+Gracz trzymał wygrywające celowanie, a gra strzelała z innego.
+
+### Naprawa: cofnięcie do celowania, które było trzymane
+
+W momencie puszczenia celowanie wraca do pozycji sprzed 55 ms — ale **tylko wtedy, gdy palec faktycznie stał**. Ruch większy niż 7 px CSS w tym oknie to świadomy gest i zostaje wzięty dokładnie tak, jak go wykonano.
+
+To **nie jest martwa strefa**. Martwa strefa ignorowałaby też drobne ruchy w trakcie celowania, a na to gry nie stać przy misjach z tolerancją ±2 px CSS. W trakcie przeciągania nie zmieniło się nic — każdy piksel rozdzielczości został.
+
+Pomiar na symulowanym, realistycznym geście (dojście, przytrzymanie z drżeniem ręki, zejście palca): przy drgnięciu 2 px CSS **88% → 98%** trzymanych wygrywających celowań naprawdę wygrywa. Przy 3 px: 84% → 98%. Wynik po poprawce nie zależy już od wielkości drgnięcia.
+
+### Zabezpieczenia
+
+`tests/aim-settle.test.mjs`: osiem testów jednostkowych (w tym sprawdzenie, że **żaden kierunek** zejścia palca nie rusza strzału) plus test przez **prawdziwy moduł główny** — pełny gest z drgnięciem 3 px, które bez poprawki zamienia wygraną w przegraną. Dwa sabotaże: odpięcie poprawki od puszczenia i potraktowanie każdego drgnięcia jako intencji — oba zapalają właściwego strażnika.
+
 ## 0.35.0 — Bohater nie znika już z ekranu
 
 Po poprzedniej poprawce scena kończy się dokładnie na krawędziach świata — więc to, co wylatuje poza kadr, naprawdę znika. Zmierzyłem, jak często to się dzieje.
