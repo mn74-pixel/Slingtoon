@@ -247,8 +247,16 @@ for (const type of ["pendulum", "spring"]) {
 // Shot shape is the campaign's main variable now. The tolerance grid must also
 // sample its own centre: an odd step count straddled zero, so a mission could
 // ship a margin whose own axes fail.
+// The search itself now lives in scripts/lib/route-search.mjs, shared with the
+// mission generator so both judge a mission by the same measurements.
+const routeSearch = await readFile(resolve(root, "scripts/lib/route-search.mjs"), "utf8");
+assert.ok(/const steps = 2 \* Math\.max/.test(routeSearch), "the tolerance grid needs an even step count or it never samples the centre");
 const balance = await readFile(resolve(root, "scripts/balance-campaign.mjs"), "utf8");
-assert.ok(/const steps = 2 \* Math\.max/.test(balance), "the tolerance grid needs an even step count or it never samples the centre");
+assert.ok(/from "\.\/lib\/route-search\.mjs"/.test(balance),
+  "the balancer must use the shared route search, or the generator and the campaign drift apart");
+const lab = await readFile(resolve(root, "scripts/lib/mission-lab.mjs"), "utf8");
+assert.ok(/from "\.\/route-search\.mjs"/.test(lab) && /from "\.\.\/\.\.\/src\/campaign\.js"/.test(lab),
+  "the mission generator must build and judge through the campaign's own machinery, not its own copy");
 assert.ok(/const REACH = \{/.test(campaign) && /const SHOT_GRID = Object\.freeze/.test(campaign),
   "distance and height must be chosen separately; tying difficulty to distance pulled the campaign into the left half of the screen");
 // One height table for every distance is wrong, and raising it proved it: the

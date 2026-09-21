@@ -1,5 +1,41 @@
 # Changelog
 
+## 0.38.0 — Misje powstają same
+
+Prośba brzmiała: narzędzie do prototypowania, w którym **nie projektuję ja i nie projektuje gracz**. Więc to nie jest edytor. Generator wymyśla misję i próbuje ją złamać; zostają te, które przeżyją.
+
+```bash
+npm run generate -- --count=12 --tries=260 --seed=21
+npm run generate:render -- /tmp/slingtoon-generated
+```
+
+Wynik trafia do `docs/generated-missions.json`. **Nic nie wchodzi do kampanii automatycznie.**
+
+### Generator nie ma własnego zdania
+
+Każdy osąd wykonuje maszyneria, która certyfikuje wydaną kampanię: układ z `mission()` (skalowanie, rozsuwanie rysunków, dorastanie zasięgu), trasa i tolerancja z `scripts/lib/route-search.mjs`, odstępy z `prop-art.js`, gwiazdka z dowodem przez symulację.
+
+Żeby to było możliwe, wnętrze balansera stało się modułem. **Refaktor zmienił wynik** — trzy misje przesunęły gwiazdkę, bo oryginał sortował listę naciągów *w miejscu*, a wyszukiwanie gwiazdki chodziło po niej już posortowanej; moja kopia zostawiała wywołującemu porządek siatki i remisy rozstrzygały się inaczej. Kolejność jest teraz zwracana jawnie, a `campaign-routes.js` i `campaign-balance.json` wychodzą **bajt w bajt identyczne**.
+
+### Progi są mierzone, nie wymyślone — dwie reguły odpadły
+
+| reguła | dlaczego odpadła |
+|---|---|
+| „przeszkody muszą zmniejszać zbiór wygrywających naciągów" | portale, wiatr i sprężyny go **powiększają** (mediana 74%, dziewiąty decyl 168%) |
+| „przeszkoda, którą się omija, musi zmieniać to, co wygrywa" | **15 z 23** ręcznie zaprojektowanych zmienia go o 0% |
+
+Obie odrzuciłyby sporą część kampanii napisanej ręcznie. Została jedna nowa, poparta pomiarem: **wyjście portalu ≥ 180 px od celu**, bo żaden portal w kampanii nie wypuszcza bohatera bliżej niż 184 px.
+
+Ciekawostka z testu: rozsuwanie rysunków załatwia to samo w większości przypadków — ale **nie** dla portalu umieszczonego *za* celem. Taki buduje się **126 px** od niego, spełniając wszystkie reguły odstępu. Test znalazł ten przypadek, gdy próbowałem udowodnić, że reguła jest zbędna.
+
+### Co dostajesz
+
+12 misji z 35 prób, wszystkie przegrane przez prawdziwy model aż do wygranej: tolerancje ±8 do ±20 px, mechaniki od portali i wiatru po wahadła i ruchome ściany, w różnych scenach. Odrzucone: 12 × brak wybaczającej trasy, 6 × brak trasy w ogóle, 4 × tylko ±5 px, 1 × rysunki na sobie.
+
+### Czego generator nie robi
+
+Nie pisze gagów, nie układa kolejności nauczania, nie wie, że rozdział ma temat. Daje układ i dowód, że da się go przejść. Powód, żeby chcieć — dopisujemy razem.
+
 ## 0.37.0 — Audyt fizyki: cztery kryteria briefu dostają strażników, dwa pomysły odpadają na pomiarze
 
 Wydanie bez zmiany rozgrywki. Po poprawce celowania przeszedłem przez fizykę i ruch szukając kolejnych usterek — **nie znalazłem żadnej**. Za to cztery kryteria odbioru z briefu były sprawdzane wyłącznie ręcznie. Teraz mają testy.

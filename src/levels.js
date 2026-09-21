@@ -1,5 +1,5 @@
-import { CHAPTERS, EXTRA_LEVELS } from "./campaign.js?v=0.37.0";
-export { CHAPTERS } from "./campaign.js?v=0.37.0";
+import { CHAPTERS, EXTRA_LEVELS } from "./campaign.js?v=0.38.0";
+export { CHAPTERS } from "./campaign.js?v=0.38.0";
 const point = (x, y) => ({ x, y });
 function freeze(value) {
   if (value && typeof value === "object") {
@@ -10,7 +10,9 @@ function freeze(value) {
 }
 export const WORLD = freeze({ width: 1280, height: 640 });
 
-function level(config) {
+// Exported for scripts/generate-missions.mjs, which has to play what it
+// invents through the same normaliser the campaign goes through.
+export function level(config) {
   const { number, title, mechanic, clue, direction, pull, win, lose, ...data } = config;
   const freeStages = config.freeStages ?? Math.max(0, 4 - number);
   return freeze({

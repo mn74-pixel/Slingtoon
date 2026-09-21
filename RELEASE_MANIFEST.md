@@ -1,7 +1,7 @@
-# SlingToon Web 0.37.0 — Release Manifest
+# SlingToon Web 0.38.0 — Release Manifest
 
 Data: 19 września 2026. Format: HTML5 Canvas / PWA, statyczny hosting GitHub Pages.
-Pakiet kandydujący 0.37.0. Publikacja wymaga osobnej zgody właściciela po obejrzeniu wersji roboczej.
+Pakiet kandydujący 0.38.0. Publikacja wymaga osobnej zgody właściciela po obejrzeniu wersji roboczej.
 
 ## Zawartość
 
@@ -20,6 +20,8 @@ Na niskim, szerokim oknie pasek misji i pasek statusu przenoszą się do kolumn 
 Gdy bohater opuszcza kadr — 34% strzałów mija prawą krawędź świata, 16% wylatuje nad górną — przy tej krawędzi pojawia się jego twarz ze strzałką wskazującą kierunek lotu, malejąca z odległością. Widoczność liczona jest z rzeczywistego viewportu, więc na szerokim ekranie odsłonięty pas świata nadal liczy się jako widoczny. Dymek z tekstem, dociskany do kadru, ustępuje wtedy znacznikowi.
 
 Strzał jest oddawany z celowania, które gracz trzymał, a nie z ruchu palca schodzącego ze szkła: to drgnięcie o 2 px CSS traciło 11% wygrywających celowań (przy 3 px — 16%), a gra ma 14 misji bez miejsca wygodniejszego niż ±8 px naciągu. W trakcie przeciągania nie filtrujemy niczego — świadomy gest do samego puszczenia zostaje wzięty tak, jak go wykonano.
+
+Misje można prototypować generatorem (`npm run generate`, `docs/MISSION_GENERATOR_PL.md`). Nie jest to edytor — nikt nie stawia pudełek ręcznie i gracz go nie widzi. Generator wymyśla układ i sam próbuje go złamać tą samą maszynerią, która certyfikuje wydaną kampanię: układ z `mission()`, trasa i tolerancja ze wspólnego `route-search.mjs`, odstępy z `prop-art.js`, gwiazdka z dowodem przez symulację. Progi pochodzą z pomiarów kampanii; dwie kandydujące reguły odpadły, bo odrzucałyby misje napisane ręcznie. Wynik trafia do `docs/generated-missions.json` do przeglądu — nic nie wchodzi do kampanii automatycznie.
 
 Kampania używa całej szerokości ekranu: najciaśniejsza para sąsiednich obiektów — z celem włącznie — to 165 px zamiast 40, misji kończących się przed 70% szerokości jest czternaście zamiast trzydziestu jeden, a cztery scenerie domowe, które nie miały nic za połową kadru, sięgają teraz prawej krawędzi.
 
@@ -40,7 +42,7 @@ Cel reaguje na uderzenie w pobliżu — prawdziwa odległość do celu razy sił
 
 ## Publikacja
 
-Publikować po zgodzie właściciela do istniejącego repozytorium i GitHub Pages. Sprawdzić po wdrożeniu wersję `0.37.0`, mapę rozdziałów oraz aktualizację cache poprzedniej instalacji.
+Publikować po zgodzie właściciela do istniejącego repozytorium i GitHub Pages. Sprawdzić po wdrożeniu wersję `0.38.0`, mapę rozdziałów oraz aktualizację cache poprzedniej instalacji.
 
 ## Dalszy rozwój
 
