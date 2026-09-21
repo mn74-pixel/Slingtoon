@@ -1,7 +1,7 @@
 // Authored campaign layouts. Coordinates describe actual colliders, not decoration.
 // Routes are measured offline with the same solver used by the game.
-import { CAMPAIGN_ROUTES } from "./campaign-routes.js?v=0.37.0";
-import { PROP_CLEARANCE, clearanceBetween, goalParts, propParts, spansVertically } from "./prop-art.js?v=0.37.0";
+import { CAMPAIGN_ROUTES } from "./campaign-routes.js?v=0.38.0";
+import { PROP_CLEARANCE, clearanceBetween, goalParts, propParts, spansVertically } from "./prop-art.js?v=0.38.0";
 
 export const CHAPTERS = Object.freeze([
   { id: "home", name: "Domowy chaos", subtitle: "Od drzemki do pierwszej kaczki", scene: "bedroom" },
@@ -339,13 +339,19 @@ function goalRadius(number, local) {
   return base;
 }
 
-function mission(number, name, kind, authoredX, authoredY, mechanic, clue, win, authoredInteractions, options = {}) {
+// Exported so scripts/generate-missions.mjs can build a candidate through the
+// very same layout path the shipped campaign uses — the scaling, the gap
+// relaxation and the reach growth included. A generator with its own layout
+// would be measuring a mission the game never builds.
+export function mission(number, name, kind, authoredX, authoredY, mechanic, clue, win, authoredInteractions, options = {}) {
   const chapter = CHAPTERS[Math.floor((number - 1) / 8)];
   const local = (number - 1) % 8;
   // The authored goal position describes the layout's proportions; the shot
   // shape decides where the mission actually sits in the sling's reach, and the
   // obstacles ride along so their place in the flight is unchanged.
-  const shot = shotFor(number, SHOT_OVERRIDES[number]);
+  // A generated candidate names its own shot shape; an authored one uses the
+  // campaign's rotation and its hand-picked overrides.
+  const shot = shotFor(number, options.shot ?? SHOT_OVERRIDES[number]);
   // The shot may still have to grow, but only by as much as the artwork really
   // needs. Counting objects and multiplying by a fixed gap was the previous
   // answer and it measured the wrong thing twice: a count says nothing about
@@ -377,7 +383,9 @@ function mission(number, name, kind, authoredX, authoredY, mechanic, clue, win, 
   }
   const { goal, factor, interactions } = layout;
   const { x, y } = goal;
-  const route = CAMPAIGN_ROUTES[number];
+  // A generated candidate borrows a slot number for its chapter and shot
+  // shape, but must not inherit that slot's shipped route.
+  const route = options.route !== undefined ? options.route : CAMPAIGN_ROUTES[number];
   const required = options.required ?? interactions.filter((item) => !["solid", "gate", "hazard", "pendulum"].includes(item.type)).map((item) => item.id);
   const surface = interactions.find((item) => item.type === "water");
   const pull = route?.pull ?? p(55, 500);

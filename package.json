@@ -1,6 +1,6 @@
 {
   "name": "slingtoon-web",
-  "version": "0.37.0",
+  "version": "0.38.0",
   "private": true,
   "type": "module",
   "description": "SlingToon HTML5 Canvas PWA",
@@ -11,7 +11,9 @@
     "check": "npm run validate && npm run syntax && npm test",
     "build": "node scripts/build-static.mjs",
     "smoke": "node scripts/http-smoke.mjs",
-    "serve": "python3 -m http.server 4173"
+    "serve": "python3 -m http.server 4173",
+    "generate": "node scripts/generate-missions.mjs",
+    "generate:render": "node scripts/render-generated.mjs"
   },
   "engines": {
     "node": ">=20"
