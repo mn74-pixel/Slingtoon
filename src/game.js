@@ -1,6 +1,6 @@
-import { DEFAULT_LEVEL, WORLD } from "./levels.js?v=0.38.0";
-import { FIXED_STEP, clamp, contains, magnitude, stepPhysics } from "./physics.js?v=0.38.0";
-export { DEFAULT_LEVEL, LEVELS, WORLD, getLevel } from "./levels.js?v=0.38.0";
+import { DEFAULT_LEVEL, WORLD } from "./levels.js?v=0.39.0";
+import { FIXED_STEP, clamp, contains, magnitude, stepPhysics } from "./physics.js?v=0.39.0";
+export { DEFAULT_LEVEL, LEVELS, WORLD, getLevel } from "./levels.js?v=0.39.0";
 
 export const GameMode = Object.freeze({ QUICK: "quickSling", ONE_MOVE: "oneMoveChallenge" });
 export const GamePhase = Object.freeze({ READY: "ready", AIMING: "aiming", FLYING: "flying", SUCCEEDED: "succeeded", FAILED: "failed" });
@@ -140,7 +140,12 @@ export class GameModel {
     if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y)) return false;
     if (!this.level.editable || this.mode !== GameMode.ONE_MOVE || this.phase !== GamePhase.READY || this.moveUsed) return false;
     const item = this.interactions.find((entry) => entry.id === this.level.editable.id);
-    const bounds = { x: Math.min(item.a.x, item.b.x) - 30, y: Math.min(item.a.y, item.b.y) - 30, width: Math.abs(item.a.x - item.b.x) + 60, height: Math.abs(item.a.y - item.b.y) + 60 };
+    if (!item) return false;
+    // Same two shapes as the offset above: a cushion is two points, a crate is
+    // a box. The 30 px of slack is the grab margin, not the object.
+    const bounds = item.a && item.b
+      ? { x: Math.min(item.a.x, item.b.x) - 30, y: Math.min(item.a.y, item.b.y) - 30, width: Math.abs(item.a.x - item.b.x) + 60, height: Math.abs(item.a.y - item.b.y) + 60 }
+      : { x: item.x - 30, y: item.y - 30, width: (item.width ?? 60) + 60, height: (item.height ?? 60) + 60 };
     if (!contains(bounds, point)) return false;
     this.movingObject = true;
     this.moveStart = { pointerX: point.x, offset: this.layoutOffset };
@@ -323,8 +328,17 @@ export class GameModel {
   rectContains(rect, point) { return contains(rect, point); }
   get interactions() {
     if (this.interactionCache?.level === this.level && this.interactionCache.offset === this.layoutOffset) return this.interactionCache.items;
-    const items = this.level.interactions.map((item) => item.id === this.level.editable?.id
-      ? { ...item, a: { x: item.a.x + this.layoutOffset, y: item.a.y }, b: { x: item.b.x + this.layoutOffset, y: item.b.y } } : item);
+    // One Move existed in a single mission whose movable piece was a cushion,
+    // so this only ever knew the two-point shape. A crate or a rock has `x` and
+    // a width instead, and reading `item.a.x` on one throws before a frame is
+    // drawn. Both shapes slide now.
+    const items = this.level.interactions.map((item) => {
+      if (item.id !== this.level.editable?.id) return item;
+      if (item.a && item.b) {
+        return { ...item, a: { x: item.a.x + this.layoutOffset, y: item.a.y }, b: { x: item.b.x + this.layoutOffset, y: item.b.y } };
+      }
+      return { ...item, x: item.x + this.layoutOffset };
+    });
     this.interactionCache = { level: this.level, offset: this.layoutOffset, items };
     return items;
   }
@@ -382,11 +396,19 @@ export class GameModel {
     return "neutral";
   }
   get statusText() {
-    if (this.phase === GamePhase.READY && this.mode === GameMode.ONE_MOVE && !this.moveUsed) return "Przesuń ukośną poduszkę raz, potem wystrzel. Dotknięcie bez ruchu się nie liczy.";
+    if (this.phase === GamePhase.READY && this.mode === GameMode.ONE_MOVE && !this.moveUsed) return `Przesuń ${this.movableName} raz, potem wystrzel. Dotknięcie bez ruchu się nie liczy.`;
     if (this.phase === GamePhase.READY && this.activeHint) return this.activeHint.text;
     if (this.phase === GamePhase.FAILED) return this.failureReason;
     return this.level.status[this.phase] ?? this.level.result.successTitle;
   }
+  // One Move used to name "the angled cushion" in every mission, because it
+  // existed in exactly one and that one had a sofa. It now spans eleven, whose
+  // movable piece is a carton, a rock, a coral, a spring board or a cushion.
+  get movableName() {
+    const item = this.interactions.find((entry) => entry.id === this.level.editable?.id);
+    return { breakable: "karton", solid: "przeszkodę", cushion: "ukośną poduszkę", spring: "sprężynę" }[item?.type] ?? "ruchomy obiekt";
+  }
+
   get speechText() {
     return this.level.speech?.[this.phase]?.[this.personality] ?? ({ aiming: "MAM PLAN. MNIEJ WIĘCEJ.", flying: this.airMoveUsed ? "TO BYŁ MANEWR TAKTYCZNY!" : "TO NIE BYŁO W UMOWIE!", failed: "GODNOŚĆ ODRADZA SIĘ PIERWSZA." }[this.phase] ?? "");
   }

@@ -11,7 +11,14 @@ test("real main module: campaign navigation, touch shots, hints, medals, FIK and
   assert.equal(elements.oneMoveMode.hidden, true);
   for (let i = 0; i < LEVELS.length; i++) {
     assert.equal(elements.missionTitle.textContent, LEVELS[i].mission.title);
-    assert.equal(elements.oneMoveMode.hidden, i !== 3);
+    // One Move used to live in mission 4 alone, so this read `i !== 3`. It is
+    // offered wherever a mission has furniture the player may slide — and the
+    // Quick Sling pill beside it is hidden in the same breath, because a
+    // switch with one position is a dead control.
+    assert.equal(elements.oneMoveMode.hidden, !LEVELS[i].editable,
+      `mission ${i + 1}: One Move shown without anything to move, or hidden with something to move`);
+    assert.equal(elements.quickMode.hidden, !LEVELS[i].editable,
+      `mission ${i + 1}: the mode switch must appear and disappear as a pair`);
     shoot(LEVELS[i].assistPull);
     assert.equal(elements.nextLevel.disabled, true);
     assert.equal(elements.airMoveButton.hidden, i < 4);

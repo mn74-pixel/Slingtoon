@@ -1,4 +1,4 @@
-import { DEFAULT_MIMIC_STRENGTH, buildExpressionSheet, mimicAnchors, opaqueBounds } from "./face-mimic.js?v=0.38.0";
+import { DEFAULT_MIMIC_STRENGTH, buildExpressionSheet, mimicAnchors, opaqueBounds } from "./face-mimic.js?v=0.39.0";
 
 const clamp = (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value));
 
