@@ -1,5 +1,37 @@
 # Changelog
 
+## 0.39.0 — Quick Sling naprawdę nic nie robił
+
+Zgłoszenie brzmiało „quick sling chyba nie działa". Sprawdzone na żywej wersji: kliknięcie **nie zmieniało ani jednego atrybutu**. To nie był błąd kodu — to był martwy przycisk.
+
+### Przełącznik z jedną pozycją
+
+One Move — przesunięcie jednego mebla przed strzałem — istniał w **1 z 88 misji** (misja 4, kanapa). W pozostałych 87 druga pigułka była ukryta, a `setMode` wychodził od razu, bo tryb już był ustawiony. Gracz widzi przycisk, klika, nic się nie dzieje.
+
+Zamiast usuwać tryb, sprawdziłem, ile misji mogłoby go unieść. Kryterium: przez **cały zakres przesuwu −90…+100 px** plansza musi zachować wszystkie odstępy rysunków, gwiazdka musi zostać czytelna, a misja przechodzalna przy **każdym** przesunięciu. Zdały **12 obiektów w 11 misjach** (sprawdzenie gwiazdki odrzuciło 4 kolejne).
+
+One Move jest teraz w **11 misjach**: 2, 4, 7, 10, 18, 55, 71, 74, 83, 85, 88 — karton, kanapa, żywopłot, skała, koral, dwie paczki, pamiątki i trzy sprężyny. A tam, gdzie misja nie ma czego przesuwać, **przełącznik się nie pokazuje**: przycisk, który nic nie robi, czyta się jak zepsuta gra.
+
+### Błąd, który czekał na pierwsze użycie
+
+Przesuwanie obiektu było zaimplementowane **wyłącznie dla kształtu poduszki** — dwóch punktów `a`/`b`. Karton i skała mają `x` i szerokość, więc `item.a.x` rzucał wyjątkiem, zanim narysowała się klatka. Ten sam błąd był w chwytaniu obiektu. Oba kształty działają teraz, a test przechodzi przez wszystkie 11 misji, chwytając i przesuwając każdy przedmiot.
+
+Do tego tekst: komunikat mówił „Przesuń **ukośną poduszkę**" w każdej misji, bo istniała tylko jedna i miała kanapę. Teraz nazywa to, co naprawdę się przesuwa.
+
+### Moduł twarzy do innych gier
+
+`src/face-kit.js` to jedno udokumentowane wejście do wycinania twarzy. Trzy pliki robią robotę i **żaden nie wie nic o SlingToonie** — inna gra kopiuje je i importuje ten jeden.
+
+Testy pilnują trzech obietnic: że drzwi nie gubią klamki (pełna lista eksportów), że moduł **nie importuje niczego z tej gry**, i że nie ma w nim żadnej drogi wysłania zdjęcia — `fetch`, `XMLHttpRequest`, `WebSocket`, `sendBeacon` ani zdalnego adresu.
+
+Przy okazji **odwołuję własną obawę** z poprzedniej odpowiedzi: wzorzysta bluza przy szyi *nie* przecieknie do wycinka. Ubranie jest odrzucane po **kategorii** segmentacji, nie po geometrii, i pilnuje tego test, który był w repozytorium przede mną.
+
+### Rozmieszczenie na planszach — pomiar, nie przebudowa
+
+Zmierzone na 88 planszach: szerokość zajęta przez rekwizyty — mediana 666 px z 1280. **29 plansz ma najwyżej jeden rekwizyt** (to rytm rozdziału: co czwarta misja to „odkrycie" albo „oddech"). 50 z 88 celów stoi nisko (y>430). Rozkład mechanik: `switch` i `gate` to **53 z 172 obiektów**, a poduszka, sprężyna, wahadło, woda i strefa zakazana razem — 26 plansz.
+
+To jest materiał do decyzji projektowej, nie do jednostronnej przebudowy dwudziestu misji. Propozycje czekają na Twoją zgodę.
+
 ## 0.38.0 — Misje powstają same
 
 Prośba brzmiała: narzędzie do prototypowania, w którym **nie projektuję ja i nie projektuje gracz**. Więc to nie jest edytor. Generator wymyśla misję i próbuje ją złamać; zostają te, które przeżyją.

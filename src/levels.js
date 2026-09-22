@@ -1,5 +1,5 @@
-import { CHAPTERS, EXTRA_LEVELS } from "./campaign.js?v=0.38.0";
-export { CHAPTERS } from "./campaign.js?v=0.38.0";
+import { CHAPTERS, EXTRA_LEVELS } from "./campaign.js?v=0.39.0";
+export { CHAPTERS } from "./campaign.js?v=0.39.0";
 const point = (x, y) => ({ x, y });
 function freeze(value) {
   if (value && typeof value === "object") {
@@ -64,6 +64,7 @@ export const LEVELS = freeze([
     goal: { kind: "coffee", shape: "circle", x: 1050, y: 455, radius: 94, scale: 1.02 },
     star: point(760, 360), required: ["parcel"], requirement: "Najpierw przebij paczkę — kawa czeka na dostawę!",
     interactions: [{ id: "parcel", type: "breakable", x: 545, y: 190, width: 72, height: 396, label: "NIE RZUCAĆ" }],
+    editable: { id: "parcel", minOffset: -90, maxOffset: 100 },
     visual: { accent: "#ff6078", gag: "KURIER: DOSTARCZONO OSOBIŚCIE", wash: "rgba(255,96,120,.025)" },
     win: ["EKSPRES!", "Dostawa z własnym kubkiem. I wstrząsem."], lose: "Przesyłka nie zmieściła się w awizo.",
   }),
@@ -117,6 +118,7 @@ export const LEVELS = freeze([
     goal: { kind: "ice-cream", shape: "circle", x: 1040, y: 370, radius: 78, scale: 0.97, motion: { axis: "y", amplitude: 80, speed: 1.5 } },
     star: point(800, 235), required: [],
     interactions: [{ id: "hedge", type: "solid", x: 680, y: 435, width: 100, height: 151, label: "ŻYWOPŁOT" }],
+    editable: { id: "hedge", minOffset: -90, maxOffset: 100 },
     visual: { accent: "#ffd35f", gag: "GOŁĄB: TO SĄ MOJE LODY", wash: "rgba(255,211,95,.02)" },
     win: ["MNIAM!", "Gołąb wystawił jedną gwiazdkę."], lose: "Lody nie czekają. Gołąb też nie.",
   }),

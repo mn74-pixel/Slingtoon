@@ -1,7 +1,7 @@
-# SlingToon Web 0.38.0 — Release Manifest
+# SlingToon Web 0.39.0 — Release Manifest
 
 Data: 19 września 2026. Format: HTML5 Canvas / PWA, statyczny hosting GitHub Pages.
-Pakiet kandydujący 0.38.0. Publikacja wymaga osobnej zgody właściciela po obejrzeniu wersji roboczej.
+Pakiet kandydujący 0.39.0. Publikacja wymaga osobnej zgody właściciela po obejrzeniu wersji roboczej.
 
 ## Zawartość
 
@@ -23,6 +23,8 @@ Strzał jest oddawany z celowania, które gracz trzymał, a nie z ruchu palca sc
 
 Misje można prototypować generatorem (`npm run generate`, `docs/MISSION_GENERATOR_PL.md`). Nie jest to edytor — nikt nie stawia pudełek ręcznie i gracz go nie widzi. Generator wymyśla układ i sam próbuje go złamać tą samą maszynerią, która certyfikuje wydaną kampanię: układ z `mission()`, trasa i tolerancja ze wspólnego `route-search.mjs`, odstępy z `prop-art.js`, gwiazdka z dowodem przez symulację. Progi pochodzą z pomiarów kampanii; dwie kandydujące reguły odpadły, bo odrzucałyby misje napisane ręcznie. Wynik trafia do `docs/generated-missions.json` do przeglądu — nic nie wchodzi do kampanii automatycznie.
 
+Tryb One Move (przesunięcie jednego mebla przed strzałem) obejmuje 11 misji zamiast jednej; wybrane pomiarem — przez cały zakres przesuwu plansza zachowuje odstępy, gwiazdka zostaje czytelna, a misja przechodzalna. Tam, gdzie misja nie ma czego przesuwać, przełącznik trybu się nie pokazuje. Moduł wycinania twarzy ma jedno udokumentowane wejście (`src/face-kit.js`) i nie importuje niczego z gry, więc da się go przenieść do innego projektu; testy pilnują, że nie zawiera żadnej drogi wysłania zdjęcia.
+
 Kampania używa całej szerokości ekranu: najciaśniejsza para sąsiednich obiektów — z celem włącznie — to 165 px zamiast 40, misji kończących się przed 70% szerokości jest czternaście zamiast trzydziestu jeden, a cztery scenerie domowe, które nie miały nic za połową kadru, sięgają teraz prawej krawędzi.
 
 Wgrane zdjęcie robi miny. Dwanaście min jest wypiekanych raz, przy zatwierdzaniu zdjęcia, z jego własnych pikseli: siatka trójkątów przeciągana punktami twarzy, poza całej głowy obracana wokół brody i cień wnętrza otwartych ust. Nic nie jest dorysowane i zdjęcie zostaje zdjęciem. Próg czytelności jest pilnowany testem przy realnym rozmiarze głowy w grze (96 px). Pusty wycinek nie da się już zatwierdzić.
@@ -42,7 +44,7 @@ Cel reaguje na uderzenie w pobliżu — prawdziwa odległość do celu razy sił
 
 ## Publikacja
 
-Publikować po zgodzie właściciela do istniejącego repozytorium i GitHub Pages. Sprawdzić po wdrożeniu wersję `0.38.0`, mapę rozdziałów oraz aktualizację cache poprzedniej instalacji.
+Publikować po zgodzie właściciela do istniejącego repozytorium i GitHub Pages. Sprawdzić po wdrożeniu wersję `0.39.0`, mapę rozdziałów oraz aktualizację cache poprzedniej instalacji.
 
 ## Dalszy rozwój
 

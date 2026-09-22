@@ -24,6 +24,7 @@ const requiredFiles = [
   "src/prop-art.js",
   "src/sling-art.js",
   "src/aim-settle.js",
+  "src/face-kit.js",
   "src/progress.js",
   "src/interactions-renderer.js",
   "src/world-renderer.js",

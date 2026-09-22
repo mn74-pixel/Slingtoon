@@ -1,11 +1,11 @@
-import { GameModel, GameMode, GamePhase, LEVELS, modifierName } from "./game.js?v=0.38.0";
-import { GameRenderer } from "./render.js?v=0.38.0";
-import { GameAudio } from "./audio.js?v=0.38.0";
-import { FaceStudio } from "./face-studio.js?v=0.38.0";
-import { CHARACTER_UNLOCKS, PROGRESS_KEY, TOKEN_SCORE_STEP, characterLock, countMastered, countStars, isMastered, readProgress, hintOffer, purchaseHint, recordStreak, rewardSuccess, medalText } from "./progress.js?v=0.38.0";
-import { STREAK_MAX_SHOTS, STREAK_MIN_POOL, canStartStreak, clearStreakMission, createStreakRun, drawStreakMission, spendStreakShot, streakSummary } from "./streak.js?v=0.38.0";
-import { CHAPTERS } from "./levels.js?v=0.38.0";
-import { settledAim, trimAimTrail } from "./aim-settle.js?v=0.38.0";
+import { GameModel, GameMode, GamePhase, LEVELS, modifierName } from "./game.js?v=0.39.0";
+import { GameRenderer } from "./render.js?v=0.39.0";
+import { GameAudio } from "./audio.js?v=0.39.0";
+import { FaceStudio } from "./face-studio.js?v=0.39.0";
+import { CHARACTER_UNLOCKS, PROGRESS_KEY, TOKEN_SCORE_STEP, characterLock, countMastered, countStars, isMastered, readProgress, hintOffer, purchaseHint, recordStreak, rewardSuccess, medalText } from "./progress.js?v=0.39.0";
+import { STREAK_MAX_SHOTS, STREAK_MIN_POOL, canStartStreak, clearStreakMission, createStreakRun, drawStreakMission, spendStreakShot, streakSummary } from "./streak.js?v=0.39.0";
+import { CHAPTERS } from "./levels.js?v=0.39.0";
+import { settledAim, trimAimTrail } from "./aim-settle.js?v=0.39.0";
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -106,7 +106,7 @@ let progress = loadProgress();
 let highestUnlockedLevel = progress.highestUnlockedLevel;
 let mapChapterIndex = 0;
 let lastReward = null;
-const FULLSCREEN_TIP_KEY = "slingtoon-fullscreen-tip-0.38.0";
+const FULLSCREEN_TIP_KEY = "slingtoon-fullscreen-tip-0.39.0";
 
 function loadProgress() {
   try {
@@ -206,7 +206,7 @@ function requestHint() {
   }
   model.revealHint(offer.stage);
   saveProgress();
-  const layoutNote = offer.stage === 3 && model.mode === GameMode.ONE_MOVE ? " Poduszka wraca na pozycję startową." : "";
+  const layoutNote = offer.stage === 3 && model.mode === GameMode.ONE_MOVE ? ` ${model.movableName[0].toUpperCase()}${model.movableName.slice(1)} wraca na pozycję startową.` : "";
   showToast(`${offer.hint.text}${layoutNote} ${offer.cost ? `(−${offer.cost} żet.)` : "(gratis)"}`);
 }
 
@@ -506,7 +506,13 @@ function updateMissionUi() {
   elements.missionKicker.textContent = mission.kicker;
   elements.missionTitle.textContent = mission.title;
   elements.canvas.setAttribute("aria-label", mission.canvasLabel);
-  elements.oneMoveMode.hidden = !model.level.editable;
+  // A switch with one position is not a switch. One Move is offered where a
+  // mission has furniture the player may slide; where it has none, clicking
+  // "Quick Sling" did nothing at all — measured on the live build, not a single
+  // attribute changed — and a player reads a dead control as a broken game.
+  const offersChoice = Boolean(model.level.editable);
+  elements.oneMoveMode.hidden = !offersChoice;
+  elements.quickMode.hidden = !offersChoice;
   elements.levelIndicator.textContent = `${currentLevelIndex + 1} / ${LEVELS.length}`;
 }
 
@@ -756,7 +762,7 @@ function hideResult() {
 
 function instructionForState() {
   if (model.mode === GameMode.ONE_MOVE && model.phase === GamePhase.READY && !model.moveUsed) {
-    return { icon: "↔", title: "Przesuń ukośną poduszkę raz" };
+    return { icon: "↔", title: `Przesuń ${model.movableName} raz` };
   }
   if (model.mode === GameMode.QUICK && model.phase === GamePhase.READY && model.attempts === 0 && model.level.tutorial) {
     return { icon: "↙", title: model.level.tutorial.title };
@@ -963,7 +969,7 @@ window.addEventListener("keydown", (event) => {
 
 window.addEventListener("load", () => {
   if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
-    navigator.serviceWorker.register("./sw.js?v=0.38.0").catch(() => {});
+    navigator.serviceWorker.register("./sw.js?v=0.39.0").catch(() => {});
   }
   scheduleFullscreenSuggestion();
   syncGameViewport();
