@@ -46,6 +46,18 @@ Prototyp 035  ±20 px aim · 11.3% of pulls win · 30 px air · hazard
 - **11.3% of pulls win** — udział wygrywających naciągów w całej siatce. Misja, którą wygrywa prawie wszystko, niczego nie uczy; taka, którą prawie nic — jest loterią. Lista jest sortowana wokół 12%;
 - **30 px air** — najmniejszy odstęp między rysunkami.
 
+## Co proponuje
+
+Wagi archetypów to odwrotność udziału mechaniki w kampanii, liczona z `LEVELS` w czasie działania. Losowanie równomierne proponowało kolejne bramki i portale — czyli to, czego już jest najwięcej. Kiedy kampania się zmieni, wagi pójdą za nią bez ruszania kodu.
+
+## Promocja do kampanii
+
+```bash
+npm run generate -- --promote="Prototyp 006"
+```
+
+Wypisuje gotową linię `mission(...)` do wklejenia w `src/campaign.js`, z pomiarami w komentarzu. Trasy nie wypisuje — po wklejeniu uruchom `npm run balance -- --write`, które przelicza wszystko od zera.
+
 ## Następny krok
 
 Generator nie pisze gagów, nie układa kolejności nauczania i nie wie, że rozdział ma temat. To robimy razem: on daje układ i dowód, że da się go przejść, my dajemy powód, żeby chcieć.

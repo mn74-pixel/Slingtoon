@@ -97,3 +97,46 @@ test("every archetype builds something the renderer can draw", () => {
     }
   }
 });
+
+// The generator's output is only useful if it can be pasted. The first version
+// built the object literal by regexing JSON, which mangles any label holding a
+// comma or a colon — and every interaction carries a label.
+test("a promoted mission is valid, faithful JavaScript", () => {
+  const literal = (value) => {
+    if (Array.isArray(value)) return `[${value.map(literal).join(", ")}]`;
+    if (value && typeof value === "object") {
+      return `{ ${Object.entries(value).map(([key, inner]) => `${key}: ${literal(inner)}`).join(", ")} }`;
+    }
+    return JSON.stringify(value);
+  };
+  const awkward = {
+    id: "crate-0", type: "breakable", x: 600, y: 200, width: 60, height: 380,
+    // The labels the campaign really uses: commas, colons and Polish letters.
+    label: "OSTROŻNIE: ZAWARTOŚĆ, NAPRAWDĘ",
+    force: { x: 12, y: -30 },
+  };
+  const restored = new Function(`return ${literal(awkward)};`)();
+  assert.deepEqual(restored, awkward, "the pasted literal is not the mission that was measured");
+  assert.match(literal(awkward), /label: "OSTROŻNIE: ZAWARTOŚĆ, NAPRAWDĘ"/, "the label lost its punctuation");
+});
+
+// The campaign leans on the mechanics it already has; a generator that picks
+// uniformly proposes more of the same. Measured on the 88 boards: gate and
+// switch appear on 28% each, water on 5%.
+test("the lab proposes what the campaign is short of", () => {
+  seed(31);
+  const counts = {};
+  for (let i = 1; i <= 160; i += 1) {
+    for (const id of compose(i).archetypes) counts[id] = (counts[id] ?? 0) + 1;
+  }
+  // Group totals do not discriminate: there are four thin archetypes and one
+  // gate, so "thin beats gate" holds even with uniform picking. The rate of a
+  // single mechanic against a single other one is what the weighting changes.
+  // Water sits on 5% of boards and gate on 28%, so water should be proposed
+  // roughly three times as often; uniform picking would make it one.
+  const gate = counts.gate ?? 0;
+  const water = counts.water ?? 0;
+  assert.ok(water > gate * 2,
+    `water came up ${water} times against ${gate} gates; the scarcity weighting is not biting`);
+  assert.ok((counts.water ?? 0) > 0, "water is the rarest mechanic in the campaign and must be offered");
+});
