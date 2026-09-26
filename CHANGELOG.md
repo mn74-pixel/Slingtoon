@@ -1,5 +1,41 @@
 # Changelog
 
+## 0.40.0 — Generator proponuje to, czego kampanii brakuje, i wypluwa kod do wklejenia
+
+Generator z 0.38.0 miał dwie dziury: powielał mechaniki, których kampania ma już najwięcej, a jego wynik był JSON-em, którego nikt nie mógł użyć.
+
+### Znał dziewięć mechanik, a wybierał jak z kapelusza
+
+Pomiar na 88 planszach — udział plansz, na których mechanika w ogóle występuje:
+
+| mechanika | plansze | | mechanika | plansze |
+|---|---|---|---|---|
+| woda | **5%** | | para | 17% |
+| poduszka | **6%** | | karton | 22% |
+| wahadło | **6%** | | portal | 23% |
+| sprężyna | **6%** | | przycisk | 28% |
+| strefa zakazana | 8% | | bramka | **28%** |
+
+Generator losował równomiernie, więc proponował **kolejne bramki i portale** — czyli tłum, nie lukę. Teraz waga każdej mechaniki to odwrotność jej udziału, **liczona z kampanii w czasie działania**, nie wpisana w komentarz: kiedy kampania się zmieni, wagi pójdą za nią.
+
+Doszły też cztery mechaniki, których lab nie znał: **woda, bąbel, przyciąganie i prąd** — trzy z nich siedzą w cienkim ogonie.
+
+### `--promote` zamiast JSON-a
+
+```bash
+npm run generate -- --promote="Prototyp 006"
+```
+
+Wypisuje gotową linię `mission(...)` do wklejenia w `src/campaign.js`, z pomiarami w komentarzu i instrukcją, co zrobić potem (`npm run balance -- --write`). Nie wypisuje trasy — balanser i tak przelicza wszystko od zera, gdy misja już stoi na miejscu.
+
+Generator nie pisze gagów, nie zna tematu rozdziału i nie wie, gdzie w kolejności nauczania należy dana reguła. Dlatego zatrzymuje się na kodzie i oddaje go dalej.
+
+### Dwa własne błędy złapane po drodze
+
+**Serializator.** Pierwsza wersja budowała literał obiektu, regexując JSON — co psuje każdą etykietę z przecinkiem lub dwukropkiem, a etykietę ma **każdy** obiekt („OSTROŻNIE: ZAWARTOŚĆ"). Wynik, którego nie da się wkleić bez czytania, jest bezużyteczny. Napisany porządnie, z testem na etykiecie z przecinkiem, dwukropkiem i polskimi znakami.
+
+**Test wag był za słaby.** Sprawdzał, czy „cienkie" mechaniki wypadają częściej niż bramka — ale cienkich archetypów jest cztery, a bramka jedna, więc stosunek 4:1 przechodził **także bez wag**. Sabotaż to pokazał. Teraz test porównuje jedną mechanikę z jedną: woda ma wypadać ponad dwa razy częściej niż bramka. Bez wag wychodzi 24 do 23 i test pada.
+
 ## 0.39.0 — Quick Sling naprawdę nic nie robił
 
 Zgłoszenie brzmiało „quick sling chyba nie działa". Sprawdzone na żywej wersji: kliknięcie **nie zmieniało ani jednego atrybutu**. To nie był błąd kodu — to był martwy przycisk.

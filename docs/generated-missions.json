@@ -1,9 +1,9 @@
 {
-  "seed": 21,
-  "tried": 35,
+  "seed": 31,
+  "tried": 26,
   "kept": [
     {
-      "name": "Prototyp 018",
+      "name": "Prototyp 015",
       "slot": 37,
       "archetypes": [
         "hazard",
@@ -12,58 +12,223 @@
       "mechanic": "STREFA ZAKAZANA + PODMUCH",
       "clue": "Czerwona strefa kończy lot od dotknięcia. Poprowadź tor obok niej. Strzałki pokazują wiatr. Przeleć przez niego, a poniesie Cię dalej.",
       "shape": {
-        "reach": "short",
+        "reach": "mid",
         "height": "high"
       },
       "authored": {
-        "x": 1075,
-        "y": 400
+        "x": 1015,
+        "y": 420
       },
       "interactions": [
         {
           "id": "spikes-0",
           "type": "hazard",
-          "x": 705,
-          "y": 346,
-          "width": 95,
-          "height": 240,
+          "x": 655,
+          "y": 326,
+          "width": 135,
+          "height": 260,
           "label": "NIE DOTYKAJ"
         },
         {
           "id": "gust-1",
           "type": "steam",
-          "x": 805,
-          "y": 225,
+          "x": 905,
+          "y": 230,
           "width": 320,
-          "height": 295,
+          "height": 360,
           "force": {
-            "x": 510,
-            "y": -330
+            "x": 680,
+            "y": -270
           },
           "label": "PODMUCH →"
         }
       ],
       "route": {
         "pull": {
-          "x": 50,
+          "x": 80,
           "y": 560
         },
         "star": {
-          "x": 650,
-          "y": 131
+          "x": 429,
+          "y": 118
         },
         "starPull": {
-          "x": 125,
+          "x": 115,
           "y": 565
         }
       },
-      "margin": 8,
-      "winningShare": 0.124,
-      "clearance": null
+      "margin": 16,
+      "winningShare": 0.111,
+      "clearance": 134
     },
     {
-      "name": "Prototyp 035",
-      "slot": 16,
+      "name": "Prototyp 022",
+      "slot": 10,
+      "archetypes": [
+        "portal"
+      ],
+      "mechanic": "PORTAL",
+      "clue": "Miętowe wejście prowadzi do fioletowego wyjścia. Pęd zostaje z Tobą.",
+      "shape": {
+        "reach": "long",
+        "height": "low"
+      },
+      "authored": {
+        "x": 1015,
+        "y": 435
+      },
+      "interactions": [
+        {
+          "id": "pipe-0",
+          "type": "portal",
+          "entry": {
+            "x": 930,
+            "y": 325
+          },
+          "exit": {
+            "x": 1000,
+            "y": 365
+          },
+          "radius": 68,
+          "turn": 0
+        }
+      ],
+      "route": {
+        "pull": {
+          "x": 85,
+          "y": 540
+        },
+        "star": {
+          "x": 650,
+          "y": 129
+        },
+        "starPull": {
+          "x": 100,
+          "y": 560
+        }
+      },
+      "margin": 8,
+      "winningShare": 0.111,
+      "clearance": 30
+    },
+    {
+      "name": "Prototyp 004",
+      "slot": 41,
+      "archetypes": [
+        "moving-wall"
+      ],
+      "mechanic": "RUCHOMA PRZESZKODA",
+      "clue": "Ściana wraca w to samo miejsce. Policz jej rytm.",
+      "shape": {
+        "reach": "mid",
+        "height": "high"
+      },
+      "authored": {
+        "x": 990,
+        "y": 410
+      },
+      "interactions": [
+        {
+          "id": "shutter-0",
+          "type": "solid",
+          "x": 580,
+          "y": 280,
+          "width": 80,
+          "height": 201,
+          "label": "OMIŃ",
+          "motion": {
+            "axis": "y",
+            "amplitude": 50,
+            "speed": 0.844106241222471
+          }
+        }
+      ],
+      "route": {
+        "pull": {
+          "x": 80,
+          "y": 560
+        },
+        "star": {
+          "x": 781,
+          "y": 319
+        },
+        "starPull": {
+          "x": 120,
+          "y": 550
+        }
+      },
+      "margin": 16,
+      "winningShare": 0.098,
+      "clearance": 265
+    },
+    {
+      "name": "Prototyp 001",
+      "slot": 28,
+      "archetypes": [
+        "portal",
+        "current"
+      ],
+      "mechanic": "PORTAL + PRĄD",
+      "clue": "Miętowe wejście prowadzi do fioletowego wyjścia. Pęd zostaje z Tobą. Turkusowy pas płynie w jedną stronę. Wejdź w niego i daj się nieść.",
+      "shape": {
+        "reach": "long",
+        "height": "mid"
+      },
+      "authored": {
+        "x": 1040,
+        "y": 425
+      },
+      "interactions": [
+        {
+          "id": "pipe-0",
+          "type": "portal",
+          "entry": {
+            "x": 525,
+            "y": 385
+          },
+          "exit": {
+            "x": 710,
+            "y": 275
+          },
+          "radius": 68,
+          "turn": 0
+        },
+        {
+          "id": "flow-1",
+          "type": "current",
+          "x": 855,
+          "y": 310,
+          "width": 375,
+          "height": 290,
+          "force": {
+            "x": 400,
+            "y": -30
+          },
+          "drag": 0.12,
+          "label": "PRĄD"
+        }
+      ],
+      "route": {
+        "pull": {
+          "x": 125,
+          "y": 490
+        },
+        "star": {
+          "x": 556,
+          "y": 164
+        },
+        "starPull": {
+          "x": 145,
+          "y": 525
+        }
+      },
+      "margin": 8,
+      "winningShare": 0.094,
+      "clearance": 204
+    },
+    {
+      "name": "Prototyp 026",
+      "slot": 33,
       "archetypes": [
         "hazard"
       ],
@@ -74,219 +239,97 @@
         "height": "high"
       },
       "authored": {
-        "x": 905,
-        "y": 390
+        "x": 990,
+        "y": 440
       },
       "interactions": [
         {
           "id": "spikes-0",
           "type": "hazard",
-          "x": 815,
-          "y": 381,
-          "width": 125,
-          "height": 205,
+          "x": 850,
+          "y": 421,
+          "width": 130,
+          "height": 165,
           "label": "NIE DOTYKAJ"
         }
       ],
       "route": {
         "pull": {
           "x": 70,
-          "y": 565
+          "y": 560
         },
         "star": {
-          "x": 658,
-          "y": 338
+          "x": 651,
+          "y": 354
         },
         "starPull": {
-          "x": 50,
+          "x": 35,
           "y": 545
         }
       },
       "margin": 20,
-      "winningShare": 0.113,
-      "clearance": 30
+      "winningShare": 0.15,
+      "clearance": null
     },
     {
-      "name": "Prototyp 028",
-      "slot": 33,
+      "name": "Prototyp 006",
+      "slot": 46,
       "archetypes": [
-        "portal",
-        "wind"
+        "gravity",
+        "hazard"
       ],
-      "mechanic": "PORTAL + PODMUCH",
-      "clue": "Miętowe wejście prowadzi do fioletowego wyjścia. Pęd zostaje z Tobą. Strzałki pokazują wiatr. Przeleć przez niego, a poniesie Cię dalej.",
+      "mechanic": "PRZYCIĄGANIE + STREFA ZAKAZANA",
+      "clue": "Kula przyciąga. Przeleć obok, a zakrzywi Ci tor. Czerwona strefa kończy lot od dotknięcia. Poprowadź tor obok niej.",
       "shape": {
-        "reach": "short",
-        "height": "low"
+        "reach": "mid",
+        "height": "high"
       },
       "authored": {
-        "x": 1020,
-        "y": 445
+        "x": 1000,
+        "y": 370
       },
       "interactions": [
         {
-          "id": "pipe-0",
-          "type": "portal",
-          "entry": {
-            "x": 465,
-            "y": 335
-          },
-          "exit": {
-            "x": 715,
-            "y": 325
-          },
-          "radius": 68,
-          "turn": 0
+          "id": "planet-0",
+          "type": "gravity",
+          "x": 670,
+          "y": 355,
+          "radius": 210,
+          "coreRadius": 29,
+          "strength": 980,
+          "label": "PRZYCIĄGANIE"
         },
         {
-          "id": "gust-1",
-          "type": "steam",
-          "x": 885,
-          "y": 200,
-          "width": 300,
-          "height": 365,
-          "force": {
-            "x": 660,
-            "y": -310
-          },
-          "label": "PODMUCH →"
+          "id": "spikes-1",
+          "type": "hazard",
+          "x": 805,
+          "y": 346,
+          "width": 125,
+          "height": 240,
+          "label": "NIE DOTYKAJ"
         }
       ],
       "route": {
         "pull": {
-          "x": 145,
-          "y": 535
+          "x": 75,
+          "y": 560
         },
         "star": {
-          "x": 418,
-          "y": 124
+          "x": 595,
+          "y": 350
         },
         "starPull": {
-          "x": 150,
-          "y": 565
-        }
-      },
-      "margin": 8,
-      "winningShare": 0.131,
-      "clearance": 40
-    },
-    {
-      "name": "Prototyp 019",
-      "slot": 84,
-      "archetypes": [
-        "wind"
-      ],
-      "mechanic": "PODMUCH",
-      "clue": "Strzałki pokazują wiatr. Przeleć przez niego, a poniesie Cię dalej.",
-      "shape": {
-        "reach": "long",
-        "height": "low"
-      },
-      "authored": {
-        "x": 1005,
-        "y": 410
-      },
-      "interactions": [
-        {
-          "id": "gust-0",
-          "type": "steam",
-          "x": 825,
-          "y": 210,
-          "width": 325,
-          "height": 300,
-          "force": {
-            "x": 650,
-            "y": -320
-          },
-          "label": "PODMUCH →"
-        }
-      ],
-      "route": {
-        "pull": {
           "x": 40,
-          "y": 515
-        },
-        "star": {
-          "x": 650,
-          "y": 238
-        },
-        "starPull": {
-          "x": 115,
           "y": 550
         }
       },
       "margin": 10,
-      "winningShare": 0.135,
-      "clearance": null
-    },
-    {
-      "name": "Prototyp 034",
-      "slot": 52,
-      "archetypes": [
-        "portal",
-        "moving-wall"
-      ],
-      "mechanic": "PORTAL + RUCHOMA PRZESZKODA",
-      "clue": "Miętowe wejście prowadzi do fioletowego wyjścia. Pęd zostaje z Tobą. Ściana wraca w to samo miejsce. Policz jej rytm.",
-      "shape": {
-        "reach": "short",
-        "height": "mid"
-      },
-      "authored": {
-        "x": 1000,
-        "y": 410
-      },
-      "interactions": [
-        {
-          "id": "pipe-0",
-          "type": "portal",
-          "entry": {
-            "x": 725,
-            "y": 340
-          },
-          "exit": {
-            "x": 1000,
-            "y": 260
-          },
-          "radius": 68,
-          "turn": 0
-        },
-        {
-          "id": "shutter-1",
-          "type": "solid",
-          "x": 800,
-          "y": 255,
-          "width": 80,
-          "height": 236,
-          "label": "OMIŃ",
-          "motion": {
-            "axis": "y",
-            "amplitude": 40,
-            "speed": 0.7247520450502634
-          }
-        }
-      ],
-      "route": {
-        "pull": {
-          "x": 105,
-          "y": 535
-        },
-        "star": {
-          "x": 580,
-          "y": 127
-        },
-        "starPull": {
-          "x": 125,
-          "y": 560
-        }
-      },
-      "margin": 10,
-      "winningShare": 0.137,
+      "winningShare": 0.081,
       "clearance": 30
     },
     {
-      "name": "Prototyp 033",
-      "slot": 85,
+      "name": "Prototyp 002",
+      "slot": 19,
       "archetypes": [
         "pendulum"
       ],
@@ -294,311 +337,98 @@
       "clue": "Wahadło wie, która godzina. Przeleć, kiedy odchodzi.",
       "shape": {
         "reach": "mid",
-        "height": "high"
+        "height": "mid"
       },
       "authored": {
-        "x": 920,
-        "y": 430
+        "x": 950,
+        "y": 415
       },
       "interactions": [
         {
           "id": "swing-0",
           "type": "pendulum",
-          "x": 702,
-          "y": 247,
+          "x": 427,
+          "y": 307,
           "width": 76,
           "height": 76,
           "pendulum": {
-            "x": 740,
+            "x": 465,
             "y": 110,
-            "length": 175,
-            "swing": 0.6478411346673966,
-            "speed": 2.449489742783178,
-            "phase": 0.45167546696029603
+            "length": 235,
+            "swing": 0.7884737075073645,
+            "speed": 2.1137845458757094,
+            "phase": 0.5626969588920474
           },
           "label": "WAHADŁO"
         }
       ],
       "route": {
         "pull": {
-          "x": 70,
-          "y": 560
+          "x": 35,
+          "y": 485
         },
         "star": {
-          "x": 486,
-          "y": 118
+          "x": 821,
+          "y": 198
         },
         "starPull": {
-          "x": 110,
-          "y": 565
+          "x": 115,
+          "y": 515
         }
       },
-      "margin": 20,
-      "winningShare": 0.156,
-      "clearance": 30
+      "margin": 16,
+      "winningShare": 0.179,
+      "clearance": 154
     },
     {
-      "name": "Prototyp 010",
-      "slot": 35,
+      "name": "Prototyp 025",
+      "slot": 63,
       "archetypes": [
-        "ramp"
+        "gravity"
       ],
-      "mechanic": "KĄT = KIERUNEK",
-      "clue": "Opadnij na ukos. Kąt zrobi resztę.",
+      "mechanic": "PRZYCIĄGANIE",
+      "clue": "Kula przyciąga. Przeleć obok, a zakrzywi Ci tor.",
       "shape": {
         "reach": "short",
-        "height": "low"
+        "height": "mid"
       },
       "authored": {
-        "x": 910,
-        "y": 360
+        "x": 975,
+        "y": 425
       },
       "interactions": [
         {
-          "id": "slope-0",
-          "type": "cushion",
-          "a": {
-            "x": 530,
-            "y": 445
-          },
-          "b": {
-            "x": 835,
-            "y": 510
-          },
-          "thickness": 16,
-          "label": "KĄT = KIERUNEK"
-        }
-      ],
-      "route": {
-        "pull": {
-          "x": 130,
-          "y": 530
-        },
-        "star": {
-          "x": 647,
-          "y": 264
-        },
-        "starPull": {
-          "x": 150,
-          "y": 550
-        }
-      },
-      "margin": 8,
-      "winningShare": 0.074,
-      "clearance": 30
-    },
-    {
-      "name": "Prototyp 022",
-      "slot": 44,
-      "archetypes": [
-        "moving-wall"
-      ],
-      "mechanic": "RUCHOMA PRZESZKODA",
-      "clue": "Ściana wraca w to samo miejsce. Policz jej rytm.",
-      "shape": {
-        "reach": "short",
-        "height": "low"
-      },
-      "authored": {
-        "x": 1035,
-        "y": 460
-      },
-      "interactions": [
-        {
-          "id": "shutter-0",
-          "type": "solid",
-          "x": 410,
-          "y": 275,
-          "width": 80,
-          "height": 181,
-          "label": "OMIŃ",
-          "motion": {
-            "axis": "x",
-            "amplitude": 55,
-            "speed": 0.7978034909814596
-          }
+          "id": "planet-0",
+          "type": "gravity",
+          "x": 395,
+          "y": 260,
+          "radius": 195,
+          "coreRadius": 29,
+          "strength": 900,
+          "label": "PRZYCIĄGANIE"
         }
       ],
       "route": {
         "pull": {
           "x": 55,
-          "y": 445
-        },
-        "star": {
-          "x": 650,
-          "y": 315
-        },
-        "starPull": {
-          "x": 140,
-          "y": 555
-        }
-      },
-      "margin": 20,
-      "winningShare": 0.171,
-      "clearance": 220
-    },
-    {
-      "name": "Prototyp 029",
-      "slot": 41,
-      "archetypes": [
-        "gate"
-      ],
-      "mechanic": "PRZYCISK I BRAMKA",
-      "clue": "Bramka jest zamknięta, dopóki nie trafisz w przycisk.",
-      "shape": {
-        "reach": "short",
-        "height": "mid"
-      },
-      "authored": {
-        "x": 910,
-        "y": 460
-      },
-      "interactions": [
-        {
-          "id": "bell-0",
-          "type": "switch",
-          "x": 930,
-          "y": 315,
-          "radius": 57,
-          "label": "DZYŃ!"
-        },
-        {
-          "id": "door-1",
-          "type": "gate",
-          "x": 1010,
-          "y": 130,
-          "width": 34,
-          "height": 456,
-          "switchId": "bell",
-          "label": "BRAMKA"
-        }
-      ],
-      "route": {
-        "pull": {
-          "x": 50,
-          "y": 540
-        },
-        "star": {
-          "x": 650,
-          "y": 183
-        },
-        "starPull": {
-          "x": 115,
-          "y": 555
-        }
-      },
-      "margin": 16,
-      "winningShare": 0.181,
-      "clearance": 30
-    },
-    {
-      "name": "Prototyp 030",
-      "slot": 10,
-      "archetypes": [
-        "hazard"
-      ],
-      "mechanic": "STREFA ZAKAZANA",
-      "clue": "Czerwona strefa kończy lot od dotknięcia. Poprowadź tor obok niej.",
-      "shape": {
-        "reach": "short",
-        "height": "mid"
-      },
-      "authored": {
-        "x": 1030,
-        "y": 425
-      },
-      "interactions": [
-        {
-          "id": "spikes-0",
-          "type": "hazard",
-          "x": 650,
-          "y": 421,
-          "width": 120,
-          "height": 165,
-          "label": "NIE DOTYKAJ"
-        }
-      ],
-      "route": {
-        "pull": {
-          "x": 50,
-          "y": 540
-        },
-        "star": {
-          "x": 650,
-          "y": 183
-        },
-        "starPull": {
-          "x": 115,
-          "y": 555
-        }
-      },
-      "margin": 16,
-      "winningShare": 0.226,
-      "clearance": 105
-    },
-    {
-      "name": "Prototyp 013",
-      "slot": 27,
-      "archetypes": [
-        "portal",
-        "breakable"
-      ],
-      "mechanic": "PORTAL + PRZEBIJ KARTON",
-      "clue": "Miętowe wejście prowadzi do fioletowego wyjścia. Pęd zostaje z Tobą. Karton pęka raz. Za nim już nic nie zatrzyma lotu.",
-      "shape": {
-        "reach": "long",
-        "height": "mid"
-      },
-      "authored": {
-        "x": 955,
-        "y": 365
-      },
-      "interactions": [
-        {
-          "id": "pipe-0",
-          "type": "portal",
-          "entry": {
-            "x": 545,
-            "y": 365
-          },
-          "exit": {
-            "x": 740,
-            "y": 380
-          },
-          "radius": 68,
-          "turn": 0
-        },
-        {
-          "id": "carton-1",
-          "type": "breakable",
-          "x": 945,
-          "y": 245,
-          "width": 60,
-          "height": 375,
-          "label": "OSTROŻNIE"
-        }
-      ],
-      "route": {
-        "pull": {
-          "x": 70,
           "y": 490
         },
         "star": {
-          "x": 380,
-          "y": 280
+          "x": 622,
+          "y": 134
         },
         "starPull": {
-          "x": 125,
-          "y": 505
+          "x": 130,
+          "y": 490
         }
       },
-      "margin": 16,
-      "winningShare": 0.25,
-      "clearance": 30
+      "margin": 12,
+      "winningShare": 0.198,
+      "clearance": null
     },
     {
-      "name": "Prototyp 026",
-      "slot": 83,
+      "name": "Prototyp 013",
+      "slot": 10,
       "archetypes": [
         "breakable"
       ],
@@ -606,40 +436,40 @@
       "clue": "Karton pęka raz. Za nim już nic nie zatrzyma lotu.",
       "shape": {
         "reach": "long",
-        "height": "low"
+        "height": "high"
       },
       "authored": {
-        "x": 1015,
-        "y": 425
+        "x": 935,
+        "y": 405
       },
       "interactions": [
         {
           "id": "carton-0",
           "type": "breakable",
-          "x": 845,
-          "y": 200,
+          "x": 425,
+          "y": 250,
           "width": 60,
-          "height": 420,
+          "height": 380,
           "label": "OSTROŻNIE"
         }
       ],
       "route": {
         "pull": {
-          "x": 60,
-          "y": 510
+          "x": 70,
+          "y": 535
         },
         "star": {
-          "x": 650,
-          "y": 238
+          "x": 661,
+          "y": 151
         },
         "starPull": {
-          "x": 115,
-          "y": 550
+          "x": 95,
+          "y": 555
         }
       },
       "margin": 20,
-      "winningShare": 0.361,
-      "clearance": 45
+      "winningShare": 0.332,
+      "clearance": 498
     }
   ]
 }

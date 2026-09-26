@@ -13,6 +13,7 @@
 // authored ones change it by 0% — a gate's job is to make its switch matter,
 // not to narrow the aim).
 import { GameModel } from "../../src/game.js";
+import { LEVELS } from "../../src/levels.js";
 import { mission } from "../../src/campaign.js";
 import { level } from "../../src/levels.js";
 import { PROP_CLEARANCE, clearanceBetween, goalParts, propParts } from "../../src/prop-art.js";
@@ -110,6 +111,39 @@ export const ARCHETYPES = [
     },
   },
   {
+    id: "water", mechanic: "ŚLIZG PO WODZIE",
+    clue: "Płaski lot robi kaczkę. Zbyt stromy kończy się pluskiem.",
+    build: (band) => {
+      const x = bandX(band), y = step(500, 540);
+      return [{ id: "lagoon", type: "water", x, y, width: step(360, 560), height: 615 - y, label: "ŚLIZG →" }];
+    },
+  },
+  {
+    id: "bubble", mechanic: "BĄBEL",
+    clue: "Bąbel unosi. Wejdź w niego niżej, a wyniesie Cię wyżej.",
+    build: (band) => {
+      const x = bandX(band), y = step(330, 430);
+      return [{ id: "lift", type: "bubble", x, y, radius: step(120, 170), force: p(110, -step(420, 600, 10)), drag: .22, label: "BĄBEL ↑" }];
+    },
+  },
+  {
+    id: "gravity", mechanic: "PRZYCIĄGANIE",
+    clue: "Kula przyciąga. Przeleć obok, a zakrzywi Ci tor.",
+    build: (band) => {
+      const x = bandX(band), y = step(230, 360);
+      return [{ id: "planet", type: "gravity", x, y, radius: step(190, 250), coreRadius: 29, strength: step(700, 1000, 10), label: "PRZYCIĄGANIE" }];
+    },
+  },
+  {
+    id: "current", mechanic: "PRĄD",
+    clue: "Turkusowy pas płynie w jedną stronę. Wejdź w niego i daj się nieść.",
+    build: (band) => {
+      const x = bandX(band), y = step(200, 330);
+      return [{ id: "flow", type: "current", x, y, width: step(240, 380), height: step(200, 300),
+        force: p(step(300, 560, 10), -step(20, 160, 10)), drag: .12, label: "PRĄD" }];
+    },
+  },
+  {
     id: "pendulum", mechanic: "WAHADŁO",
     clue: "Wahadło wie, która godzina. Przeleć, kiedy odchodzi.",
     build: (band) => {
@@ -120,12 +154,42 @@ export const ARCHETYPES = [
   },
 ];
 
+// Which mechanics the shipped campaign is short of, measured at run time so
+// the weighting follows the campaign instead of a number frozen in a comment.
+//
+// It needed the weighting: the first batches leaned on the same rules the
+// campaign already leans on. Measured across the 88 boards — gate and switch
+// appear on 28% of them each, portal 23%, breakable 22%, while water sits at
+// 5% and cushion, pendulum and spring at 6%. A generator that picks uniformly
+// reproduces the crowd, not the gap.
+const boardShare = () => {
+  const boards = {};
+  for (const level of LEVELS) for (const type of new Set(level.interactions.map((item) => item.type))) {
+    boards[type] = (boards[type] ?? 0) + 1;
+  }
+  return (type) => (boards[type] ?? 0) / LEVELS.length;
+};
+const share = boardShare();
+// The archetype's id is its own prop type for most, but a few build something
+// else: the rule names the type its weight should follow.
+const WEIGHED_AS = { ramp: "cushion", wind: "steam", "moving-wall": "solid", gate: "gate" };
+const weightOf = (archetype) => 1 / (share(WEIGHED_AS[archetype.id] ?? archetype.id) + 0.05);
+function weightedPick(list) {
+  const total = list.reduce((sum, item) => sum + weightOf(item), 0);
+  let roll = random() * total;
+  for (const item of list) {
+    roll -= weightOf(item);
+    if (roll <= 0) return item;
+  }
+  return list[list.length - 1];
+}
+
 // A candidate: one or two rules, placed in different parts of the flight.
 export function compose(index) {
   const slot = 9 + Math.floor(random() * 80);          // chapter, scene and goal size
   const pair = random() < 0.42;
-  const first = pick(ARCHETYPES);
-  const second = pair ? pick(ARCHETYPES.filter((a) => a.id !== first.id)) : null;
+  const first = weightedPick(ARCHETYPES);
+  const second = pair ? weightedPick(ARCHETYPES.filter((a) => a.id !== first.id)) : null;
   const bands = pair ? (random() < 0.5 ? ["near", "far"] : ["mid", "far"]) : [pick(["near", "mid", "far"])];
   const parts = [first.build(bands[0]), ...(second ? [second.build(bands[1])] : [])];
   const interactions = parts.flat().map((item, i) => ({ ...item, id: `${item.id}-${i}` }));
