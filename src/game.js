@@ -1,6 +1,6 @@
-import { DEFAULT_LEVEL, WORLD } from "./levels.js?v=0.40.0";
-import { FIXED_STEP, clamp, contains, magnitude, stepPhysics } from "./physics.js?v=0.40.0";
-export { DEFAULT_LEVEL, LEVELS, WORLD, getLevel } from "./levels.js?v=0.40.0";
+import { DEFAULT_LEVEL, WORLD } from "./levels.js?v=0.41.0";
+import { FIXED_STEP, clamp, contains, magnitude, stepPhysics } from "./physics.js?v=0.41.0";
+export { DEFAULT_LEVEL, LEVELS, WORLD, getLevel } from "./levels.js?v=0.41.0";
 
 export const GameMode = Object.freeze({ QUICK: "quickSling", ONE_MOVE: "oneMoveChallenge" });
 export const GamePhase = Object.freeze({ READY: "ready", AIMING: "aiming", FLYING: "flying", SUCCEEDED: "succeeded", FAILED: "failed" });
@@ -117,7 +117,13 @@ export class GameModel {
     return true;
   }
   dragSling(point) {
-    if (this.phase !== GamePhase.AIMING || !Number.isFinite(point.x) || !Number.isFinite(point.y)) return;
+    // `beginObjectMove` two methods down already refuses a missing point; this
+    // one read `point.x` off it and threw. No path from the pointer handlers
+    // produces null — they always carry finite coordinates — but the model is
+    // driven by the mission generator and the offline tools too, and one entry
+    // point defending itself while its sibling does not is how the One Move
+    // crash survived unnoticed for eighty-seven missions.
+    if (!point || this.phase !== GamePhase.AIMING || !Number.isFinite(point.x) || !Number.isFinite(point.y)) return;
     this.avatarPosition = this.clampedSlingPoint({ x: point.x - this.slingGrabOffset.x, y: point.y - this.slingGrabOffset.y });
     this.rotation = Math.atan2(this.anchor.y - this.avatarPosition.y, this.anchor.x - this.avatarPosition.x);
   }
@@ -270,6 +276,9 @@ export class GameModel {
     this.emit(success ? "success" : "failure", { position: copy(this.avatarPosition), attempt: this.attempts, levelId: this.level.id, goalKind: this.level.goal.kind, star: this.collectedStar });
   }
   simulate(pull, numberOfDots = 32, duration = 6) {
+    // Same reason as dragSling: `trajectoryForPull` right below refuses a
+    // missing pull, this one dereferenced it.
+    if (!pull || !Number.isFinite(pull.x) || !Number.isFinite(pull.y)) return { points: [], reachesGoal: false, star: false };
     const launch = this.clampedSlingPoint(pull);
     const simulation = new GameModel(() => {}, this.level);
     simulation.layoutOffset = this.layoutOffset;

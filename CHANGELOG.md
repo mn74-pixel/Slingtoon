@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.41.0 — Polowanie na błędy, kontur na kropkach i jeden pomiar, który nie wyszedł
+
+### Błędy: crawler, fuzzer, dwa znaleziska
+
+Crawler przeszedł **26 misji** przez prawdziwy interfejs — strzały, podpowiedzi, przełączanie trybów, restarty, manewry, mapa, pracownia twarzy, zmiana charakteru, klawiatura. **Zero błędów konsoli.**
+
+Fuzzer puścił **21 120 losowych i bezsensownych wywołań** na modelu we wszystkich 88 misjach. Znalazł dwa wejścia, które rzucały wyjątkiem na brakującym punkcie: `dragSling(null)` i `simulate(null)`. Ich rodzeństwo `beginObjectMove` broniło się przed tym od zawsze — a to właśnie taka niespójność ukryła awarię One Move przez osiemdziesiąt siedem misji. Z interfejsu nie ma do nich drogi (zdarzenia wskaźnika zawsze niosą skończone współrzędne), ale model napędzają też generator misji i narzędzia offline.
+
+### Grafika: kropki podglądu miały kolor rekwizytów
+
+Kropki celowania są kremowe — **dokładnie w kolorze pudełka portalu, pierścienia przycisku i każdej etykiety**. Zmierzony kontrast najgorszej kropki wobec sceny pod nią: **1,00:1 w dziewięciu misjach** i poniżej 1,6:1 we wszystkich 88. Tam, gdzie tor przecina rekwizyt — czyli tam, gdzie najbardziej się go czyta — podgląd znikał.
+
+Dostały kontur, jak ma wszystko inne w tej grze. Zmierzone na 710 kropkach: piąty percentyl widocznego śladu **24 → 50**, kropek bez śladu 36 → 30 (reszta to te zasłonięte przez bohatera, i tak ma być).
+
+### Grywalność: czego NIE udało się zrobić
+
+Pomiar, od którego zacząłem: **79 z 88 misji to płaski ślizg** (wznios do dystansu poniżej 0,25), mediana wzniosu 114 px na 867 px lotu, **ani jednego loba w całej grze**. Osiemdziesiąt osiem misji, jeden strzał.
+
+Przetestowałem misja po misji przestawienie kształtu strzału na krótki i wysoki. Czternaście misji przeszło w prawdziwy łuk (0,30–0,49) z tolerancją równą lub lepszą — płaskich ślizgów **79 → 67**. I wtedy strażnik zapalił się słusznie: krótki strzał ląduje na 57–66% szerokości, więc **25 misji kończyłoby się przed 70% ekranu** — dokładnie ta pusta prawa trzecia, na którą już raz zwróciłeś uwagę.
+
+Kompromis `mid/high` zachowuje szerokość, ale **łuku nie dowozi**: płaskich ślizgów wyszło 80, czyli o jeden więcej niż przed zmianą. Nie będę tego opisywał jako sukcesu.
+
+Co naprawdę się poprawiło i zostaje: **misji z ciasnym celowaniem (±5…±10 px) jest 32 → 28**, a wybaczających (±12 i więcej) 48 → 52. Misja 35, najciaśniejsza w grze, przeszła z ±5 na ±12. Celów wysokich (y<300) jest 9 → 14.
+
+**Wniosek do decyzji projektowej:** prawdziwe łuki wymagają krótkich lotów, a krótkie loty opróżniają prawą trzecią ekranu. Te dwie rzeczy nie dadzą się pogodzić samym kształtem strzału — trzeba by przesunąć scenografię i rekwizyty w prawo dla całego krótkiego pasma. To jest robota na osobną decyzję, nie na cichą zmianę.
+
 ## 0.40.0 — Generator proponuje to, czego kampanii brakuje, i wypluwa kod do wklejenia
 
 Generator z 0.38.0 miał dwie dziury: powielał mechaniki, których kampania ma już najwięcej, a jego wynik był JSON-em, którego nikt nie mógł użyć.

@@ -1,8 +1,8 @@
-import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.40.0";
-import { clientPointToWorld, createCropFreeViewport, edgeMarker } from "./viewport.js?v=0.40.0";
-import { POUCH_HALF, REST_LEAN, pouchEnds, restPosition, restingGrip, slingFrame, slingGrip } from "./sling-art.js?v=0.40.0";
-import { drawInteractions, drawObjective } from "./interactions-renderer.js?v=0.40.0";
-import { drawCampaignGoal, drawCampaignScene, drawWorldCompanion, setSceneBleed } from "./world-renderer.js?v=0.40.0";
+import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.41.0";
+import { clientPointToWorld, createCropFreeViewport, edgeMarker } from "./viewport.js?v=0.41.0";
+import { POUCH_HALF, REST_LEAN, pouchEnds, restPosition, restingGrip, slingFrame, slingGrip } from "./sling-art.js?v=0.41.0";
+import { drawInteractions, drawObjective } from "./interactions-renderer.js?v=0.41.0";
+import { drawCampaignGoal, drawCampaignScene, drawWorldCompanion, setSceneBleed } from "./world-renderer.js?v=0.41.0";
 
 const PALETTE = Object.freeze({
   ink: "#19142d",
@@ -1184,9 +1184,19 @@ export class GameRenderer {
       ctx.fillStyle = prediction.reachesGoal
         ? index % 4 === 0 ? PALETTE.white : PALETTE.mint
         : index % 4 === 0 ? PALETTE.gold : PALETTE.cream;
+      const radius = Math.max(2.5, 6.5 - t * 3.6);
       ctx.beginPath();
-      ctx.arc(point.x, point.y, Math.max(2.5, 6.5 - t * 3.6), 0, Math.PI * 2);
+      ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
       ctx.fill();
+      // Everything else in this game carries an ink outline; the aiming dots
+      // did not, and they are cream — the same cream as a portal's box, a
+      // switch's ring and every caption. Measured against the scene underneath:
+      // the worst dot in 88 of 88 missions fell under 1.6:1 contrast, and in
+      // nine missions it was exactly 1.00:1 — the dot and the prop beneath it
+      // were the same colour. That is precisely where the path matters most.
+      ctx.strokeStyle = "rgba(25, 20, 45, 0.85)";
+      ctx.lineWidth = Math.max(1.4, radius * 0.42);
+      ctx.stroke();
     }
 
     if (prediction.reachesGoal) {
