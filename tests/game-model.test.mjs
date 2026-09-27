@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { readFileSync } from "node:fs";
 import { DEFAULT_LEVEL, FLIGHT_STYLES, GameModel, GameMode, GamePhase, LEVELS, Modifier, Personality } from "../src/game.js";
@@ -598,4 +599,37 @@ test("no swinging obstacle sweeps across the goal it guards", () => {
       assert.ok(closest >= 45, `mission ${level.number}: ${item.id} sweeps to ${Math.round(closest)} px of the goal`);
     }
   }
+});
+
+// Found by fuzzing the model with nonsense input: 21 120 random calls across
+// all 88 missions turned up two entry points that threw on a missing point,
+// while their sibling `beginObjectMove` had always refused one. No path from
+// the pointer handlers produces null — they carry finite coordinates — but the
+// model is driven by the mission generator and the offline tools as well, and
+// an entry point that defends itself while its sibling does not is exactly how
+// the One Move crash survived for eighty-seven missions.
+test("the model refuses nonsense input instead of throwing", () => {
+  const model = new GameModel(() => {}, LEVELS[0]);
+  for (const bad of [null, undefined, {}, { x: NaN, y: 0 }, { x: 0, y: Infinity }]) {
+    assert.doesNotThrow(() => model.dragSling(bad), `dragSling(${JSON.stringify(bad)}) threw`);
+    assert.doesNotThrow(() => model.beginObjectMove(bad), `beginObjectMove(${JSON.stringify(bad)}) threw`);
+    const shot = model.simulate(bad);
+    assert.deepEqual(shot.points, [], `simulate(${JSON.stringify(bad)}) should return an empty shot`);
+    assert.equal(shot.reachesGoal, false);
+  }
+  // And a real pull still works, so the guard did not swallow the good case.
+  assert.ok(model.simulate({ x: 90, y: 520 }).points.length > 0, "a real pull must still simulate");
+});
+
+// Measured while looking for more variety: 79 of 88 missions were a flat skim,
+// the hero rising a median 114 px over an 867 px flight. Raising nine goals
+// moved the tight end of the aim tolerance — that is the part that held — so
+// it is pinned here. The arc itself barely moved and no claim is made about it.
+test("the campaign keeps its forgiving end", async () => {
+  const report = JSON.parse(await readFile(new URL("../docs/campaign-balance.json", import.meta.url), "utf8"));
+  const tight = report.filter((entry) => entry.margin <= 10).length;
+  assert.ok(tight <= 28,
+    `${tight} missions demand ±10 px of aim or less; that band was cut to 28 and must not creep back`);
+  const heights = new Set(LEVELS.map((level) => Math.round(level.goal.y / 100)));
+  assert.ok(heights.size >= 4, `goals sit at only ${heights.size} rough heights`);
 });

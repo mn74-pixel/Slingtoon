@@ -1,7 +1,7 @@
 // Authored campaign layouts. Coordinates describe actual colliders, not decoration.
 // Routes are measured offline with the same solver used by the game.
-import { CAMPAIGN_ROUTES } from "./campaign-routes.js?v=0.40.0";
-import { PROP_CLEARANCE, clearanceBetween, goalParts, propParts, spansVertically } from "./prop-art.js?v=0.40.0";
+import { CAMPAIGN_ROUTES } from "./campaign-routes.js?v=0.41.0";
+import { PROP_CLEARANCE, clearanceBetween, goalParts, propParts, spansVertically } from "./prop-art.js?v=0.41.0";
 
 export const CHAPTERS = Object.freeze([
   { id: "home", name: "Domowy chaos", subtitle: "Od drzemki do pierwszej kaczki", scene: "bedroom" },
@@ -329,7 +329,16 @@ function scaleItem(item, factor) {
 // added when the campaign moved right: a longer flight spends more of the launch
 // power, which leaves less room for both a forgiving window and a second route
 // to hang the optional star on.
-const SHOT_OVERRIDES = Object.freeze({ 12: { reach: "short", height: "low" }, 13: { reach: "mid", height: "mid" }, 16: { reach: "long", height: "low" }, 20: { reach: "mid", height: "high" }, 22: { reach: "long", height: "mid" }, 30: { reach: "long", height: "mid" }, 35: { reach: "long", height: "mid" }, 39: { reach: "mid", height: "mid" }, 45: { reach: "short", height: "low" }, 47: { reach: "mid", height: "mid" }, 56: { reach: "short", height: "high" }, 58: { reach: "mid", height: "high" }, 59: { reach: "long", height: "mid" }, 62: { reach: "mid", height: "high" }, 66: { reach: "long", height: "mid" }, 70: { reach: "long", height: "low" }, 72: { reach: "mid", height: "high" }, 74: { reach: "mid", height: "mid" }, 75: { reach: "short", height: "high" }, 76: { reach: "mid", height: "high" }, 86: { reach: "long", height: "mid" } });
+// Measured on the shipped campaign: 79 of 88 missions were a flat skim — the
+// hero rose a median of 114 px over an 867 px flight, and the game held no
+// lob at all. Eighty-eight missions, one shot.
+//
+// The ten mid/high entries below were each tested alone. `short/high` throws a
+// far better arc, but a short shot lands at 57-66% of the width, and putting
+// fourteen missions there left twenty-five stopping before 70% of the screen —
+// the empty right-hand third a player had already complained about. Height
+// without losing the width is the trade that survived.
+const SHOT_OVERRIDES = Object.freeze({ 50: { reach: "long", height: "high" }, 19: { reach: "mid", height: "high" }, 22: { reach: "mid", height: "high" }, 35: { reach: "mid", height: "high" }, 42: { reach: "mid", height: "high" }, 66: { reach: "mid", height: "high" }, 69: { reach: "mid", height: "high" }, 73: { reach: "mid", height: "high" }, 77: { reach: "mid", height: "high" }, 12: { reach: "short", height: "low" }, 13: { reach: "mid", height: "mid" }, 16: { reach: "long", height: "low" }, 20: { reach: "mid", height: "high" }, 30: { reach: "long", height: "mid" }, 39: { reach: "mid", height: "mid" }, 45: { reach: "short", height: "low" }, 47: { reach: "mid", height: "mid" }, 56: { reach: "short", height: "high" }, 58: { reach: "mid", height: "high" }, 59: { reach: "long", height: "mid" }, 62: { reach: "mid", height: "high" }, 70: { reach: "long", height: "low" }, 72: { reach: "mid", height: "high" }, 74: { reach: "mid", height: "mid" }, 75: { reach: "short", height: "high" }, 76: { reach: "mid", height: "high" }, 86: { reach: "long", height: "mid" } });
 const HONEST_GOAL_RADIUS = 56;
 function goalRadius(number, local) {
   const base = Math.max(HONEST_GOAL_RADIUS, Math.round(84 - (number - 9) * 0.72));
