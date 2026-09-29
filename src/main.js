@@ -1,11 +1,12 @@
-import { GameModel, GameMode, GamePhase, LEVELS, modifierName } from "./game.js?v=0.42.0";
-import { GameRenderer } from "./render.js?v=0.42.0";
-import { GameAudio } from "./audio.js?v=0.42.0";
-import { FaceStudio } from "./face-studio.js?v=0.42.0";
-import { CHARACTER_UNLOCKS, PROGRESS_KEY, TOKEN_SCORE_STEP, characterLock, countMastered, countStars, isMastered, readProgress, hintOffer, purchaseHint, recordStreak, rewardSuccess, medalText } from "./progress.js?v=0.42.0";
-import { STREAK_MAX_SHOTS, STREAK_MIN_POOL, canStartStreak, clearStreakMission, createStreakRun, drawStreakMission, spendStreakShot, streakSummary } from "./streak.js?v=0.42.0";
-import { CHAPTERS } from "./levels.js?v=0.42.0";
-import { settledAim, trimAimTrail } from "./aim-settle.js?v=0.42.0";
+import { GameModel, GameMode, GamePhase, LEVELS, modifierName } from "./game.js?v=0.43.0";
+import { GameRenderer } from "./render.js?v=0.43.0";
+import { GameAudio } from "./audio.js?v=0.43.0";
+import { FaceStudio } from "./face-studio.js?v=0.43.0";
+import { CHARACTER_UNLOCKS, PROGRESS_KEY, TOKEN_SCORE_STEP, characterLock, countMastered, countStars, isMastered, readProgress, hintOffer, purchaseHint, recordStreak, rewardSuccess, medalText } from "./progress.js?v=0.43.0";
+import { STREAK_MAX_SHOTS, STREAK_MIN_POOL, canStartStreak, clearStreakMission, createStreakRun, drawStreakMission, spendStreakShot, streakSummary } from "./streak.js?v=0.43.0";
+import { CHAPTERS } from "./levels.js?v=0.43.0";
+import { settledAim, trimAimTrail } from "./aim-settle.js?v=0.43.0";
+import { approachTimeFeel, armTimeFeel, createTimeFeel, punchTimeFeel, timeScale } from "./time-feel.js?v=0.43.0";
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -94,6 +95,7 @@ const elements = {
 const audio = new GameAudio();
 const model = new GameModel();
 const renderer = new GameRenderer(elements.canvas, model);
+const timeFeel = createTimeFeel();
 
 let activePointer = null;
 let interaction = null;
@@ -106,7 +108,7 @@ let progress = loadProgress();
 let highestUnlockedLevel = progress.highestUnlockedLevel;
 let mapChapterIndex = 0;
 let lastReward = null;
-const FULLSCREEN_TIP_KEY = "slingtoon-fullscreen-tip-0.42.0";
+const FULLSCREEN_TIP_KEY = "slingtoon-fullscreen-tip-0.43.0";
 
 function loadProgress() {
   try {
@@ -425,6 +427,13 @@ const faceStudio = new FaceStudio(
 model.onEvent = (event) => {
   renderer.handleGameEvent(event);
   audio.handleGameEvent(event);
+
+  // A fresh flight gets its one slow-motion back.
+  if (["launch", "what-if", "reset", "level", "mode"].includes(event.type)) armTimeFeel(timeFeel);
+  if (event.type === "impact") punchTimeFeel(timeFeel, event.speed);
+  // The drop and the win have no collision speed of their own; both are heavy.
+  if (event.type === "dive-move") punchTimeFeel(timeFeel, 520);
+  if (event.type === "success") punchTimeFeel(timeFeel, 460);
 
   if (["reset", "mode", "launch", "what-if"].includes(event.type)) hideResult();
   if (event.type === "launch" && inStreak()) {
@@ -836,9 +845,19 @@ function updateUi() {
 }
 
 function frame(now) {
-  const deltaSeconds = Math.min((now - lastFrame) / 1000, .1);
+  const realSeconds = Math.min((now - lastFrame) / 1000, .1);
   lastFrame = now;
   if (document.hidden) { requestAnimationFrame(frame); return; }
+  if (model.phase === GamePhase.FLYING) {
+    const goal = model.goalCentre;
+    const here = model.avatarPosition;
+    approachTimeFeel(timeFeel, Math.hypot(here.x - goal.x, here.y - goal.y), model.goalRadius);
+  }
+  // The solver is a fixed 1/120 accumulator, so scaling the seconds handed to
+  // it changes the pace of the flight and not one step of its path. Both the
+  // model and the renderer get the same scaled clock, or the confetti would
+  // outrun the hero it came off.
+  const deltaSeconds = realSeconds * timeScale(timeFeel, realSeconds);
   model.update(deltaSeconds);
   renderer.update(deltaSeconds);
   renderer.render();
@@ -969,7 +988,7 @@ window.addEventListener("keydown", (event) => {
 
 window.addEventListener("load", () => {
   if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
-    navigator.serviceWorker.register("./sw.js?v=0.42.0").catch(() => {});
+    navigator.serviceWorker.register("./sw.js?v=0.43.0").catch(() => {});
   }
   scheduleFullscreenSuggestion();
   syncGameViewport();
