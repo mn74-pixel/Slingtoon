@@ -1,7 +1,7 @@
 // Authored campaign layouts. Coordinates describe actual colliders, not decoration.
 // Routes are measured offline with the same solver used by the game.
-import { CAMPAIGN_ROUTES } from "./campaign-routes.js?v=0.43.0";
-import { PROP_CLEARANCE, clearanceBetween, goalParts, propParts, spansVertically } from "./prop-art.js?v=0.43.0";
+import { CAMPAIGN_ROUTES } from "./campaign-routes.js?v=0.44.0";
+import { PROP_CLEARANCE, clearanceBetween, goalParts, propParts, spansVertically } from "./prop-art.js?v=0.44.0";
 
 export const CHAPTERS = Object.freeze([
   { id: "home", name: "Domowy chaos", subtitle: "Od drzemki do pierwszej kaczki", scene: "bedroom" },
@@ -339,6 +339,32 @@ function scaleItem(item, factor) {
 // the empty right-hand third a player had already complained about. Height
 // without losing the width is the trade that survived.
 const SHOT_OVERRIDES = Object.freeze({ 50: { reach: "long", height: "high" }, 19: { reach: "mid", height: "high" }, 22: { reach: "mid", height: "high" }, 35: { reach: "mid", height: "high" }, 42: { reach: "mid", height: "high" }, 66: { reach: "mid", height: "high" }, 69: { reach: "mid", height: "high" }, 73: { reach: "mid", height: "high" }, 77: { reach: "mid", height: "high" }, 12: { reach: "short", height: "low" }, 13: { reach: "mid", height: "mid" }, 16: { reach: "long", height: "low" }, 20: { reach: "mid", height: "high" }, 30: { reach: "long", height: "mid" }, 39: { reach: "mid", height: "mid" }, 45: { reach: "short", height: "low" }, 47: { reach: "mid", height: "mid" }, 56: { reach: "short", height: "high" }, 58: { reach: "mid", height: "high" }, 59: { reach: "long", height: "mid" }, 62: { reach: "mid", height: "high" }, 70: { reach: "long", height: "low" }, 72: { reach: "mid", height: "high" }, 74: { reach: "mid", height: "mid" }, 75: { reach: "short", height: "high" }, 76: { reach: "mid", height: "high" }, 86: { reach: "long", height: "mid" } });
+// How high each target can actually sit.
+//
+// Measured, not designed: 41 of 88 certified flights rose less than 150 px over
+// an 885 px span, so the game played as a flat slide. Three other levers were
+// tried and rejected first — a steeper assist alone loses the width, more
+// launch power makes the widest route flatter still, and preferring arc among
+// equally forgiving routes buys 16 px. A blanket lift of the shot grid was
+// rejected too: -120 px across the board costs two missions their solution,
+// sixteen their tolerance and five their star.
+//
+// So every mission was asked on its own, by scripts/lift-goals.mjs, how far it
+// can rise while keeping ALL of: a certified route at least as forgiving as the
+// one it ships, a readable optional star, and its reach. 71 targets could rise,
+// 64 of them in the balanced range 9-88 that this table covers; chapter 1 keeps
+// its hand-written routes and its heights.
+//
+// Result across the campaign: median flight rise 157 -> 217 px, flights flatter
+// than 150 px 41 -> 20. Nothing here may be hand-edited: rerun the search.
+const GOAL_LIFT = Object.freeze({
+  9: 120, 11: 30, 12: 60, 14: 150, 15: 120, 16: 180, 17: 60, 19: 30, 20: 90, 21: 120, 22: 60, 23: 60,
+  24: 120, 25: 150, 26: 120, 27: 90, 28: 180, 29: 90, 31: 180, 32: 90, 34: 60, 35: 150, 38: 30, 40: 30,
+  41: 90, 42: 90, 43: 60, 44: 60, 46: 30, 47: 180, 48: 180, 49: 120, 50: 30, 51: 120, 52: 30, 53: 120,
+  54: 180, 55: 60, 56: 30, 57: 150, 58: 30, 59: 150, 60: 180, 61: 30, 62: 60, 64: 180, 66: 150, 67: 180,
+  68: 180, 69: 150, 70: 180, 72: 60, 73: 120, 74: 180, 76: 120, 77: 150, 78: 180, 79: 180, 81: 150, 82: 90,
+  83: 180, 84: 150, 87: 90, 88: 30
+});
 const HONEST_GOAL_RADIUS = 56;
 function goalRadius(number, local) {
   const base = Math.max(HONEST_GOAL_RADIUS, Math.round(84 - (number - 9) * 0.72));
@@ -379,7 +405,12 @@ export function mission(number, name, kind, authoredX, authoredY, mechanic, clue
     // mission's own furniture, which is a trap dressed as a target. The clamp
     // keeps its own jitter, or every mission pushed to the cap lands on the
     // same pixel: five pairs once had byte-identical target positions.
-    const height = Math.round(Math.max(shot.y, reachFloor(at) + 30 + Math.abs(jitter(number + 17, 34))));
+    // The lift comes off AFTER the reach-envelope floor, because the floor is a
+    // cheap proxy for "a free flight can get here" and the lift is the measured
+    // article: every value in GOAL_LIFT was certified against the real solver.
+    // It is applied inside the layout, not after it, so the prop-clearance loop
+    // below sees the target where it will actually be drawn.
+    const height = Math.round(Math.max(shot.y, reachFloor(at) + 30 + Math.abs(jitter(number + 17, 34))) - (GOAL_LIFT[number] ?? 0));
     const target = { kind, shape: "circle", x: at, y: height, radius, scale: 1, motion: options.motion };
     const scale = (at - ANCHOR_X) / authoredReach;
     return { goal: target, factor: scale, interactions: relaxGaps(authoredInteractions.map((item) => scaleItem(item, scale)), target) };
