@@ -1,8 +1,9 @@
-import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.41.0";
-import { clientPointToWorld, createCropFreeViewport, edgeMarker } from "./viewport.js?v=0.41.0";
-import { POUCH_HALF, REST_LEAN, pouchEnds, restPosition, restingGrip, slingFrame, slingGrip } from "./sling-art.js?v=0.41.0";
-import { drawInteractions, drawObjective } from "./interactions-renderer.js?v=0.41.0";
-import { drawCampaignGoal, drawCampaignScene, drawWorldCompanion, setSceneBleed } from "./world-renderer.js?v=0.41.0";
+import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.42.0";
+import { clientPointToWorld, createCropFreeViewport, edgeMarker } from "./viewport.js?v=0.42.0";
+import { POUCH_HALF, REST_LEAN, pouchEnds, restPosition, restingGrip, slingFrame, slingGrip } from "./sling-art.js?v=0.42.0";
+import { drawInteractions, drawObjective } from "./interactions-renderer.js?v=0.42.0";
+import { drawCampaignGoal, drawCampaignScene, drawWorldCompanion, setSceneBleed } from "./world-renderer.js?v=0.42.0";
+import { drawSceneLife } from "./scene-life.js?v=0.42.0";
 
 const PALETTE = Object.freeze({
   ink: "#19142d",
@@ -100,6 +101,7 @@ export class GameRenderer {
     this.successPulse = 0;
     this.fanAngle = 0;
     this.time = 0;
+    this.sceneSpan = { left: 0, width: WORLD.width };
   }
 
   async load() {
@@ -306,6 +308,12 @@ export class GameRenderer {
     }
 
     this.drawBackground(ctx);
+    // The ambient layer sits above the scene wash and below everything the
+    // player can touch, so the board breathes without a mote ever reading as
+    // a prop. The span is mutated in place: a frame must not allocate.
+    this.sceneSpan.left = -this.viewport.offsetX;
+    this.sceneSpan.width = WORLD.width + this.viewport.offsetX * 2;
+    drawSceneLife(ctx, this.model.level.scene, this.time, this.sceneSpan);
     drawObjective(ctx, this.model, this.time);
     this.drawModifierAtmosphere(ctx);
     this.drawGhostPath(ctx);
