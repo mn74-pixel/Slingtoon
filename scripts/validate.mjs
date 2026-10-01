@@ -231,6 +231,18 @@ assert.match(css, /orientation:\s*landscape[^}]*max-height:\s*560px/);
   assert.doesNotMatch(mergedBlock, /level-nav__indicator\s*\{\s*display:\s*none/, "the mission-map button is hidden on phones");
 }
 assert.match(main, /overlayInset\(rect,/, "the camera no longer knows which strips cover the canvas");
+// Tablets and computers: 43-61% of the screen before 0.47.0. The full-window
+// HUD must cover every landscape screen above the phone range too.
+{
+  const hud = css.slice(css.indexOf("/*\n * Tablets and computers play on the whole window too."));
+  const block = hud.slice(0, hud.indexOf("\n}\n") + 3);
+  assert.match(block, /@media \(orientation: landscape\) and \(min-height: 561px\) \{/, "the full-window layout for tablets and computers is gone");
+  assert.match(block, /\.mission-strip,\s*\.status-row\s*\{[^}]*position:\s*absolute/, "the strips no longer float over the canvas");
+  assert.match(html, /class="status-row">[\s\S]*class="key-legend"/, "the keyboard legend left the status row (it printed over the privacy note as an overlay)");
+  assert.match(html, /id="keyboardHelp"/, "screen readers lost the full keyboard description");
+}
+assert.match(main, /nextPixelBudget\(pixelBudget, frameIntervals, floor\)/, "the canvas no longer adapts its sharpness to the device");
+assert.match(main, /window\.devicePixelRatio/, "the canvas ignores the screen's pixel density");
 assert.match(css, /object-fit:\s*fill/);
 assert.doesNotMatch(css, /object-fit:\s*cover/);
 assert.match(main, /ResizeObserver/);

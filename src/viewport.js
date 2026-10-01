@@ -63,6 +63,48 @@ export function overlayInset(stage, overlays, styleOf = (element) => globalThis.
   return { x: 0, y: Math.max(top, bottom) };
 }
 
+// How many canvas pixels to spend on one world unit.
+//
+// The canvas used to be exactly as many pixels as the logical view (about
+// 1280 wide) whatever the screen, and the browser stretched it to fit. On a
+// 1440x900 Retina laptop that stretched every pixel 2.6x; on a 3x phone 1.4x —
+// every outline in the game was soft. Now the backing store follows the
+// screen's own pixels (CSS size x devicePixelRatio), capped so the fill cost
+// stays bounded: no more than RENDER_MAX_PIXELS per frame and never past 3x.
+// On a small screen the ratio can drop below 1, which is fewer pixels to fill
+// than before — the same sharpness the screen can show, for less work.
+export const RENDER_MAX_PIXELS = 4_200_000;
+export const RENDER_MAX_RATIO = 3;
+
+export function renderScale(cssWidth, viewport, devicePixelRatio = 1, maxPixels = RENDER_MAX_PIXELS) {
+  const css = finitePositive(cssWidth, viewport.width);
+  const dpr = finitePositive(devicePixelRatio, 1);
+  const wanted = Math.min((css / viewport.width) * dpr, RENDER_MAX_RATIO);
+  const budget = Math.sqrt(maxPixels / (viewport.width * viewport.height));
+  return Math.max(0.25, Math.min(wanted, budget));
+}
+
+// Adaptive sharpness. Full device resolution is a gift to a GPU and a tax on
+// a slow one: in a CPU-rendered Chromium the 1440x900@2 frame went from 16.7
+// to 66.7 ms. So the budget starts at the full RENDER_MAX_PIXELS and, whenever
+// the median frame of a sampled window runs slower than SLOW_FRAME_MS, steps
+// down by BUDGET_STEP — never below `floor`, which the caller sets to the
+// pixel count the game used before this change. The worst case is therefore
+// exactly the old picture at the old cost, reached within a few seconds. It
+// never steps back up: oscillating resolution reads as a flicker.
+export const SLOW_FRAME_MS = 20.5;
+export const BUDGET_STEP = 0.7;
+
+export function nextPixelBudget(budget, frameIntervals, floor) {
+  const samples = [];
+  for (const interval of frameIntervals) if (Number.isFinite(interval) && interval > 0 && interval < 250) samples.push(interval);
+  if (samples.length < 30) return budget;
+  samples.sort((a, b) => a - b);
+  const median = samples[Math.floor(samples.length / 2)];
+  if (median <= SLOW_FRAME_MS || budget <= floor) return budget;
+  return Math.max(floor, budget * BUDGET_STEP);
+}
+
 export function clientPointToWorld(clientX, clientY, rect, viewport) {
   const rectWidth = finitePositive(rect?.width, 1);
   const rectHeight = finitePositive(rect?.height, 1);

@@ -1,13 +1,13 @@
-import { GameModel, GameMode, GamePhase, LEVELS, modifierName } from "./game.js?v=0.46.0";
-import { GameRenderer } from "./render.js?v=0.46.0";
-import { GameAudio } from "./audio.js?v=0.46.0";
-import { FaceStudio } from "./face-studio.js?v=0.46.0";
-import { CHARACTER_UNLOCKS, PROGRESS_KEY, TOKEN_SCORE_STEP, characterLock, countMastered, countStars, isMastered, readProgress, hintOffer, purchaseHint, recordStreak, rewardSuccess, medalText } from "./progress.js?v=0.46.0";
-import { STREAK_MAX_SHOTS, STREAK_MIN_POOL, canStartStreak, clearStreakMission, createStreakRun, drawStreakMission, spendStreakShot, streakSummary } from "./streak.js?v=0.46.0";
-import { CHAPTERS } from "./levels.js?v=0.46.0";
-import { settledAim, trimAimTrail } from "./aim-settle.js?v=0.46.0";
-import { overlayInset } from "./viewport.js?v=0.46.0";
-import { approachTimeFeel, armTimeFeel, createTimeFeel, punchTimeFeel, timeScale } from "./time-feel.js?v=0.46.0";
+import { GameModel, GameMode, GamePhase, LEVELS, modifierName } from "./game.js?v=0.47.0";
+import { GameRenderer } from "./render.js?v=0.47.0";
+import { GameAudio } from "./audio.js?v=0.47.0";
+import { FaceStudio } from "./face-studio.js?v=0.47.0";
+import { CHARACTER_UNLOCKS, PROGRESS_KEY, TOKEN_SCORE_STEP, characterLock, countMastered, countStars, isMastered, readProgress, hintOffer, purchaseHint, recordStreak, rewardSuccess, medalText } from "./progress.js?v=0.47.0";
+import { STREAK_MAX_SHOTS, STREAK_MIN_POOL, canStartStreak, clearStreakMission, createStreakRun, drawStreakMission, spendStreakShot, streakSummary } from "./streak.js?v=0.47.0";
+import { CHAPTERS } from "./levels.js?v=0.47.0";
+import { settledAim, trimAimTrail } from "./aim-settle.js?v=0.47.0";
+import { RENDER_MAX_PIXELS, nextPixelBudget, overlayInset } from "./viewport.js?v=0.47.0";
+import { approachTimeFeel, armTimeFeel, createTimeFeel, punchTimeFeel, timeScale } from "./time-feel.js?v=0.47.0";
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -109,7 +109,7 @@ let progress = loadProgress();
 let highestUnlockedLevel = progress.highestUnlockedLevel;
 let mapChapterIndex = 0;
 let lastReward = null;
-const FULLSCREEN_TIP_KEY = "slingtoon-fullscreen-tip-0.46.0";
+const FULLSCREEN_TIP_KEY = "slingtoon-fullscreen-tip-0.47.0";
 
 function loadProgress() {
   try {
@@ -507,10 +507,30 @@ function pointFromPointer(event) {
 
 const OVERLAYS = [".mission-strip", ".status-row", ".topbar"];
 
+// The sharpness budget (viewport.js nextPixelBudget): full device resolution
+// until the frames say the device cannot afford it.
+let pixelBudget = RENDER_MAX_PIXELS;
+const frameIntervals = new Float32Array(90);
+let frameSlot = 0;
+
 function syncGameViewport() {
   const rect = elements.stage.getBoundingClientRect();
   if (rect.width > 0 && rect.height > 0) {
-    renderer.resizeView(rect.width, rect.height, overlayInset(rect, OVERLAYS.map((selector) => document.querySelector(selector))));
+    renderer.resizeView(rect.width, rect.height, overlayInset(rect, OVERLAYS.map((selector) => document.querySelector(selector))), window.devicePixelRatio || 1, pixelBudget);
+  }
+}
+
+function watchFrameCost(realSeconds) {
+  frameIntervals[frameSlot] = realSeconds * 1000;
+  frameSlot += 1;
+  if (frameSlot < frameIntervals.length) return;
+  frameSlot = 0;
+  // Never below what the game drew before it followed the screen's pixels.
+  const floor = renderer.viewport.width * renderer.viewport.height;
+  const next = nextPixelBudget(pixelBudget, frameIntervals, floor);
+  if (next !== pixelBudget) {
+    pixelBudget = next;
+    syncGameViewport();
   }
 }
 
@@ -850,9 +870,13 @@ function updateUi() {
 }
 
 function frame(now) {
-  const realSeconds = Math.min((now - lastFrame) / 1000, .1);
+  const rawSeconds = (now - lastFrame) / 1000;
+  const realSeconds = Math.min(rawSeconds, .1);
   lastFrame = now;
   if (document.hidden) { requestAnimationFrame(frame); return; }
+  // Only the game's own frames count: a face-studio session runs heavy vision
+  // work on this thread and would otherwise be blamed on the picture.
+  if (elements.faceStudio.hidden) watchFrameCost(rawSeconds);
   if (model.phase === GamePhase.FLYING) {
     const goal = model.goalCentre;
     const here = model.avatarPosition;
@@ -993,7 +1017,7 @@ window.addEventListener("keydown", (event) => {
 
 window.addEventListener("load", () => {
   if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
-    navigator.serviceWorker.register("./sw.js?v=0.46.0").catch(() => {});
+    navigator.serviceWorker.register("./sw.js?v=0.47.0").catch(() => {});
   }
   scheduleFullscreenSuggestion();
   syncGameViewport();
