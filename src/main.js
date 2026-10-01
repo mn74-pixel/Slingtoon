@@ -1,12 +1,13 @@
-import { GameModel, GameMode, GamePhase, LEVELS, modifierName } from "./game.js?v=0.45.0";
-import { GameRenderer } from "./render.js?v=0.45.0";
-import { GameAudio } from "./audio.js?v=0.45.0";
-import { FaceStudio } from "./face-studio.js?v=0.45.0";
-import { CHARACTER_UNLOCKS, PROGRESS_KEY, TOKEN_SCORE_STEP, characterLock, countMastered, countStars, isMastered, readProgress, hintOffer, purchaseHint, recordStreak, rewardSuccess, medalText } from "./progress.js?v=0.45.0";
-import { STREAK_MAX_SHOTS, STREAK_MIN_POOL, canStartStreak, clearStreakMission, createStreakRun, drawStreakMission, spendStreakShot, streakSummary } from "./streak.js?v=0.45.0";
-import { CHAPTERS } from "./levels.js?v=0.45.0";
-import { settledAim, trimAimTrail } from "./aim-settle.js?v=0.45.0";
-import { approachTimeFeel, armTimeFeel, createTimeFeel, punchTimeFeel, timeScale } from "./time-feel.js?v=0.45.0";
+import { GameModel, GameMode, GamePhase, LEVELS, modifierName } from "./game.js?v=0.46.0";
+import { GameRenderer } from "./render.js?v=0.46.0";
+import { GameAudio } from "./audio.js?v=0.46.0";
+import { FaceStudio } from "./face-studio.js?v=0.46.0";
+import { CHARACTER_UNLOCKS, PROGRESS_KEY, TOKEN_SCORE_STEP, characterLock, countMastered, countStars, isMastered, readProgress, hintOffer, purchaseHint, recordStreak, rewardSuccess, medalText } from "./progress.js?v=0.46.0";
+import { STREAK_MAX_SHOTS, STREAK_MIN_POOL, canStartStreak, clearStreakMission, createStreakRun, drawStreakMission, spendStreakShot, streakSummary } from "./streak.js?v=0.46.0";
+import { CHAPTERS } from "./levels.js?v=0.46.0";
+import { settledAim, trimAimTrail } from "./aim-settle.js?v=0.46.0";
+import { overlayInset } from "./viewport.js?v=0.46.0";
+import { approachTimeFeel, armTimeFeel, createTimeFeel, punchTimeFeel, timeScale } from "./time-feel.js?v=0.46.0";
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -108,7 +109,7 @@ let progress = loadProgress();
 let highestUnlockedLevel = progress.highestUnlockedLevel;
 let mapChapterIndex = 0;
 let lastReward = null;
-const FULLSCREEN_TIP_KEY = "slingtoon-fullscreen-tip-0.45.0";
+const FULLSCREEN_TIP_KEY = "slingtoon-fullscreen-tip-0.46.0";
 
 function loadProgress() {
   try {
@@ -504,9 +505,13 @@ function pointFromPointer(event) {
   return renderer.clientPoint(event.clientX, event.clientY);
 }
 
+const OVERLAYS = [".mission-strip", ".status-row", ".topbar"];
+
 function syncGameViewport() {
   const rect = elements.stage.getBoundingClientRect();
-  if (rect.width > 0 && rect.height > 0) renderer.resizeView(rect.width, rect.height);
+  if (rect.width > 0 && rect.height > 0) {
+    renderer.resizeView(rect.width, rect.height, overlayInset(rect, OVERLAYS.map((selector) => document.querySelector(selector))));
+  }
 }
 
 function updateMissionUi() {
@@ -988,7 +993,7 @@ window.addEventListener("keydown", (event) => {
 
 window.addEventListener("load", () => {
   if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
-    navigator.serviceWorker.register("./sw.js?v=0.45.0").catch(() => {});
+    navigator.serviceWorker.register("./sw.js?v=0.46.0").catch(() => {});
   }
   scheduleFullscreenSuggestion();
   syncGameViewport();

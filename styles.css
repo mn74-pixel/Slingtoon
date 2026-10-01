@@ -1703,8 +1703,13 @@ noscript {
  * visible. On phone-shaped landscape screens the old height-derived shell
  * width turned the whole game into a postcard. Fill the safe width instead
  * and let the crop-free canvas camera reveal extra room at the sides.
+ *
+ * This used to apply only from 2:1 up, so every 16:9 phone (iPhone SE, 8 and
+ * 8 Plus, 640x360 Androids) still got the postcard: measured, the canvas took
+ * 30-44% of the screen. The strips float over the canvas here, and the camera
+ * (viewport.js overlayInset) fits the world inside what they leave.
  */
-@media (orientation: landscape) and (max-height: 560px) and (min-aspect-ratio: 2 / 1) {
+@media (orientation: landscape) and (max-height: 560px) {
   .app-shell {
     width: 100%;
     max-width: none;
@@ -1801,13 +1806,17 @@ body.is-fullscreen-active .keyboard-help {
 }
 
 /*
- * In true fullscreen the browser chrome is gone, so the controls and mission
- * can share one translucent row. The canvas receives the complete screen
+ * On every landscape phone the controls and the mission share one translucent
+ * row. This was the fullscreen-only layout; outside fullscreen the phone kept
+ * a 38 px top bar AND a mission strip AND a status row stacked over a 640 px
+ * world, which left it at 0.33-0.38 of its size on 2:1 phones and 0.27-0.36 on
+ * 16:9 ones once the floor was un-hidden. One row gives the world that height
+ * back (tests/layout below and the 0.46.0 notes carry the measurements). The canvas receives the complete screen
  * height while its logical camera expands to the phone aspect ratio, keeping
  * all 640 world pixels visible without letterboxing or top-edge cropping.
  */
 @media (orientation: landscape) and (max-height: 560px) {
-  body.is-fullscreen-active .app-shell {
+  .app-shell {
     width: 100%;
     height: 100dvh;
     padding: 0;
@@ -1815,7 +1824,7 @@ body.is-fullscreen-active .keyboard-help {
     gap: 0;
   }
 
-  body.is-fullscreen-active .topbar {
+  .topbar {
     position: absolute;
     z-index: 14;
     top: 0;
@@ -1829,45 +1838,44 @@ body.is-fullscreen-active .keyboard-help {
     pointer-events: none;
   }
 
-  body.is-fullscreen-active .brand-block { display: none; }
-  body.is-fullscreen-active .top-actions { pointer-events: auto; }
+  .brand-block { display: none; }
+  .top-actions { pointer-events: auto; }
 
-  body.is-fullscreen-active main {
+  main {
     grid-row: 1;
     height: 100%;
     min-height: 0;
     align-items: stretch;
   }
 
-  body.is-fullscreen-active .game-card {
+  .game-card {
     height: 100%;
     border: 0;
     border-radius: 0;
   }
 
-  body.is-fullscreen-active .mission-strip {
+  .mission-strip {
     top: 0;
     height: 42px;
     min-height: 42px;
     padding-right: 56vw;
   }
 
-  body.is-fullscreen-active .mission-copy h1 {
+  .mission-copy h1 {
     max-width: 30vw;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
-  body.is-fullscreen-active .mission-badges { display: none; }
-  body.is-fullscreen-active .level-nav__indicator { display: none; }
+  .mission-badges { display: none; }
 
-  body.is-fullscreen-active .stage {
+  .stage {
     width: 100%;
     height: 100%;
   }
 
-  body.is-fullscreen-active .status-row {
+  .status-row {
     height: calc(38px + env(safe-area-inset-bottom));
     min-height: calc(38px + env(safe-area-inset-bottom));
     padding-bottom: env(safe-area-inset-bottom);

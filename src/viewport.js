@@ -6,23 +6,30 @@ const finitePositive = (value, fallback) => Number.isFinite(value) && value > 0 
  * The 1280x640 gameplay world is always fully visible. Wider screens reveal
  * extra room at the sides; taller screens reveal extra room above and below.
  * Gameplay coordinates and physics stay unchanged.
+ *
+ * `inset` is how much of the stage, in CSS pixels on each side, is covered by
+ * interface laid OVER the canvas — the translucent mission strip and status
+ * row on a landscape phone. The world is fitted inside what is left, and the
+ * scenery keeps painting underneath. Without it, measured on an 844x390
+ * phone, 91 world pixels at the bottom sat under the status row — the floor,
+ * the hero's feet and the foot of the sling — and 76 at the top under the
+ * mission strip, exactly where the lifted targets of 0.44.0 now fly. The
+ * inset is applied symmetrically (the larger of the two edges) so the world
+ * stays centred and every scene's "offset on both sides" bleed still holds.
  */
-export function createCropFreeViewport(cssWidth, cssHeight, worldWidth = 1280, worldHeight = 640) {
+export function createCropFreeViewport(cssWidth, cssHeight, worldWidth = 1280, worldHeight = 640, inset = {}) {
   const safeWorldWidth = finitePositive(worldWidth, 1280);
   const safeWorldHeight = finitePositive(worldHeight, 640);
   const width = finitePositive(cssWidth, safeWorldWidth);
   const height = finitePositive(cssHeight, safeWorldHeight);
-  const stageAspect = width / height;
-  const worldAspect = safeWorldWidth / safeWorldHeight;
-
-  let viewWidth = safeWorldWidth;
-  let viewHeight = safeWorldHeight;
-
-  if (stageAspect > worldAspect) {
-    viewWidth = Math.ceil(safeWorldHeight * stageAspect);
-  } else if (stageAspect < worldAspect) {
-    viewHeight = Math.ceil(safeWorldWidth / stageAspect);
-  }
+  // An inset may never eat more than a third of the stage, or a broken
+  // measurement could shrink the world to nothing.
+  const insetX = Math.min(Math.max(0, Number(inset.x) || 0), width / 3);
+  const insetY = Math.min(Math.max(0, Number(inset.y) || 0), height / 3);
+  const scale = Math.min((width - insetX * 2) / safeWorldWidth, (height - insetY * 2) / safeWorldHeight);
+  // 1e-6 so float noise on the fitted axis (640.0000000001) never adds a pixel.
+  const viewWidth = Math.max(safeWorldWidth, Math.ceil(width / scale - 1e-6));
+  const viewHeight = Math.max(safeWorldHeight, Math.ceil(height / scale - 1e-6));
 
   return Object.freeze({
     width: viewWidth,
@@ -31,7 +38,29 @@ export function createCropFreeViewport(cssWidth, cssHeight, worldWidth = 1280, w
     offsetY: (viewHeight - safeWorldHeight) * 0.5,
     worldWidth: safeWorldWidth,
     worldHeight: safeWorldHeight,
+    // The covered band, in world units: what the player cannot really see.
+    safeX: (insetX * viewWidth) / width,
+    safeY: (insetY * viewHeight) / height,
   });
+}
+
+// How much of the stage is covered by interface laid over it. On landscape
+// phones the mission strip and the status row float over the canvas as frosted
+// glass; the camera fits the world inside what they leave, and the scenery
+// keeps painting underneath. Measured from the live layout, so a CSS change
+// can never quietly put the floor back under the status row.
+export function overlayInset(stage, overlays, styleOf = (element) => globalThis.getComputedStyle(element)) {
+  let top = 0, bottom = 0;
+  for (const element of overlays) {
+    if (!element) continue;
+    const style = styleOf(element);
+    if (style.position !== "absolute" || style.display === "none" || style.visibility === "hidden") continue;
+    const box = element.getBoundingClientRect();
+    if (box.height <= 0 || box.bottom <= stage.top || box.top >= stage.bottom) continue;
+    if (box.top + box.height / 2 < stage.top + stage.height / 2) top = Math.max(top, box.bottom - stage.top);
+    else bottom = Math.max(bottom, stage.bottom - box.top);
+  }
+  return { x: 0, y: Math.max(top, bottom) };
 }
 
 export function clientPointToWorld(clientX, clientY, rect, viewport) {
@@ -66,15 +95,17 @@ export function worldPointToClient(worldX, worldY, rect, viewport) {
 // drawn past the frame edge and only the badge is visible.
 export function edgeMarker(point, viewport, inset = 62) {
   if (!point || !viewport) return null;
-  const left = -viewport.offsetX;
-  const top = -viewport.offsetY;
-  const right = left + viewport.width;
-  const bottom = top + viewport.height;
+  // The frame the player can actually see: under the overlaying strips the
+  // hero is behind frosted glass, so the marker has to stand clear of them.
+  const left = -viewport.offsetX + (viewport.safeX ?? 0);
+  const top = -viewport.offsetY + (viewport.safeY ?? 0);
+  const right = -viewport.offsetX + viewport.width - (viewport.safeX ?? 0);
+  const bottom = -viewport.offsetY + viewport.height - (viewport.safeY ?? 0);
   if (point.x >= left && point.x <= right && point.y >= top && point.y <= bottom) return null;
   // The inset keeps the marker fully inside the frame; on a very small frame
   // it must not cross over itself.
-  const padX = Math.min(inset, viewport.width / 2 - 1);
-  const padY = Math.min(inset, viewport.height / 2 - 1);
+  const padX = Math.min(inset, (right - left) / 2 - 1);
+  const padY = Math.min(inset, (bottom - top) / 2 - 1);
   const x = Math.min(Math.max(point.x, left + padX), right - padX);
   const y = Math.min(Math.max(point.y, top + padY), bottom - padY);
   const dx = point.x - x, dy = point.y - y;

@@ -1,11 +1,11 @@
-import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.45.0";
-import { clientPointToWorld, createCropFreeViewport, edgeMarker } from "./viewport.js?v=0.45.0";
-import { POUCH_HALF, REST_LEAN, pouchEnds, restPosition, restingGrip, slingFrame, slingGrip } from "./sling-art.js?v=0.45.0";
-import { drawInteractions, drawObjective } from "./interactions-renderer.js?v=0.45.0";
-import { drawCampaignGoal, drawCampaignScene, drawWorldCompanion, setSceneBleed } from "./world-renderer.js?v=0.45.0";
-import { drawSceneLife } from "./scene-life.js?v=0.45.0";
-import { createRng, sprayAngle, stepParticle } from "./particles.js?v=0.45.0";
-import { surfaceBelow } from "./physics.js?v=0.45.0";
+import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.46.0";
+import { clientPointToWorld, createCropFreeViewport, edgeMarker } from "./viewport.js?v=0.46.0";
+import { POUCH_HALF, REST_LEAN, pouchEnds, restPosition, restingGrip, slingFrame, slingGrip } from "./sling-art.js?v=0.46.0";
+import { drawInteractions, drawObjective } from "./interactions-renderer.js?v=0.46.0";
+import { drawCampaignGoal, drawCampaignScene, drawWorldCompanion, setSceneBleed } from "./world-renderer.js?v=0.46.0";
+import { drawSceneLife } from "./scene-life.js?v=0.46.0";
+import { createRng, sprayAngle, stepParticle } from "./particles.js?v=0.46.0";
+import { surfaceBelow } from "./physics.js?v=0.46.0";
 
 // How long the hero takes to turn around when a bounce sends them back.
 const TURN_SECONDS = 0.12;
@@ -131,8 +131,8 @@ export class GameRenderer {
     }
   }
 
-  resizeView(cssWidth, cssHeight) {
-    const viewport = createCropFreeViewport(cssWidth, cssHeight, WORLD.width, WORLD.height);
+  resizeView(cssWidth, cssHeight, inset = {}) {
+    const viewport = createCropFreeViewport(cssWidth, cssHeight, WORLD.width, WORLD.height, inset);
     this.viewport = viewport;
     if (this.canvas.width !== viewport.width) this.canvas.width = viewport.width;
     if (this.canvas.height !== viewport.height) this.canvas.height = viewport.height;
