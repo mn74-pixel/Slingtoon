@@ -1,6 +1,6 @@
-import { DEFAULT_LEVEL, WORLD } from "./levels.js?v=0.44.0";
-import { FIXED_STEP, clamp, contains, magnitude, stepPhysics } from "./physics.js?v=0.44.0";
-export { DEFAULT_LEVEL, LEVELS, WORLD, getLevel } from "./levels.js?v=0.44.0";
+import { DEFAULT_LEVEL, WORLD } from "./levels.js?v=0.45.0";
+import { FIXED_STEP, clamp, contains, magnitude, startBody, stepPhysics } from "./physics.js?v=0.45.0";
+export { DEFAULT_LEVEL, LEVELS, WORLD, getLevel } from "./levels.js?v=0.45.0";
 
 export const GameMode = Object.freeze({ QUICK: "quickSling", ONE_MOVE: "oneMoveChallenge" });
 export const GamePhase = Object.freeze({ READY: "ready", AIMING: "aiming", FLYING: "flying", SUCCEEDED: "succeeded", FAILED: "failed" });
@@ -70,6 +70,10 @@ export class GameModel {
     this.avatarPosition = copy(this.anchor);
     this.avatarVelocity = { x: 0, y: 0 };
     this.rotation = 0;
+    this.facing = 1;
+    this.bodyAngle = 0;
+    this.spin = 0;
+    this.turnedAt = -1;
     this.impactFlash = 0;
     this.flightTime = 0;
     this.accumulator = 0;
@@ -183,6 +187,7 @@ export class GameModel {
     this.accumulator = 0;
     this.impactFlash = 0;
     this.movingObject = false;
+    startBody(this);
     if (countsAsNewAttempt) this.attempts += 1;
     this.emit("launch", { position: copy(this.avatarPosition), velocity: copy(velocity) });
   }
@@ -266,7 +271,8 @@ export class GameModel {
     this.lastImpactTime = this.flightTime;
     this.impactFlash = 0.2;
     this.impactCount += 1;
-    this.emit("impact", { speed, x, y, surface });
+    const normal = this.contactNormal ?? { x: 0, y: -1 };
+    this.emit("impact", { speed, x, y, surface, normal: { x: normal.x, y: normal.y } });
   }
   finishAttempt(success) {
     if (this.phase !== GamePhase.FLYING) return;

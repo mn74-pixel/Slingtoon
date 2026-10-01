@@ -1,10 +1,19 @@
-import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.44.0";
-import { clientPointToWorld, createCropFreeViewport, edgeMarker } from "./viewport.js?v=0.44.0";
-import { POUCH_HALF, REST_LEAN, pouchEnds, restPosition, restingGrip, slingFrame, slingGrip } from "./sling-art.js?v=0.44.0";
-import { drawInteractions, drawObjective } from "./interactions-renderer.js?v=0.44.0";
-import { drawCampaignGoal, drawCampaignScene, drawWorldCompanion, setSceneBleed } from "./world-renderer.js?v=0.44.0";
-import { drawSceneLife } from "./scene-life.js?v=0.44.0";
+import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.45.0";
+import { clientPointToWorld, createCropFreeViewport, edgeMarker } from "./viewport.js?v=0.45.0";
+import { POUCH_HALF, REST_LEAN, pouchEnds, restPosition, restingGrip, slingFrame, slingGrip } from "./sling-art.js?v=0.45.0";
+import { drawInteractions, drawObjective } from "./interactions-renderer.js?v=0.45.0";
+import { drawCampaignGoal, drawCampaignScene, drawWorldCompanion, setSceneBleed } from "./world-renderer.js?v=0.45.0";
+import { drawSceneLife } from "./scene-life.js?v=0.45.0";
+import { createRng, sprayAngle, stepParticle } from "./particles.js?v=0.45.0";
+import { surfaceBelow } from "./physics.js?v=0.45.0";
 
+// How long the hero takes to turn around when a bounce sends them back.
+const TURN_SECONDS = 0.12;
+// The released pouch: how far a full-power launch carries it past the frame,
+// how fast it rings (rad/s) and how quickly that dies (1/s).
+const POUCH_OVERSHOOT = 34;
+const POUCH_RING = 34;
+const POUCH_DECAY = 6.5;
 const PALETTE = Object.freeze({
   ink: "#19142d",
   cream: "#fff5d9",
@@ -102,6 +111,9 @@ export class GameRenderer {
     this.fanAngle = 0;
     this.time = 0;
     this.sceneSpan = { left: 0, width: WORLD.width };
+    // Seeded, and reseeded per flight, so the same shot throws the same sparks
+    // in the game, in a replay and in an offline render.
+    this.random = createRng(1);
   }
 
   async load() {
@@ -169,6 +181,7 @@ export class GameRenderer {
     }
 
     if (event.type === "launch" || event.type === "what-if") {
+      this.random = createRng(this.model.level.number * 7919 + this.model.attempts * 104729);
       this.trail.length = 0;
       this.lastTrailPoint = null;
       this.flightPath = [{ x: this.model.avatarPosition.x, y: this.model.avatarPosition.y }];
@@ -189,14 +202,19 @@ export class GameRenderer {
       const goalDistance = Math.hypot(event.x - this.model.goalCentre.x, event.y - this.model.goalCentre.y);
       const proximity = clamp(1 - goalDistance / GOAL_WOBBLE_RADIUS, 0, 1);
       this.goalWobble = Math.max(this.goalWobble, proximity * intensity * 1.6);
-      this.spawnImpact(event.x, event.y, 12 + Math.round(intensity * 16));
+      // The solver reports the hero's centre; the hit happened a radius away,
+      // on the surface. The floor and the water already report the surface.
+      const onSurface = event.surface === "ground" || event.surface === "water";
+      const normal = event.normal ?? null;
+      const reach = onSurface || !normal ? 0 : this.model.avatarRadius;
+      this.spawnImpact(event.x - (normal?.x ?? 0) * reach, event.y - (normal?.y ?? 0) * reach, 12 + Math.round(intensity * 16), normal);
       this.callouts.push({
         x: event.x,
         y: event.y - 24,
         text: event.surface === "water" ? "KACZKA!" : event.surface === "cushion" ? "PLOF!" : "BĘC!",
         age: 0,
         life: 0.72,
-        angle: (Math.random() - 0.5) * 0.18,
+        angle: (this.random() - 0.5) * 0.18,
       });
     }
 
@@ -280,13 +298,7 @@ export class GameRenderer {
     for (const point of this.trail) point.age += dt;
     this.trail = this.trail.filter((point) => point.age < 0.75);
 
-    for (const particle of this.particles) {
-      particle.age += dt;
-      particle.velocity.y += particle.gravity * dt;
-      particle.x += particle.velocity.x * dt;
-      particle.y += particle.velocity.y * dt;
-      particle.rotation += particle.spin * dt;
-    }
+    for (const particle of this.particles) stepParticle(particle, dt, this.model.groundY);
     this.particles = this.particles.filter((particle) => particle.age < particle.life);
 
     for (const callout of this.callouts) callout.age += dt;
@@ -302,8 +314,8 @@ export class GameRenderer {
     ctx.translate(this.viewport.offsetX, this.viewport.offsetY);
 
     if (this.shake > 0) {
-      const x = (Math.random() - 0.5) * this.shake;
-      const y = (Math.random() - 0.5) * this.shake * 0.72;
+      const x = (this.random() - 0.5) * this.shake;
+      const y = (this.random() - 0.5) * this.shake * 0.72;
       ctx.translate(x, y);
     }
 
@@ -1132,11 +1144,18 @@ export class GameRenderer {
   // Where the empty pouch hangs once the hero has gone: it snaps back past the
   // fork and settles, so the launch leaves something behind instead of the
   // bands simply vanishing.
+  // After release the pouch overshoots the frame and rings out. It used to
+  // swing 26 px sideways whatever the shot: a feather tap and a full-power
+  // launch let go of the band identically. Now it rings along the line the
+  // hero left on, as far as the launch was hard, and dies away like a band.
   emptyGrip(frame) {
     const rest = restingGrip(frame);
-    const settle = Math.max(0, 1 - this.model.flightTime * 2.6);
-    const wobble = Math.sin(this.model.flightTime * 34) * 26 * settle;
-    return { x: rest.x + wobble, y: rest.y + wobble * 0.22 };
+    const launch = this.model.previousShot?.launchVelocity;
+    const speed = launch ? Math.hypot(launch.x, launch.y) : 0;
+    if (!speed) return rest;
+    const t = this.model.flightTime;
+    const swing = POUCH_OVERSHOOT * clamp(speed / 924, 0.3, 1) * Math.exp(-POUCH_DECAY * t) * Math.sin(POUCH_RING * t);
+    return { x: rest.x + (launch.x / speed) * swing, y: rest.y + (launch.y / speed) * swing };
   }
 
   // A band under tension is straight; a slack one sags. `slack` is the sag in
@@ -1252,13 +1271,15 @@ export class GameRenderer {
   drawAvatarShadow(ctx) {
     const landed = this.landingPose();
     const avatar = landed ?? this.heroPosition();
-    const distance = Math.max(0, this.model.groundY - avatar.y);
+    // Cast onto the first real surface below, not the floor line behind it.
+    const surface = landed ? this.model.groundY : surfaceBelow(this.model, avatar.x, avatar.y + this.model.avatarRadius * 0.5);
+    const distance = Math.max(0, surface - avatar.y);
     const scale = clamp(1 - distance / 700, 0.28, 1);
     ctx.save();
     ctx.globalAlpha = 0.28 * scale;
     ctx.fillStyle = "#130d25";
     ctx.beginPath();
-    ctx.ellipse(avatar.x, this.model.groundY + 4, 46 * scale, 11 * scale, 0, 0, Math.PI * 2);
+    ctx.ellipse(avatar.x, surface + (surface === this.model.groundY ? 4 : 2), 46 * scale, 11 * scale, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
@@ -1331,12 +1352,21 @@ export class GameRenderer {
       ctx.clip();
     }
     ctx.translate(landed ? landed.x : position.x, (landed ? landed.y : position.y) + idleBob);
-    // A landing straightens the hero out: keeping the flight angle is what made
-    // them look stuck to the object at whatever angle they arrived.
+    // The body angle is the solver's own (physics.js stepBody): it leans into
+    // the arc, tumbles on a hard hit and rights itself in the air. A landing
+    // straightens it out: keeping the flight angle is what made the hero look
+    // stuck to the object at whatever angle they arrived.
+    const airborne = model.phase === GamePhase.FLYING || model.phase === GamePhase.FAILED;
     ctx.rotate(landed
-      ? model.rotation * (1 - landed.progress) + landed.tilt
-      : model.phase === GamePhase.FLYING ? model.rotation : Math.sin(this.time * 2.1) * 0.018);
-    ctx.scale(baseScale * (stretchX + (landed?.squash ?? 0)), baseScale * (stretchY - (landed?.squash ?? 0)));
+      ? model.bodyAngle * (1 - landed.progress) + landed.tilt
+      : airborne ? model.bodyAngle + (model.phase === GamePhase.FAILED ? Math.sin(this.time * 2.1) * 0.018 : 0)
+        : Math.sin(this.time * 2.1) * 0.018);
+    // Turning around is a turn, not a flip: the drawing narrows to its edge and
+    // opens out the other way over a tenth of a second.
+    const facing = airborne || landed ? model.facing : 1;
+    const turn = model.turnedAt >= 0 ? clamp((model.flightTime - model.turnedAt) / TURN_SECONDS, 0, 1) : 1;
+    const mirror = facing * Math.cos(Math.PI * (1 - turn));
+    ctx.scale(baseScale * mirror * (stretchX + (landed?.squash ?? 0)), baseScale * (stretchY - (landed?.squash ?? 0)));
     ctx.lineJoin = "round";
     ctx.lineCap = "round";
 
@@ -1890,14 +1920,14 @@ export class GameRenderer {
       const side = index % 2 === 0 ? 1 : -1;
       this.particles.push({
         kind: "circle",
-        x: x + side * (6 + Math.random() * 16),
-        y: y + (Math.random() - 0.5) * 10,
-        velocity: { x: side * (40 + Math.random() * 70), y: -30 - Math.random() * 45 },
+        x: x + side * (6 + this.random() * 16),
+        y: y + (this.random() - 0.5) * 10,
+        velocity: { x: side * (40 + this.random() * 70), y: -30 - this.random() * 45 },
         gravity: 120,
-        size: 4 + Math.random() * 6,
+        size: 4 + this.random() * 6,
         color: PALETTE.cream,
         age: 0,
-        life: 0.34 + Math.random() * 0.2,
+        life: 0.34 + this.random() * 0.2,
         rotation: 0,
         spin: 0,
       });
@@ -1908,37 +1938,37 @@ export class GameRenderer {
     for (let index = 0; index < count; index += 1) {
       this.particles.push({
         kind: "circle",
-        x: x + (Math.random() - 0.5) * 28,
-        y: y + (Math.random() - 0.5) * 20,
-        velocity: { x: -70 - Math.random() * 90, y: -25 + (Math.random() - 0.5) * 80 },
+        x: x + (this.random() - 0.5) * 28,
+        y: y + (this.random() - 0.5) * 20,
+        velocity: { x: -70 - this.random() * 90, y: -25 + (this.random() - 0.5) * 80 },
         gravity: 50,
-        size: 4 + Math.random() * 7,
+        size: 4 + this.random() * 7,
         color: PALETTE.cream,
         age: 0,
-        life: 0.38 + Math.random() * 0.24,
+        life: 0.38 + this.random() * 0.24,
         rotation: 0,
         spin: 0,
       });
     }
   }
 
-  spawnImpact(x, y, count) {
+  spawnImpact(x, y, count, normal = null) {
     const colors = [PALETTE.gold, PALETTE.coral, PALETTE.cream, PALETTE.mint];
     for (let index = 0; index < count; index += 1) {
-      const angle = Math.random() * Math.PI * 2;
-      const speed = 90 + Math.random() * 340;
+      const angle = sprayAngle(this.random, normal);
+      const speed = 90 + this.random() * 340;
       this.particles.push({
         kind: index % 3 === 0 ? "spark" : "circle",
         x,
         y,
         velocity: { x: Math.cos(angle) * speed, y: Math.sin(angle) * speed },
         gravity: 520,
-        size: 4 + Math.random() * 9,
+        size: 4 + this.random() * 9,
         color: colors[index % colors.length],
         age: 0,
-        life: 0.35 + Math.random() * 0.52,
+        life: 0.35 + this.random() * 0.52,
         rotation: angle,
-        spin: (Math.random() - 0.5) * 14,
+        spin: (this.random() - 0.5) * 14,
       });
     }
   }
@@ -1946,20 +1976,26 @@ export class GameRenderer {
   spawnConfetti(x, y, count) {
     const colors = [PALETTE.gold, PALETTE.coral, PALETTE.mint, PALETTE.violetBright, PALETTE.cream];
     for (let index = 0; index < count; index += 1) {
-      const angle = -Math.PI * (0.15 + Math.random() * 0.7);
-      const speed = 170 + Math.random() * 460;
+      const angle = -Math.PI * (0.15 + this.random() * 0.7);
+      const speed = 170 + this.random() * 460;
       this.particles.push({
         kind: "confetti",
-        x: x + (Math.random() - 0.5) * 40,
-        y: y + (Math.random() - 0.5) * 35,
+        x: x + (this.random() - 0.5) * 40,
+        y: y + (this.random() - 0.5) * 35,
         velocity: { x: Math.cos(angle) * speed, y: Math.sin(angle) * speed },
         gravity: 430,
-        size: 6 + Math.random() * 8,
+        size: 6 + this.random() * 8,
         color: colors[index % colors.length],
         age: 0,
-        life: 1.2 + Math.random() * 1.3,
-        rotation: Math.random() * Math.PI,
-        spin: (Math.random() - 0.5) * 12,
+        life: 1.2 + this.random() * 1.3,
+        rotation: this.random() * Math.PI,
+        spin: (this.random() - 0.5) * 12,
+        // Paper in air: terminal speed ~gravity/drag, about 200 px/s, and a
+        // sideways wander so it drifts down instead of dropping.
+        drag: 2.1,
+        sway: 260,
+        flutter: 5 + this.random() * 4,
+        phase: this.random() * Math.PI * 2,
       });
     }
   }
@@ -2047,8 +2083,12 @@ export class GameRenderer {
         ctx.closePath();
         ctx.fill();
       } else {
-        ctx.fillRect(-particle.size * 0.5, -particle.size * 0.8, particle.size, particle.size * 1.6);
-        ctx.strokeRect(-particle.size * 0.5, -particle.size * 0.8, particle.size, particle.size * 1.6);
+        // A flake turning over shows its edge: the width breathes with the
+        // flutter, which is most of what makes paper read as paper.
+        const face = particle.flutter ? Math.max(0.15, Math.abs(Math.cos(particle.age * particle.flutter * 1.3 + particle.phase))) : 1;
+        const w = particle.size * face;
+        ctx.fillRect(-w * 0.5, -particle.size * 0.8, w, particle.size * 1.6);
+        ctx.strokeRect(-w * 0.5, -particle.size * 0.8, w, particle.size * 1.6);
       }
       ctx.restore();
     }
