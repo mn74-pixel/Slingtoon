@@ -1,11 +1,11 @@
-import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.46.0";
-import { clientPointToWorld, createCropFreeViewport, edgeMarker } from "./viewport.js?v=0.46.0";
-import { POUCH_HALF, REST_LEAN, pouchEnds, restPosition, restingGrip, slingFrame, slingGrip } from "./sling-art.js?v=0.46.0";
-import { drawInteractions, drawObjective } from "./interactions-renderer.js?v=0.46.0";
-import { drawCampaignGoal, drawCampaignScene, drawWorldCompanion, setSceneBleed } from "./world-renderer.js?v=0.46.0";
-import { drawSceneLife } from "./scene-life.js?v=0.46.0";
-import { createRng, sprayAngle, stepParticle } from "./particles.js?v=0.46.0";
-import { surfaceBelow } from "./physics.js?v=0.46.0";
+import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.47.0";
+import { RENDER_MAX_PIXELS, clientPointToWorld, createCropFreeViewport, edgeMarker, renderScale } from "./viewport.js?v=0.47.0";
+import { POUCH_HALF, REST_LEAN, pouchEnds, restPosition, restingGrip, slingFrame, slingGrip } from "./sling-art.js?v=0.47.0";
+import { drawInteractions, drawObjective } from "./interactions-renderer.js?v=0.47.0";
+import { drawCampaignGoal, drawCampaignScene, drawWorldCompanion, setSceneBleed } from "./world-renderer.js?v=0.47.0";
+import { drawSceneLife } from "./scene-life.js?v=0.47.0";
+import { createRng, sprayAngle, stepParticle } from "./particles.js?v=0.47.0";
+import { surfaceBelow } from "./physics.js?v=0.47.0";
 
 // How long the hero takes to turn around when a bounce sends them back.
 const TURN_SECONDS = 0.12;
@@ -89,6 +89,8 @@ export class GameRenderer {
     this.ctx = canvas.getContext("2d", { alpha: false, desynchronized: true });
     this.model = model;
     this.viewport = createCropFreeViewport(canvas.width, canvas.height, WORLD.width, WORLD.height);
+    // Canvas pixels per world unit; resizeView sets it from the real screen.
+    this.pixelScale = 1;
     this.background = null;
     this.backgroundSource = null;
     this.faceImage = null;
@@ -131,11 +133,14 @@ export class GameRenderer {
     }
   }
 
-  resizeView(cssWidth, cssHeight, inset = {}) {
+  resizeView(cssWidth, cssHeight, inset = {}, devicePixelRatio = globalThis.devicePixelRatio ?? 1, maxPixels = RENDER_MAX_PIXELS) {
     const viewport = createCropFreeViewport(cssWidth, cssHeight, WORLD.width, WORLD.height, inset);
     this.viewport = viewport;
-    if (this.canvas.width !== viewport.width) this.canvas.width = viewport.width;
-    if (this.canvas.height !== viewport.height) this.canvas.height = viewport.height;
+    this.pixelScale = renderScale(cssWidth, viewport, devicePixelRatio, maxPixels);
+    const width = Math.max(1, Math.round(viewport.width * this.pixelScale));
+    const height = Math.max(1, Math.round(viewport.height * this.pixelScale));
+    if (this.canvas.width !== width) this.canvas.width = width;
+    if (this.canvas.height !== height) this.canvas.height = height;
   }
 
   clientPoint(clientX, clientY, rect = this.canvas.getBoundingClientRect()) {
@@ -310,6 +315,10 @@ export class GameRenderer {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     this.drawViewportBackdrop(ctx);
+    // Everything below draws in world units; the scale turns them into the
+    // screen's own pixels.
+    const k = this.canvas.width / this.viewport.width;
+    ctx.setTransform(k, 0, 0, k, 0, 0);
     ctx.save();
     ctx.translate(this.viewport.offsetX, this.viewport.offsetY);
 

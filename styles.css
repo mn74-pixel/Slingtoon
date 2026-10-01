@@ -2122,3 +2122,193 @@ button:focus-visible, canvas:focus-visible { outline: 3px solid #ffd35f; outline
   .hint-button,
   .restart-button { justify-content: center; }
 }
+
+/*
+ * Tablets and computers play on the whole window too.
+ *
+ * Measured in Chromium before this block: the canvas filled 43% of a 1024x600
+ * tablet (world drawn at 0.41 of its size — smaller than on a phone), 52-61% of
+ * laptops and monitors, and 44% of a 2560x1440 screen. The world is 640 tall;
+ * the top bar, mission strip, status row, footer and keyboard line stacked
+ * around it took about 335 px of height. Here, as on phones, the mission strip
+ * and the status row float over the canvas as frosted glass, the controls
+ * share the top row, and viewport.js fits the world inside what is left.
+ * Desktop sizes stay desktop sizes: only the layout comes from the phone.
+ */
+@media (orientation: landscape) and (min-height: 561px) {
+  :root {
+    --hud-top: clamp(52px, 6.6vh, 66px);
+    --hud-bottom: clamp(50px, 6.2vh, 62px);
+  }
+
+  html,
+  body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .app-shell {
+    width: 100%;
+    max-width: none;
+    height: 100dvh;
+    padding: 0;
+    grid-template-rows: minmax(0, 1fr);
+    gap: 0;
+  }
+
+  .topbar {
+    position: absolute;
+    z-index: 14;
+    top: 0;
+    right: 0;
+    left: auto;
+    height: var(--hud-top);
+    min-height: var(--hud-top);
+    padding-right: max(14px, env(safe-area-inset-right));
+    justify-content: flex-end;
+    pointer-events: none;
+  }
+
+  .brand-block { display: none; }
+  .top-actions { pointer-events: auto; }
+
+  main {
+    grid-row: 1;
+    height: 100%;
+    min-height: 0;
+    align-items: stretch;
+  }
+
+  .game-card {
+    position: relative;
+    display: block;
+    height: 100%;
+    min-height: 0;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .mission-strip,
+  .status-row {
+    position: absolute;
+    right: 0;
+    left: 0;
+    z-index: 6;
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+  }
+
+  .mission-strip {
+    top: 0;
+    height: var(--hud-top);
+    min-height: var(--hud-top);
+    padding: 6px min(48vw, 600px) 6px max(14px, env(safe-area-inset-left));
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    background:
+      linear-gradient(100deg, rgba(255, 96, 120, 0.18), transparent 42%),
+      rgba(39, 29, 63, 0.88);
+  }
+
+  .mission-copy h1 {
+    overflow: hidden;
+    font-size: clamp(15px, 1.45vw, 21px);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mission-badges { display: none; }
+
+  .status-row {
+    bottom: 0;
+    height: var(--hud-bottom);
+    min-height: var(--hud-bottom);
+    padding: 6px max(14px, env(safe-area-inset-right)) 6px max(14px, env(safe-area-inset-left));
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    background: rgba(30, 23, 51, 0.9);
+  }
+
+  .instruction { flex: 1 1 auto; align-items: center; }
+  .instruction-icon { width: 38px; height: 38px; }
+  .instruction strong,
+  .instruction span:last-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .hint-button,
+  .restart-button { min-height: 38px; }
+
+  .stage {
+    grid-area: auto;
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    min-height: 0;
+    aspect-ratio: auto;
+  }
+
+  #gameCanvas {
+    width: 100%;
+    height: 100%;
+    object-fit: fill;
+  }
+
+  .loading-panel { z-index: 8; }
+  .result-panel { z-index: 7; }
+
+  footer,
+  .keyboard-help { display: none; }
+}
+
+/* Below 1280 px the labelled mode pills ("⚡ Quick Sling", "◇ One Move") pushed
+   the top-right controls into the mission title on mission 2 (1024x600 and
+   1180x820 tablets, measured by hit-testing). Icons alone, as on phones. */
+@media (orientation: landscape) and (min-height: 561px) and (max-width: 1279px) {
+  .pill {
+    width: 42px;
+    min-width: 42px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .pill__label { display: none; }
+  .pill__icon { margin: 0; }
+}
+
+/* A keyboard deserves its legend. The full sentence (#keyboardHelp) stays in the
+   page for screen readers; on a computer a compact legend sits in the status row
+   as a flex item, so it can shrink or truncate but never print over the
+   "face stays local" note — a centred overlay did exactly that at 1366x768. */
+.key-legend { display: none; }
+
+@media (orientation: landscape) and (min-height: 561px) and (hover: hover) and (pointer: fine) and (min-width: 1180px) {
+  .key-legend {
+    display: block;
+    flex: 0 1 auto;
+    min-width: 0;
+    margin: 0;
+    overflow: hidden;
+    color: rgba(255, 245, 217, 0.6);
+    font-size: 11px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .key-legend kbd {
+    display: inline-block;
+    padding: 0 5px;
+    border: 1px solid rgba(255, 245, 217, 0.2);
+    border-bottom-width: 2px;
+    border-radius: 5px;
+    background: rgba(255, 245, 217, 0.07);
+    color: rgba(255, 245, 217, 0.88);
+    font: inherit;
+    font-weight: 700;
+    line-height: 1.55;
+  }
+}
