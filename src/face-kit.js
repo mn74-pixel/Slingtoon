@@ -34,7 +34,7 @@
 //
 // PORTING NOTE
 //
-// The imports inside these files carry a `?v=0.45.0` query. That is this
+// The imports inside these files carry a `?v=0.46.0` query. That is this
 // project's cache-busting convention for GitHub Pages, not part of the module:
 // strip the query, or keep it and update it with your own version.
 export {
@@ -60,7 +60,7 @@ export {
   outlineWidthFor,
   boundsFromLandmarks,
   connectionPaths,
-} from "./portrait.js?v=0.45.0";
+} from "./portrait.js?v=0.46.0";
 
 export {
   DEFAULT_MIMIC_STRENGTH,
@@ -69,6 +69,6 @@ export {
   buildExpressionSheet,
   mimicAnchors,
   opaqueBounds,
-} from "./face-mimic.js?v=0.45.0";
+} from "./face-mimic.js?v=0.46.0";
 
-export { FaceVision } from "./face-vision.js?v=0.45.0";
+export { FaceVision } from "./face-vision.js?v=0.46.0";

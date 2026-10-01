@@ -216,14 +216,40 @@ assert.match(html, /id="fullscreenStart"/);
 assert.match(html, /Graj pełny ekran/);
 assert.match(css, /padding-right:\s*0;\s*padding-left:\s*0;/);
 assert.match(css, /orientation:\s*landscape[^}]*max-height:\s*560px/);
-assert.match(css, /min-aspect-ratio:\s*2\s*\/\s*1/);
+// The overlay layout used to be gated on min-aspect-ratio 2/1, so every 16:9
+// phone (iPhone SE/8/8 Plus, 640x360 Android) got the postcard: measured in
+// Chromium, the canvas filled 30-44% of the screen instead of 100%.
+{
+  const overlay = css.slice(css.indexOf("/*\n * Safari keeps a very shallow page viewport"));
+  const query = overlay.slice(overlay.indexOf("@media"), overlay.indexOf("{"));
+  assert.match(query, /orientation:\s*landscape\)\s*and\s*\(max-height:\s*560px\)\s*$/,
+    "the full-screen phone layout must cover every landscape phone, not only 2:1 ones");
+  const merged = css.slice(css.indexOf("/*\n * On every landscape phone the controls and the mission share one translucent"));
+  const mergedBlock = merged.slice(0, merged.indexOf("\n}\n") + 3);
+  assert.ok(mergedBlock.length > 200, "the one-row phone layout is gone");
+  assert.doesNotMatch(mergedBlock, /is-fullscreen-active/, "the one-row phone layout is fullscreen-only again");
+  assert.doesNotMatch(mergedBlock, /level-nav__indicator\s*\{\s*display:\s*none/, "the mission-map button is hidden on phones");
+}
+assert.match(main, /overlayInset\(rect,/, "the camera no longer knows which strips cover the canvas");
 assert.match(css, /object-fit:\s*fill/);
 assert.doesNotMatch(css, /object-fit:\s*cover/);
 assert.match(main, /ResizeObserver/);
 assert.match(main, /visualViewport/);
 assert.match(render, /createCropFreeViewport/);
-assert.match(viewport, /viewWidth = Math\.ceil\(safeWorldHeight \* stageAspect\)/);
-assert.match(viewport, /viewHeight = Math\.ceil\(safeWorldWidth \/ stageAspect\)/);
+// The camera's promise, checked by running it rather than by grepping its
+// formula: the whole world stays visible at the stage's own aspect, with or
+// without interface laid over the canvas.
+{
+  const { createCropFreeViewport } = await import("../src/viewport.js");
+  for (const [w, h] of [[568, 320], [667, 375], [844, 390], [1024, 768], [1920, 1080], [390, 844]]) {
+    for (const inset of [{}, { y: 42 }]) {
+      const v = createCropFreeViewport(w, h, 1280, 640, inset);
+      assert.ok(v.offsetX >= 0 && v.offsetY >= 0, `${w}x${h}: the world is cropped`);
+      assert.ok(Math.abs(v.width / v.height - w / h) < 0.01, `${w}x${h}: the camera stretches the picture`);
+      assert.ok(v.offsetY >= (v.safeY ?? 0) - 1e-9, `${w}x${h}: the world reaches under the overlay strips`);
+    }
+  }
+}
 assert.match(viewport, /clientPointToWorld/);
 
 // The vignette used to stop at the world edge, putting a hard seam exactly on
