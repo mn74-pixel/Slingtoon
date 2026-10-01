@@ -73,15 +73,89 @@ export function lineContact(p, radius, line) {
   return { nx: px / distance, ny: py / distance, depth: totalRadius - distance };
 }
 
-export function resolveContact(position, velocity, contact, restitution = 0.5) {
+export function resolveContact(position, velocity, contact, restitution = 0.5, body = null) {
   if (!contact) return 0;
   position.x += contact.nx * (contact.depth + 0.01);
   position.y += contact.ny * (contact.depth + 0.01);
   const normalSpeed = velocity.x * contact.nx + velocity.y * contact.ny;
   if (normalSpeed >= 0) return 0; // Separating bodies never receive another kick.
+  if (body) {
+    // Remembered so the impact can say which way the surface faced: the sparks
+    // spray back off it instead of through it.
+    body.contactNormal = { x: contact.nx, y: contact.ny };
+    kickBody(body, contact, velocity, -normalSpeed);
+  }
   velocity.x -= (1 + restitution) * normalSpeed * contact.nx;
   velocity.y -= (1 + restitution) * normalSpeed * contact.ny;
   return -normalSpeed;
+}
+
+// THE BODY. The hero used to be drawn at atan2(velocity): a bounce back to the
+// left turned them upside down (7.8% of all flight frames, in 57 of 615 test
+// flights) and every rebound spun the drawing 180 degrees in a single frame,
+// 300 times across those flights. A person is not an arrow.
+//
+// So the body is a body: it faces the way it travels (and turns around rather
+// than flipping over), leans into the arc but never past BODY_LEAN, and carries
+// its own angular velocity. A hard hit sets it tumbling and the air rights it
+// again, like a cat. All of it is angular state only: contacts stay
+// frictionless, so not one trajectory in the campaign moves — the routes,
+// previews and replays certified against this solver all still hold.
+export const BODY_LEAN = 0.9;          // ~52 degrees: leaning, never lying down
+export const BODY_RIGHTING = 55;       // how hard the air pulls the body to its lean (1/s^2)
+export const BODY_DAMPING = 7;         // 1/s; ~0.47 of critical — one small overshoot, then still
+export const BODY_GROUND_DAMPING = 16; // sliding along the floor is not a place to cartwheel
+export const BODY_MAX_SPIN = 14;       // rad/s; a tumble, not a propeller
+const FACING_SPEED = 60;               // px/s of sideways travel needed to turn around
+const HIT_SPEED = 90;                  // the same line triggerImpact draws for a real hit
+
+export function leanFor(velocity, facing) {
+  return facing * clamp(Math.atan2(velocity.y, Math.abs(velocity.x)), -BODY_LEAN, BODY_LEAN);
+}
+
+export function startBody(model) {
+  const v = model.avatarVelocity;
+  model.facing = v.x < 0 ? -1 : 1;
+  model.bodyAngle = leanFor(v, model.facing);
+  model.spin = 0;
+  model.turnedAt = -1;
+}
+
+// What a contact would do to the body if it had grip. The solver's contacts are
+// frictionless — that keeps every route exactly where it was certified — so the
+// spin is what the drawing would do, never something the trajectory feels.
+export function kickBody(model, contact, velocity, hitSpeed) {
+  if (hitSpeed <= HIT_SPEED) return;
+  const along = velocity.x * contact.nx + velocity.y * contact.ny;
+  const tx = velocity.x - along * contact.nx, ty = velocity.y - along * contact.ny;
+  // Rolling direction: the normal crossed with the sliding velocity. Canvas y
+  // points down, so positive is clockwise — a ball rolling right on a floor.
+  const roll = (contact.nx * ty - contact.ny * tx) / model.avatarRadius;
+  // A head-on hit pitches the head back, away from what it ran into.
+  const recoil = -(model.facing ?? 1) * Math.abs(contact.nx) * hitSpeed / model.avatarRadius;
+  model.spin = clamp((model.spin ?? 0) + roll * 0.35 + recoil * 0.12, -BODY_MAX_SPIN, BODY_MAX_SPIN);
+}
+
+export function stepBody(model, dt) {
+  const v = model.avatarVelocity;
+  if (model.facing === undefined) startBody(model);
+  if (Math.abs(v.x) > FACING_SPEED && Math.sign(v.x) !== model.facing) {
+    model.facing = Math.sign(v.x);
+    // Turning around mirrors the drawing, so the lean mirrors with it: the
+    // body keeps pointing where it pointed, it just looks the other way.
+    model.bodyAngle = -model.bodyAngle;
+    model.spin = -model.spin;
+    model.turnedAt = model.flightTime;
+  }
+  const grounded = model.avatarPosition.y + model.avatarRadius >= model.groundY - 1;
+  const target = grounded ? 0 : leanFor(v, model.facing);
+  let offset = model.bodyAngle - target;
+  // Tumbling past a full turn must come back the short way, not unwind.
+  offset = Math.atan2(Math.sin(offset), Math.cos(offset));
+  const damping = grounded ? BODY_GROUND_DAMPING : BODY_DAMPING;
+  model.spin += (-offset * BODY_RIGHTING - model.spin * damping) * dt;
+  model.spin = clamp(model.spin, -BODY_MAX_SPIN, BODY_MAX_SPIN);
+  model.bodyAngle = Math.atan2(Math.sin(target + offset + model.spin * dt), Math.cos(target + offset + model.spin * dt));
 }
 
 export function stepPhysics(model, dt = FIXED_STEP) {
@@ -117,7 +191,7 @@ export function stepPhysics(model, dt = FIXED_STEP) {
         const contact = distance > .001
           ? { nx: (p.x - item.x) / distance, ny: (p.y - item.y) / distance, depth: core - distance }
           : { nx: 0, ny: -1, depth: core };
-        const speed = resolveContact(p, v, contact, .45);
+        const speed = resolveContact(p, v, contact, .45, model);
         if (speed > 90) model.triggerImpact(speed, p.x, p.y, "planet");
       }
     }
@@ -150,7 +224,7 @@ export function stepPhysics(model, dt = FIXED_STEP) {
         v.x *= 0.88; v.y *= 0.88;
         model.markInteraction(item, "break");
       } else if (contact) {
-        const speed = resolveContact(p, v, contact, 0.2);
+        const speed = resolveContact(p, v, contact, 0.2, model);
         if (speed > 90) model.triggerImpact(speed, p.x, p.y, "cardboard");
       }
     }
@@ -162,11 +236,11 @@ export function stepPhysics(model, dt = FIXED_STEP) {
       return;
     }
     if (item.type === "solid" || (item.type === "gate" && !gateIsOpen(item, model.objectState))) {
-      const speed = resolveContact(p, v, rectContact(p, radius, movedBody(item, model.flightTime)), 0.4 * model.bounceScale);
+      const speed = resolveContact(p, v, rectContact(p, radius, movedBody(item, model.flightTime)), 0.4 * model.bounceScale, model);
       if (speed > 90) model.triggerImpact(speed, p.x, p.y, item.type);
     }
     if (item.type === "cushion") {
-      const speed = resolveContact(p, v, lineContact(p, radius, item), 1.05 * model.bounceScale);
+      const speed = resolveContact(p, v, lineContact(p, radius, item), 1.05 * model.bounceScale, model);
       if (speed > 70) {
         model.markInteraction(item, "cushion");
         model.triggerImpact(speed, p.x, p.y, "cushion");
@@ -179,7 +253,7 @@ export function stepPhysics(model, dt = FIXED_STEP) {
       const incoming = magnitude(v);
       const charge = clamp((incoming - (item.threshold ?? 180)) / 520, 0, 1);
       const bounce = (item.base ?? 0.55) + charge * (item.gain ?? 1.15);
-      const speed = resolveContact(p, v, lineContact(p, radius, item), bounce * model.bounceScale);
+      const speed = resolveContact(p, v, lineContact(p, radius, item), bounce * model.bounceScale, model);
       if (speed > 60) {
         model.markInteraction(item, "spring");
         model.triggerImpact(speed, p.x, p.y, "spring");
@@ -193,6 +267,7 @@ export function stepPhysics(model, dt = FIXED_STEP) {
         v.x *= 0.94;
         model.waterSkips += 1;
         model.markInteraction(item, "water");
+        model.contactNormal = { x: 0, y: -1 };
         model.triggerImpact(Math.abs(v.y), p.x, item.y, "water");
       } else if (p.y > item.y + radius * 0.6) {
         model.failureReason = "Za stromo! Płaski lot pozwala zrobić kaczkę. Tę drugą.";
@@ -203,7 +278,7 @@ export function stepPhysics(model, dt = FIXED_STEP) {
   }
 
   if (p.y + radius > model.groundY) {
-    const speed = resolveContact(p, v, { nx: 0, ny: -1, depth: p.y + radius - model.groundY }, 0.25 * model.bounceScale);
+    const speed = resolveContact(p, v, { nx: 0, ny: -1, depth: p.y + radius - model.groundY }, 0.25 * model.bounceScale, model);
     if (speed > 90) model.triggerImpact(speed, p.x, model.groundY, "ground");
     if (Math.abs(v.y) < 35) v.y = 0;
     v.x *= Math.exp(-3.5 * dt);
@@ -229,6 +304,7 @@ export function stepPhysics(model, dt = FIXED_STEP) {
     return;
   }
   model.rotation = Math.atan2(v.y, v.x);
+  stepBody(model, dt);
   const grounded = p.y + radius >= model.groundY - 1 && magnitude(v) < 100;
   model.settledTime = grounded ? model.settledTime + dt : 0;
   if (p.x < -120 || p.x > 1410 || p.y > 760 || model.flightTime > 6 || model.settledTime > 0.28) {
@@ -255,4 +331,31 @@ export function describeMiss(model) {
   return dy < 0
     ? grazed ? "Przeszedłeś tuż nad celem. Celuj odrobinę płasko." : "Za wysoko. Spłaszcz łuk."
     : grazed ? "Przeszedłeś tuż pod celem. Podnieś łuk odrobinę." : "Za nisko. Unieś łuk.";
+}
+
+// Where a shadow cast straight down from (x, y) lands: the top of the first
+// thing the hero would actually stand on, or the floor. The shadow used to be
+// painted on the floor line whatever was in between, so over a table or a
+// crate it sat on the crate's front face — a depth cue pointing at the wrong
+// surface. Only what the solver collides with counts; a portal or a fan does
+// not catch a shadow.
+export function surfaceBelow(model, x, y) {
+  let best = model.groundY;
+  for (const item of model.interactions) {
+    const open = item.type === "gate" && gateIsOpen(item, model.objectState);
+    const broken = item.type === "breakable" && model.objectState[item.id];
+    if ((item.type === "solid" || item.type === "gate" || item.type === "breakable") && !open && !broken) {
+      const body = movedBody(item, model.flightTime);
+      if (x >= body.x && x <= body.x + body.width && body.y >= y && body.y < best) best = body.y;
+    } else if (item.type === "cushion" || item.type === "spring") {
+      const { a, b } = item;
+      const low = Math.min(a.x, b.x), high = Math.max(a.x, b.x);
+      if (high - low < 1 || x < low || x > high) continue;
+      const top = a.y + ((b.y - a.y) * (x - a.x)) / (b.x - a.x) - (item.thickness ?? 12);
+      if (top >= y && top < best) best = top;
+    } else if (item.type === "water" && x >= item.x && x <= item.x + item.width && item.y >= y && item.y < best) {
+      best = item.y;
+    }
+  }
+  return best;
 }

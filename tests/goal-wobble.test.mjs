@@ -7,6 +7,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { GameRenderer } from "../src/render.js";
+import { createRng } from "../src/particles.js";
 
 // Only the impact branch of handleGameEvent is exercised, so the renderer
 // needs none of its canvas or game-model machinery — same pattern as the
@@ -17,7 +18,9 @@ function impactRenderer(goalCentre) {
   renderer.callouts = [];
   renderer.shake = 0;
   renderer.goalWobble = 0;
-  renderer.model = { goalCentre };
+  // The constructor seeds the effects' random; a half-built renderer must too.
+  renderer.random = createRng(1);
+  renderer.model = { goalCentre, avatarRadius: 35 };
   return renderer;
 }
 

@@ -1,6 +1,6 @@
 // Visual language: mint = active/entry, coral = obstacle, gold = optional reward,
 // crimson + spikes = the one thing that ends the flight on touch.
-import { movedBody, pendulumAngle, pendulumBob } from "./physics.js?v=0.44.0";
+import { movedBody, pendulumAngle, pendulumBob } from "./physics.js?v=0.45.0";
 const ink = "#19142d", cream = "#fff5d9", mint = "#5ce1bd", coral = "#ff6078", gold = "#ffd35f", violet = "#a28bff", danger = "#d6002f";
 function box(ctx, x, y, w, h, color, radius = 12) {
   ctx.beginPath(); ctx.roundRect(x, y, w, h, radius);
@@ -233,9 +233,15 @@ export function drawObjective(ctx, model, time) {
     ctx.strokeStyle = "rgba(255,245,217,.45)"; ctx.lineWidth = 3; ctx.setLineDash([4, 10]);
     ctx.beginPath(); ctx.moveTo(model.level.goal.x, model.level.goal.y - motion.amplitude); ctx.lineTo(model.level.goal.x, model.level.goal.y + motion.amplitude); ctx.stroke(); ctx.setLineDash([]);
   }
-  ctx.strokeStyle = model.objectiveMet ? mint : coral;
-  ctx.lineWidth = 3; ctx.globalAlpha = .55 + Math.sin(time * 3) * .12; ctx.setLineDash([7, 7]);
-  ctx.beginPath(); ctx.arc(goal.x, goal.y, model.goalRadius, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
+  // Once the hero is in, "hit here" is no longer an instruction: the dashed
+  // ring and the caption kept standing over the landed hero and printed
+  // TRAF TUTAJ straight through the success tag. The win owns that space.
+  const landed = model.phase === "succeeded";
+  if (!landed) {
+    ctx.strokeStyle = model.objectiveMet ? mint : coral;
+    ctx.lineWidth = 3; ctx.globalAlpha = .55 + Math.sin(time * 3) * .12; ctx.setLineDash([7, 7]);
+    ctx.beginPath(); ctx.arc(goal.x, goal.y, model.goalRadius, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
+  }
   // The caption used to repeat the requirement at the goal while the object it
   // described stood elsewhere on screen — an instruction pointing at the wrong
   // thing. Each required object already labels its own action, so the goal only
@@ -243,7 +249,7 @@ export function drawObjective(ctx, model, time) {
   // The collider may sit inside the drawn object, so the caption clears the
   // artwork rather than the hit circle.
   const captionLift = Math.max(model.goalRadius, 74) + 28;
-  label(ctx, model.objectiveMet ? "TRAF TUTAJ" : "CEL ZAMKNIĘTY", goal.x, goal.y - captionLift, model.objectiveMet ? mint : coral, 11);
+  if (!landed) label(ctx, model.objectiveMet ? "TRAF TUTAJ" : "CEL ZAMKNIĘTY", goal.x, goal.y - captionLift, model.objectiveMet ? mint : coral, 11);
   const star = model.level.star;
   if (star && !model.collectedStar) {
     ctx.save(); ctx.translate(star.x, star.y); ctx.rotate(Math.sin(time * 2) * .13);
