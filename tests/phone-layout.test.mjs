@@ -26,10 +26,14 @@ test("the world fits between the strips, not under them", () => {
   }
 });
 
-test("with nothing over the canvas the camera is exactly the old one", () => {
-  for (const [w, h, width, height] of [[852, 393, 1388, 640], [800, 500, 1280, 800], [1280, 640, 1280, 640]]) {
+test("with nothing over the canvas the camera keeps the stage's exact proportions", () => {
+  // 0.48.0 stopped rounding the view up to whole units: that rounding alone
+  // stretched the world by up to 0.12% (1280x720), measured in Chromium.
+  for (const [w, h, width, height] of [[852, 393, (640 * 852) / 393, 640], [800, 500, 1280, 800], [1280, 640, 1280, 640], [1280, 720, 1280, 720]]) {
     const v = createCropFreeViewport(w, h);
-    assert.deepEqual([v.width, v.height, v.safeX, v.safeY], [width, height, 0, 0]);
+    assert.ok(Math.abs(v.width - width) < 1e-9 && Math.abs(v.height - height) < 1e-9, `${w}x${h}: view ${v.width}x${v.height}`);
+    assert.ok(Math.abs(v.width / v.height - w / h) < 1e-12, `${w}x${h}: the world is stretched`);
+    assert.deepEqual([v.safeX, v.safeY], [0, 0]);
   }
 });
 

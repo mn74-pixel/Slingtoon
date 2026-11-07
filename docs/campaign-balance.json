@@ -227,7 +227,7 @@
     "number": 37,
     "id": "harbour-37",
     "margin": 20,
-    "winningGridShots": 97,
+    "winningGridShots": 98,
     "gridShots": 620,
     "required": 0
   },
@@ -403,7 +403,7 @@
     "number": 59,
     "id": "moon-59",
     "margin": 10,
-    "winningGridShots": 80,
+    "winningGridShots": 81,
     "gridShots": 620,
     "required": 1
   },
@@ -459,7 +459,7 @@
     "number": 66,
     "id": "station-66",
     "margin": 12,
-    "winningGridShots": 129,
+    "winningGridShots": 130,
     "gridShots": 620,
     "required": 1
   },
@@ -578,8 +578,8 @@
   {
     "number": 81,
     "id": "lab-81",
-    "margin": 20,
-    "winningGridShots": 75,
+    "margin": 16,
+    "winningGridShots": 68,
     "gridShots": 620,
     "required": 0
   },
@@ -602,8 +602,8 @@
   {
     "number": 84,
     "id": "lab-84",
-    "margin": 20,
-    "winningGridShots": 78,
+    "margin": 8,
+    "winningGridShots": 43,
     "gridShots": 620,
     "required": 0
   },
@@ -626,8 +626,8 @@
   {
     "number": 87,
     "id": "lab-87",
-    "margin": 20,
-    "winningGridShots": 105,
+    "margin": 16,
+    "winningGridShots": 78,
     "gridShots": 620,
     "required": 1
   },
@@ -635,7 +635,7 @@
     "number": 88,
     "id": "lab-88",
     "margin": 8,
-    "winningGridShots": 69,
+    "winningGridShots": 70,
     "gridShots": 620,
     "required": 2
   }

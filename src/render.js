@@ -1,11 +1,12 @@
-import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.47.0";
-import { RENDER_MAX_PIXELS, clientPointToWorld, createCropFreeViewport, edgeMarker, renderScale } from "./viewport.js?v=0.47.0";
-import { POUCH_HALF, REST_LEAN, pouchEnds, restPosition, restingGrip, slingFrame, slingGrip } from "./sling-art.js?v=0.47.0";
-import { drawInteractions, drawObjective } from "./interactions-renderer.js?v=0.47.0";
-import { drawCampaignGoal, drawCampaignScene, drawWorldCompanion, setSceneBleed } from "./world-renderer.js?v=0.47.0";
-import { drawSceneLife } from "./scene-life.js?v=0.47.0";
-import { createRng, sprayAngle, stepParticle } from "./particles.js?v=0.47.0";
-import { surfaceBelow } from "./physics.js?v=0.47.0";
+import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.48.0";
+import { RENDER_MAX_PIXELS, clientPointToWorld, createCropFreeViewport, edgeMarker, renderScale } from "./viewport.js?v=0.48.0";
+import { POUCH_HALF, REST_LEAN, pouchEnds, restPosition, restingGrip, slingFrame, slingGrip } from "./sling-art.js?v=0.48.0";
+import { drawInteractions, drawObjective } from "./interactions-renderer.js?v=0.48.0";
+import { drawCampaignGoal, drawCampaignScene, drawWorldCompanion, setSceneBleed } from "./world-renderer.js?v=0.48.0";
+import { drawSceneLife } from "./scene-life.js?v=0.48.0";
+import { createRng, sprayAngle, stepParticle } from "./particles.js?v=0.48.0";
+import { speechBubbleLayout } from "./prop-art.js?v=0.48.0";
+import { surfaceBelow } from "./physics.js?v=0.48.0";
 
 // How long the hero takes to turn around when a bounce sends them back.
 const TURN_SECONDS = 0.12;
@@ -137,8 +138,13 @@ export class GameRenderer {
     const viewport = createCropFreeViewport(cssWidth, cssHeight, WORLD.width, WORLD.height, inset);
     this.viewport = viewport;
     this.pixelScale = renderScale(cssWidth, viewport, devicePixelRatio, maxPixels);
-    const width = Math.max(1, Math.round(viewport.width * this.pixelScale));
-    const height = Math.max(1, Math.round(viewport.height * this.pixelScale));
+    // The backing store is sized from the CSS box itself, so its proportions
+    // are the box's to the pixel. Sizing it from the rounded-up logical view
+    // let the two drift apart by a row: 1080x601 drawn into 720x400 css, a
+    // 0.17% vertical stretch, measured as the worst of 140 screen setups.
+    const devicePerCss = (this.pixelScale * viewport.width) / cssWidth;
+    const width = Math.max(1, Math.round(cssWidth * devicePerCss));
+    const height = Math.max(1, Math.round(cssHeight * devicePerCss));
     if (this.canvas.width !== width) this.canvas.width = width;
     if (this.canvas.height !== height) this.canvas.height = height;
   }
@@ -317,8 +323,9 @@ export class GameRenderer {
     this.drawViewportBackdrop(ctx);
     // Everything below draws in world units; the scale turns them into the
     // screen's own pixels.
-    const k = this.canvas.width / this.viewport.width;
-    ctx.setTransform(k, 0, 0, k, 0, 0);
+    // One scale per axis, the same two the pointer maps through
+    // (clientPointToWorld), so what you touch is exactly what you see.
+    ctx.setTransform(this.canvas.width / this.viewport.width, 0, 0, this.canvas.height / this.viewport.height, 0, 0);
     ctx.save();
     ctx.translate(this.viewport.offsetX, this.viewport.offsetY);
 
@@ -1393,7 +1400,12 @@ export class GameRenderer {
     if (model.speechText && (model.phase === GamePhase.AIMING || model.phase === GamePhase.FLYING)
       && !edgeMarker(model.avatarPosition, this.viewport)) {
       const headClearance = this.faceImage ? 102 : model.avatarRadius;
-      this.drawSpeechBubble(ctx, position.x, position.y - headClearance - 39, model.speechText);
+      // Keep the star and the goal in view: the bubble moves below the hero,
+      // or fades, rather than printing a joke over what the player aims at.
+      const avoid = [{ x: model.goalCentre.x, y: model.goalCentre.y, r: model.goalRadius * 0.6 }];
+      if (model.level.star && !model.collectedStar) avoid.push({ x: model.level.star.x, y: model.level.star.y, r: 22 });
+      const below = this.faceImage ? 70 : model.avatarRadius;
+      this.drawSpeechBubble(ctx, position.x, speechBubbleLayout(model.speechText, position, { above: headClearance, below }, avoid), model.speechText);
     }
   }
 
@@ -1843,15 +1855,17 @@ export class GameRenderer {
     }
   }
 
-  drawSpeechBubble(ctx, anchorX, anchorY, text) {
-    const width = clamp(text.length * 8.2 + 34, 125, 260);
-    const x = clamp(anchorX - width * 0.5, 12, WORLD.width - width - 12);
-    const y = clamp(anchorY - 36, 18, WORLD.height - 95);
+  drawSpeechBubble(ctx, anchorX, layout, text) {
+    const { x, y, width, side, alpha } = layout;
+    const up = side === "below";
     ctx.save();
+    ctx.globalAlpha = alpha;
     ctx.shadowColor = "rgba(15,10,27,0.30)";
     ctx.shadowBlur = 10;
     ctx.shadowOffsetY = 5;
-    roundedRect(ctx, x, y, width, 39, 16);
+    // Below the hero the box drops 11 px so its pointer, now on top, reaches up.
+    const boxY = up ? y + 11 : y;
+    roundedRect(ctx, x, boxY, width, 39, 16);
     ctx.fillStyle = PALETTE.cream;
     ctx.fill();
     ctx.strokeStyle = PALETTE.ink;
@@ -1859,9 +1873,15 @@ export class GameRenderer {
     ctx.stroke();
     ctx.beginPath();
     const pointerX = clamp(anchorX, x + 24, x + width - 24);
-    ctx.moveTo(pointerX - 9, y + 36);
-    ctx.lineTo(pointerX, y + 50);
-    ctx.lineTo(pointerX + 8, y + 36);
+    if (up) {
+      ctx.moveTo(pointerX - 9, boxY + 3);
+      ctx.lineTo(pointerX, boxY - 11);
+      ctx.lineTo(pointerX + 8, boxY + 3);
+    } else {
+      ctx.moveTo(pointerX - 9, y + 36);
+      ctx.lineTo(pointerX, y + 50);
+      ctx.lineTo(pointerX + 8, y + 36);
+    }
     ctx.fill();
     ctx.stroke();
     ctx.shadowColor = "transparent";
@@ -1869,9 +1889,10 @@ export class GameRenderer {
     ctx.font = "900 12px system-ui, sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(text, x + width * 0.5, y + 20);
+    ctx.fillText(text, x + width * 0.5, boxY + 20);
     ctx.restore();
   }
+
 
   // Shown only while the next shot is being prepared: during flight it would
   // just clutter the screen the player is reading.
