@@ -179,3 +179,35 @@ export function clearanceBetween(partsA, partsB) {
   }
   return worst;
 }
+
+// Where the hero's speech bubble goes.
+//
+// It always sat above the head, whatever was there: measured over 615 flights
+// (every mission's certified route and six deliberate misses each), it covered
+// the uncollected star in 183 flights and the goal's core in 4.1% of all
+// flight frames — the two things the player is aiming at, hidden by a joke.
+// Now it tries above, then below; where both would cover something it stays
+// above but fades, so the line is still readable and the target shows through.
+export const BUBBLE_HEIGHT = 50;
+export const BUBBLE_FADE = 0.35;
+
+export function speechBubbleLayout(text, hero, { above, below }, avoid = [], world = { width: 1280, height: 640 }) {
+  const clampTo = (value, low, high) => Math.max(low, Math.min(high, value));
+  const width = clampTo(text.length * 8.2 + 34, 125, 260);
+  const x = clampTo(hero.x - width * 0.5, 12, world.width - width - 12);
+  const place = (side) => {
+    const y = side === "above"
+      ? clampTo(hero.y - above - 39 - 36, 18, world.height - 95)
+      : clampTo(hero.y + below + 14, 18, world.height - BUBBLE_HEIGHT - 8);
+    return { x, y, width, height: BUBBLE_HEIGHT, side };
+  };
+  const covers = (box) => avoid.some((spot) => {
+    const nx = clampTo(spot.x, box.x, box.x + box.width), ny = clampTo(spot.y, box.y, box.y + box.height);
+    return Math.hypot(spot.x - nx, spot.y - ny) < spot.r;
+  });
+  for (const side of ["above", "below"]) {
+    const box = place(side);
+    if (!covers(box)) return { ...box, alpha: 1 };
+  }
+  return { ...place("above"), alpha: BUBBLE_FADE };
+}

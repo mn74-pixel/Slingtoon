@@ -27,9 +27,12 @@ export function createCropFreeViewport(cssWidth, cssHeight, worldWidth = 1280, w
   const insetX = Math.min(Math.max(0, Number(inset.x) || 0), width / 3);
   const insetY = Math.min(Math.max(0, Number(inset.y) || 0), height / 3);
   const scale = Math.min((width - insetX * 2) / safeWorldWidth, (height - insetY * 2) / safeWorldHeight);
-  // 1e-6 so float noise on the fitted axis (640.0000000001) never adds a pixel.
-  const viewWidth = Math.max(safeWorldWidth, Math.ceil(width / scale - 1e-6));
-  const viewHeight = Math.max(safeWorldHeight, Math.ceil(height / scale - 1e-6));
+  // Exact, not rounded up: the view has the stage's own proportions to the
+  // last decimal. Rounding one axis up to a whole unit stretched the world by
+  // up to 0.12% (1280x720 measured); the canvas is sized from the CSS box now,
+  // so nothing needs the view to be whole.
+  const viewWidth = Math.max(safeWorldWidth, width / scale);
+  const viewHeight = Math.max(safeWorldHeight, height / scale);
 
   return Object.freeze({
     width: viewWidth,

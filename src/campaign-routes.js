@@ -402,8 +402,8 @@ export const CAMPAIGN_ROUTES = {
       "y": 318
     },
     "starPull": {
-      "x": 50,
-      "y": 545
+      "x": 80,
+      "y": 535
     }
   },
   "38": {
@@ -805,7 +805,7 @@ export const CAMPAIGN_ROUTES = {
     },
     "star": {
       "x": 650,
-      "y": 454
+      "y": 477
     },
     "starPull": {
       "x": 50,
@@ -1010,12 +1010,12 @@ export const CAMPAIGN_ROUTES = {
   },
   "81": {
     "pull": {
-      "x": 70,
+      "x": 75,
       "y": 565
     },
     "star": {
-      "x": 379,
-      "y": 167
+      "x": 357,
+      "y": 185
     },
     "starPull": {
       "x": 105,
@@ -1043,24 +1043,24 @@ export const CAMPAIGN_ROUTES = {
     },
     "star": {
       "x": 384,
-      "y": 310
+      "y": 332
     },
     "starPull": {
-      "x": 115,
-      "y": 480
+      "x": 135,
+      "y": 530
     }
   },
   "84": {
     "pull": {
-      "x": 65,
-      "y": 565
+      "x": 40,
+      "y": 560
     },
     "star": {
-      "x": 565,
-      "y": 371
+      "x": 523,
+      "y": 369
     },
     "starPull": {
-      "x": 50,
+      "x": 55,
       "y": 535
     }
   },
@@ -1094,12 +1094,12 @@ export const CAMPAIGN_ROUTES = {
   },
   "87": {
     "pull": {
-      "x": 45,
-      "y": 525
+      "x": 40,
+      "y": 520
     },
     "star": {
-      "x": 660,
-      "y": 478
+      "x": 634,
+      "y": 477
     },
     "starPull": {
       "x": 35,
@@ -1108,16 +1108,16 @@ export const CAMPAIGN_ROUTES = {
   },
   "88": {
     "pull": {
-      "x": 35,
+      "x": 40,
       "y": 465
     },
     "star": {
-      "x": 919,
-      "y": 242
+      "x": 794,
+      "y": 477
     },
     "starPull": {
-      "x": 135,
-      "y": 530
+      "x": 140,
+      "y": 520
     }
   }
 };
