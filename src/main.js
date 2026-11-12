@@ -1,13 +1,13 @@
-import { GameModel, GameMode, GamePhase, LEVELS, modifierName } from "./game.js?v=0.48.0";
-import { GameRenderer } from "./render.js?v=0.48.0";
-import { GameAudio } from "./audio.js?v=0.48.0";
-import { FaceStudio } from "./face-studio.js?v=0.48.0";
-import { CHARACTER_UNLOCKS, PROGRESS_KEY, TOKEN_SCORE_STEP, characterLock, countMastered, countStars, isMastered, readProgress, hintOffer, purchaseHint, recordStreak, rewardSuccess, medalText } from "./progress.js?v=0.48.0";
-import { STREAK_MAX_SHOTS, STREAK_MIN_POOL, canStartStreak, clearStreakMission, createStreakRun, drawStreakMission, spendStreakShot, streakSummary } from "./streak.js?v=0.48.0";
-import { CHAPTERS } from "./levels.js?v=0.48.0";
-import { settledAim, trimAimTrail } from "./aim-settle.js?v=0.48.0";
-import { RENDER_MAX_PIXELS, nextPixelBudget, overlayInset } from "./viewport.js?v=0.48.0";
-import { approachTimeFeel, armTimeFeel, createTimeFeel, punchTimeFeel, timeScale } from "./time-feel.js?v=0.48.0";
+import { GameModel, GameMode, GamePhase, LEVELS, modifierName } from "./game.js?v=0.49.0";
+import { GameRenderer } from "./render.js?v=0.49.0";
+import { GameAudio } from "./audio.js?v=0.49.0";
+import { FaceStudio } from "./face-studio.js?v=0.49.0";
+import { CHARACTER_UNLOCKS, PROGRESS_KEY, TOKEN_SCORE_STEP, characterLock, countMastered, countStars, isMastered, readProgress, hintOffer, purchaseHint, recordStreak, rewardSuccess, medalText } from "./progress.js?v=0.49.0";
+import { STREAK_MAX_SHOTS, STREAK_MIN_POOL, canStartStreak, clearStreakMission, createStreakRun, drawStreakMission, spendStreakShot, streakSummary } from "./streak.js?v=0.49.0";
+import { CHAPTERS } from "./levels.js?v=0.49.0";
+import { settledAim, trimAimTrail } from "./aim-settle.js?v=0.49.0";
+import { RENDER_MAX_PIXELS, nextPixelBudget, overlayInset } from "./viewport.js?v=0.49.0";
+import { approachTimeFeel, armTimeFeel, createTimeFeel, punchTimeFeel, timeScale } from "./time-feel.js?v=0.49.0";
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -109,7 +109,7 @@ let progress = loadProgress();
 let highestUnlockedLevel = progress.highestUnlockedLevel;
 let mapChapterIndex = 0;
 let lastReward = null;
-const FULLSCREEN_TIP_KEY = "slingtoon-fullscreen-tip-0.48.0";
+const FULLSCREEN_TIP_KEY = "slingtoon-fullscreen-tip-0.49.0";
 
 function loadProgress() {
   try {
@@ -505,7 +505,9 @@ function pointFromPointer(event) {
   return renderer.clientPoint(event.clientX, event.clientY);
 }
 
-const OVERLAYS = [".mission-strip", ".status-row", ".topbar"];
+// Only the bar along the top covers the board; the instruction chips float
+// over its corner on purpose and fade while a shot is in play.
+const OVERLAYS = [".mission-strip", ".topbar"];
 
 // The sharpness budget (viewport.js nextPixelBudget): full device resolution
 // until the frames say the device cannot afford it.
@@ -513,7 +515,16 @@ let pixelBudget = RENDER_MAX_PIXELS;
 const frameIntervals = new Float32Array(90);
 let frameSlot = 0;
 
+// The mission title gets exactly the room the top-right controls leave. A
+// fixed reserve was wrong twice: too small when mission 2 adds its two mode
+// buttons, too generous on a wide phone. The controls are measured instead.
+const topActions = document.querySelector(".top-actions");
+function syncActionsWidth() {
+  if (topActions) document.documentElement.style.setProperty("--actions-width", `${Math.ceil(topActions.getBoundingClientRect().width)}px`);
+}
+
 function syncGameViewport() {
+  syncActionsWidth();
   const rect = elements.stage.getBoundingClientRect();
   if (rect.width > 0 && rect.height > 0) {
     renderer.resizeView(rect.width, rect.height, overlayInset(rect, OVERLAYS.map((selector) => document.querySelector(selector))), window.devicePixelRatio || 1, pixelBudget);
@@ -839,6 +850,9 @@ function updateUi() {
   elements.statusText.textContent = model.statusText;
 
   const controlsEnabled = model.phase !== GamePhase.FLYING && model.phase !== GamePhase.AIMING;
+  // While a shot is lined up or in the air, the instruction chips step back so
+  // nothing on the board is hidden behind them.
+  document.body.classList.toggle("is-playing", !controlsEnabled);
   const offer = hintOffer(progress, model.level, model.attempts);
   elements.hintButton.disabled = model.phase !== GamePhase.READY;
   elements.hintButton.textContent = offer
@@ -846,6 +860,9 @@ function updateUi() {
       ? `💡 PODPOWIEDŹ ${offer.stage}/3 · ${offer.cost} żeton`
       : `💡 PODPOWIEDŹ ${offer.stage}/3 · ${offer.rescue ? "RATUNKOWA" : "GRATIS"}`
     : model.hintStage < (progress.hints[model.level.id] ?? 0) ? "💡 POKAŻ ODKRYTE" : "💡 UKRYJ PODPOWIEDŹ";
+  // The compact top bar has room for the count, not the sentence; the full
+  // label stays the button's text for screen readers and wider layouts.
+  elements.hintButton.dataset.short = offer ? `💡 ${offer.stage}/3` : "💡";
   elements.hintButton.title = offer
     ? `Masz ${progress.hintTokens} żetonów. Odkryj zasadę, kierunek, a na końcu pełną trasę. Odkrycia zostają zapisane.`
     : model.activeHint?.text ?? "Wszystkie podpowiedzi wykorzystane";
@@ -957,6 +974,7 @@ window.addEventListener("orientationchange", () => requestAnimationFrame(syncGam
 window.visualViewport?.addEventListener("resize", () => requestAnimationFrame(syncGameViewport));
 if ("ResizeObserver" in window) {
   new ResizeObserver(syncGameViewport).observe(elements.stage);
+  if (topActions) new ResizeObserver(syncGameViewport).observe(topActions);
 } else {
   window.addEventListener("resize", syncGameViewport);
 }
@@ -1017,7 +1035,7 @@ window.addEventListener("keydown", (event) => {
 
 window.addEventListener("load", () => {
   if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
-    navigator.serviceWorker.register("./sw.js?v=0.48.0").catch(() => {});
+    navigator.serviceWorker.register("./sw.js?v=0.49.0").catch(() => {});
   }
   scheduleFullscreenSuggestion();
   syncGameViewport();

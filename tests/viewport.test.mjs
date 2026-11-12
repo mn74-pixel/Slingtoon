@@ -57,7 +57,7 @@ function backdropCoverage(offsetX, offsetY) {
   };
   const renderer = Object.create(GameRenderer.prototype);
   renderer.background = { width: 1280, height: 640, naturalWidth: 1280, naturalHeight: 640 };
-  renderer.viewport = { offsetX, offsetY };
+  renderer.viewport = { offsetX, offsetY, bleedX: offsetX, bleedY: offsetY };
   renderer.drawBackdropImage(ctx);
   return painted;
 }

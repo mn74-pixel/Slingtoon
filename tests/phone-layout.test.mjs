@@ -59,9 +59,24 @@ test("the inset is read from the strips that really float over the canvas", () =
   const fake = (e) => ({ getBoundingClientRect: () => e.box, style: e.style });
   const styleOf = (element) => element.style;
   const strips = [el(0, 42), el(352, 390)];
-  assert.deepEqual(overlayInset(stage, strips.map(fake), styleOf), { x: 0, y: 42 });
+  assert.deepEqual(overlayInset(stage, strips.map(fake), styleOf), { x: 0, top: 42, bottom: 38 });
   // Stacked above or below the canvas (the desktop card) is not "over" it.
   const stacked = [el(0, 42, "static"), el(352, 390, "relative")];
-  assert.deepEqual(overlayInset(stage, stacked.map(fake), styleOf), { x: 0, y: 0 });
-  assert.deepEqual(overlayInset(stage, [null, fake(el(500, 540))], styleOf), { x: 0, y: 0 }, "an element below the stage counted");
+  assert.deepEqual(overlayInset(stage, stacked.map(fake), styleOf), { x: 0, top: 0, bottom: 0 });
+  assert.deepEqual(overlayInset(stage, [null, fake(el(500, 540))], styleOf), { x: 0, top: 0, bottom: 0 }, "an element below the stage counted");
+});
+
+test("a bar along the top only: the board reaches the bottom of the screen", () => {
+  // A player's 932x430 phone showed a third of the screen as empty wall: the
+  // camera kept the larger of a 42 px top bar and a ~60 px bottom row clear on
+  // BOTH sides. With the bottom row gone it keeps only the top bar clear.
+  const v = createCropFreeViewport(932, 430, 1280, 640, { top: 42, bottom: 0 });
+  const scale = 430 / v.height;
+  assert.ok(Math.abs(v.offsetY * scale - 42) < 1e-6, "the world does not start right under the bar");
+  assert.ok(Math.abs((v.offsetY + 640) * scale - 430) < 1e-6, "the world does not reach the bottom edge");
+  assert.ok(scale > 0.6, `the world is drawn at ${scale.toFixed(3)}`);
+  // The scenery still has to paint the larger margin on both sides.
+  assert.ok(v.bleedY >= v.offsetY - 1e-9 && v.bleedY >= v.height - v.offsetY - 640 - 1e-9);
+  const old = createCropFreeViewport(932, 430, 1280, 640, { y: 60 });
+  assert.ok(scale / (430 / old.height) > 1.2, "the single bar gained less than 20% of world size");
 });

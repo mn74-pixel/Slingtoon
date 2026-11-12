@@ -23,27 +23,40 @@ export function createCropFreeViewport(cssWidth, cssHeight, worldWidth = 1280, w
   const width = finitePositive(cssWidth, safeWorldWidth);
   const height = finitePositive(cssHeight, safeWorldHeight);
   // An inset may never eat more than a third of the stage, or a broken
-  // measurement could shrink the world to nothing.
-  const insetX = Math.min(Math.max(0, Number(inset.x) || 0), width / 3);
-  const insetY = Math.min(Math.max(0, Number(inset.y) || 0), height / 3);
-  const scale = Math.min((width - insetX * 2) / safeWorldWidth, (height - insetY * 2) / safeWorldHeight);
+  // measurement could shrink the world to nothing. `y` is the old symmetric
+  // form; `top` and `bottom` cover each edge on its own.
+  const edge = (value, limit) => Math.min(Math.max(0, Number(value) || 0), limit);
+  const insetX = edge(inset.x, width / 3);
+  const insetTop = edge(inset.top ?? inset.y, height / 3);
+  const insetBottom = edge(inset.bottom ?? inset.y, height / 3);
+  const scale = Math.min((width - insetX * 2) / safeWorldWidth, (height - insetTop - insetBottom) / safeWorldHeight);
   // Exact, not rounded up: the view has the stage's own proportions to the
   // last decimal. Rounding one axis up to a whole unit stretched the world by
   // up to 0.12% (1280x720 measured); the canvas is sized from the CSS box now,
   // so nothing needs the view to be whole.
   const viewWidth = Math.max(safeWorldWidth, width / scale);
   const viewHeight = Math.max(safeWorldHeight, height / scale);
+  // The world is centred in the band the interface leaves, not in the stage:
+  // a bar at the top and nothing at the bottom puts it lower, and the larger
+  // of the two margins is what the scenery has to paint ("bleed").
+  const safeTop = insetTop / scale, safeBottom = insetBottom / scale;
+  const offsetY = safeTop + (viewHeight - safeTop - safeBottom - safeWorldHeight) * 0.5;
+  const offsetX = (viewWidth - safeWorldWidth) * 0.5;
 
   return Object.freeze({
     width: viewWidth,
     height: viewHeight,
-    offsetX: (viewWidth - safeWorldWidth) * 0.5,
-    offsetY: (viewHeight - safeWorldHeight) * 0.5,
+    offsetX,
+    offsetY,
+    bleedX: offsetX,
+    bleedY: Math.max(offsetY, viewHeight - offsetY - safeWorldHeight),
     worldWidth: safeWorldWidth,
     worldHeight: safeWorldHeight,
-    // The covered band, in world units: what the player cannot really see.
-    safeX: (insetX * viewWidth) / width,
-    safeY: (insetY * viewHeight) / height,
+    // The covered bands, in world units: what the player cannot really see.
+    safeX: insetX / scale,
+    safeTop,
+    safeBottom,
+    safeY: Math.max(safeTop, safeBottom),
   });
 }
 
@@ -63,7 +76,7 @@ export function overlayInset(stage, overlays, styleOf = (element) => globalThis.
     if (box.top + box.height / 2 < stage.top + stage.height / 2) top = Math.max(top, box.bottom - stage.top);
     else bottom = Math.max(bottom, stage.bottom - box.top);
   }
-  return { x: 0, y: Math.max(top, bottom) };
+  return { x: 0, top, bottom };
 }
 
 // How many canvas pixels to spend on one world unit.
@@ -143,9 +156,9 @@ export function edgeMarker(point, viewport, inset = 62) {
   // The frame the player can actually see: under the overlaying strips the
   // hero is behind frosted glass, so the marker has to stand clear of them.
   const left = -viewport.offsetX + (viewport.safeX ?? 0);
-  const top = -viewport.offsetY + (viewport.safeY ?? 0);
+  const top = -viewport.offsetY + (viewport.safeTop ?? viewport.safeY ?? 0);
   const right = -viewport.offsetX + viewport.width - (viewport.safeX ?? 0);
-  const bottom = -viewport.offsetY + viewport.height - (viewport.safeY ?? 0);
+  const bottom = -viewport.offsetY + viewport.height - (viewport.safeBottom ?? viewport.safeY ?? 0);
   if (point.x >= left && point.x <= right && point.y >= top && point.y <= bottom) return null;
   // The inset keeps the marker fully inside the frame; on a very small frame
   // it must not cross over itself.
