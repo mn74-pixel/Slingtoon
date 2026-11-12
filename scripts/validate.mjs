@@ -241,6 +241,15 @@ assert.match(main, /overlayInset\(rect,/, "the camera no longer knows which stri
   assert.match(html, /class="status-row">[\s\S]*class="key-legend"/, "the keyboard legend left the status row (it printed over the privacy note as an overlay)");
   assert.match(html, /id="keyboardHelp"/, "screen readers lost the full keyboard description");
 }
+// One bar, then the board (0.49.0): a player's 932x430 phone showed a third
+// of the screen as empty wall while a bottom status row sat under the board.
+assert.match(html, /class="top-actions"[\s\S]*id="hintButton"[\s\S]*id="restartButton"[\s\S]*<\/header>/, "hint and restart left the top bar");
+assert.match(main, /const OVERLAYS = \[".mission-strip", ".topbar"\];/, "the instruction chip is counted as covering the board again");
+{
+  const chip = css.slice(css.indexOf("/*\n * One bar, then the board."));
+  assert.ok(chip.length > 500, "the one-bar layout is gone");
+  assert.match(chip, /@media \(orientation: landscape\) \{\s*\.status-row \{[^}]*top: calc\(var\(--hud-row\) \+ 6px\);[^}]*bottom: auto;/, "the status row is back along the bottom");
+}
 assert.match(main, /nextPixelBudget\(pixelBudget, frameIntervals, floor\)/, "the canvas no longer adapts its sharpness to the device");
 assert.match(main, /window\.devicePixelRatio/, "the canvas ignores the screen's pixel density");
 assert.match(css, /object-fit:\s*fill/);
@@ -419,7 +428,7 @@ assert.ok(/export function setSceneBleed/.test(world), "scenes must be told how 
 assert.ok(/function band\(ctx, y, height, fill\)/.test(world) && /function ground\(ctx, points, fill\)/.test(world),
   "bands and ground silhouettes need primitives that reach past the authored width");
 assert.ok(!/fillRect\(0, \w+, 1280,/.test(world), "no scenery band may be nailed to the authored 1280 width");
-assert.ok(render.includes("setSceneBleed(this.viewport.offsetX"), "the renderer must hand the viewport margin to the scene");
+assert.ok(render.includes("setSceneBleed(this.viewport.bleedX"), "the renderer must hand the viewport margin to the scene");
 assert.ok(!render.includes("sceneBackdrop"), "the zoomed margin copy is gone; a scene that paints itself needs no stand-in");
 assert.ok(render.includes("sceneBand(ctx"), "the renderer's own scenes must bleed too, not just the campaign ones");
 

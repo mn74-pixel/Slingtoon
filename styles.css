@@ -2312,3 +2312,134 @@ button:focus-visible, canvas:focus-visible { outline: 3px solid #ffd35f; outline
     line-height: 1.55;
   }
 }
+
+/*
+ * One bar, then the board.
+ *
+ * A player's photo of a 932x430 phone showed a third of the screen as empty
+ * wall: the world sat between a 42 px bar on top and a ~60 px status row at
+ * the bottom, and the camera reserved the larger of the two on both sides.
+ * The status row is gone from the bottom on every landscape screen: hint and
+ * restart moved into the top bar, and the instruction became a chip in the
+ * board's top-left corner that steps back (fades) while a shot is lined up or
+ * in flight. The camera now only keeps the board clear of the top bar.
+ */
+@media (orientation: landscape) and (max-height: 560px) {
+  :root { --hud-row: 42px; --chip-gap: 52px; }
+}
+
+@media (orientation: landscape) and (min-height: 561px) {
+  :root { --hud-row: var(--hud-top); --chip-gap: 96px; }
+}
+
+@media (orientation: landscape) {
+  .status-row {
+    position: absolute;
+    z-index: 6;
+    top: calc(var(--hud-row) + 6px);
+    right: auto;
+    bottom: auto;
+    left: max(10px, env(safe-area-inset-left));
+    width: auto;
+    max-width: min(46vw, 460px);
+    height: auto;
+    min-height: 0;
+    padding: 5px 10px 5px 6px;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 4px;
+    border: 1px solid rgba(255, 245, 217, 0.1);
+    border-radius: 14px;
+    background: rgba(25, 20, 45, 0.82);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+  }
+
+  .status-row .instruction { flex: 0 0 auto; min-width: 0; }
+  .status-row .instruction > div { min-width: 0; }
+
+  .objective-status {
+    top: calc(var(--hud-row) + var(--chip-gap));
+    left: max(10px, env(safe-area-inset-left));
+    transition: opacity 0.25s ease;
+  }
+
+  body.is-playing .status-row,
+  body.is-playing .objective-status { opacity: 0.18; }
+
+  /* Hint and restart now live in the top bar: the count, not the sentence. */
+  .top-actions .hint-button,
+  .top-actions .restart-button {
+    min-height: 32px;
+    height: 32px;
+    padding: 0 10px;
+    border-radius: 11px;
+    font-size: 0;
+    white-space: nowrap;
+  }
+
+  .top-actions .hint-button::before {
+    content: attr(data-short);
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  .top-actions .restart-button::before {
+    content: "↻";
+    font-size: 15px;
+    font-weight: 800;
+  }
+}
+
+@media (orientation: landscape) and (min-height: 561px) {
+  .top-actions .hint-button,
+  .top-actions .restart-button { min-height: 40px; height: 40px; padding: 0 14px; }
+  .top-actions .hint-button::before { font-size: 14px; }
+  .top-actions .restart-button::before { content: "↻ Restart"; font-size: 13px; }
+}
+
+/* The top bar's controls now take a fixed width (measured: 323 px on phones,
+   506 px on bigger screens), so the mission title gets exactly what is left
+   instead of a share of the viewport that was too small on a 568 px phone and
+   wasted on a 932 px one. */
+@media (orientation: landscape) and (max-height: 560px) {
+  .mission-strip { padding-right: calc(335px + env(safe-area-inset-right)); }
+}
+
+@media (orientation: landscape) and (max-height: 560px) and (max-width: 620px) {
+  .select-wrap select { max-width: 64px; }
+  .mission-strip { padding-right: calc(310px + env(safe-area-inset-right)); }
+}
+
+@media (orientation: landscape) and (min-height: 561px) {
+  .mission-strip { padding-right: calc(524px + env(safe-area-inset-right)); }
+}
+
+@media (orientation: landscape) and (max-height: 560px) and (min-width: 700px) {
+  .select-wrap select { max-width: 104px; }
+  .mission-strip { padding-right: calc(349px + env(safe-area-inset-right)); }
+}
+
+/* Measured, not guessed: main.js writes the controls' real width. */
+@media (orientation: landscape) {
+  .mission-strip { padding-right: calc(var(--actions-width, 335px) + 18px + env(safe-area-inset-right)); }
+}
+
+/* Upright screens keep the stacked card, so the top bar wraps instead of
+   pushing its last buttons off the edge (an 820x1180 iPad lost the face and
+   sound buttons once hint and restart joined the bar). */
+@media (orientation: portrait) {
+  .top-actions { flex-wrap: wrap; justify-content: flex-end; }
+  .top-actions .hint-button,
+  .top-actions .restart-button {
+    min-height: 40px;
+    padding: 0 12px;
+    font-size: 0;
+    white-space: nowrap;
+  }
+  .top-actions .hint-button::before { content: attr(data-short); font-size: 14px; font-weight: 800; }
+  .top-actions .restart-button::before { content: "↻"; font-size: 16px; font-weight: 800; }
+}

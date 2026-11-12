@@ -1,12 +1,12 @@
-import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.48.0";
-import { RENDER_MAX_PIXELS, clientPointToWorld, createCropFreeViewport, edgeMarker, renderScale } from "./viewport.js?v=0.48.0";
-import { POUCH_HALF, REST_LEAN, pouchEnds, restPosition, restingGrip, slingFrame, slingGrip } from "./sling-art.js?v=0.48.0";
-import { drawInteractions, drawObjective } from "./interactions-renderer.js?v=0.48.0";
-import { drawCampaignGoal, drawCampaignScene, drawWorldCompanion, setSceneBleed } from "./world-renderer.js?v=0.48.0";
-import { drawSceneLife } from "./scene-life.js?v=0.48.0";
-import { createRng, sprayAngle, stepParticle } from "./particles.js?v=0.48.0";
-import { speechBubbleLayout } from "./prop-art.js?v=0.48.0";
-import { surfaceBelow } from "./physics.js?v=0.48.0";
+import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.49.0";
+import { RENDER_MAX_PIXELS, clientPointToWorld, createCropFreeViewport, edgeMarker, renderScale } from "./viewport.js?v=0.49.0";
+import { POUCH_HALF, REST_LEAN, pouchEnds, restPosition, restingGrip, slingFrame, slingGrip } from "./sling-art.js?v=0.49.0";
+import { drawInteractions, drawObjective } from "./interactions-renderer.js?v=0.49.0";
+import { drawCampaignGoal, drawCampaignScene, drawWorldCompanion, setSceneBleed } from "./world-renderer.js?v=0.49.0";
+import { drawSceneLife } from "./scene-life.js?v=0.49.0";
+import { createRng, sprayAngle, stepParticle } from "./particles.js?v=0.49.0";
+import { speechBubbleLayout } from "./prop-art.js?v=0.49.0";
+import { surfaceBelow } from "./physics.js?v=0.49.0";
 
 // How long the hero takes to turn around when a bounce sends them back.
 const TURN_SECONDS = 0.12;
@@ -383,7 +383,7 @@ export class GameRenderer {
     const image = this.background;
     ctx.drawImage(image, 0, 0, WORLD.width, WORLD.height);
     const left = Math.ceil(this.viewport.offsetX);
-    const top = Math.ceil(this.viewport.offsetY);
+    const top = Math.ceil(this.viewport.bleedY);
     if (left <= 0 && top <= 0) return;
     const width = image.naturalWidth || image.width || WORLD.width;
     const height = image.naturalHeight || image.height || WORLD.height;
@@ -422,7 +422,7 @@ export class GameRenderer {
     const visual = this.model.level.visual;
     // The washes used to stop at the world edge, which put a tint step exactly
     // where the margin began — the same seam the backdrop copy was making.
-    const ox = this.viewport.offsetX, oy = this.viewport.offsetY;
+    const ox = this.viewport.bleedX, oy = this.viewport.bleedY;
     const washX = -ox, washY = -oy, washW = WORLD.width + ox * 2, washH = WORLD.height + oy * 2;
     ctx.fillStyle = "rgba(49,34,75,.23)";
     ctx.fillRect(washX, washY, washW, washH);
@@ -437,7 +437,7 @@ export class GameRenderer {
     // Tell the scene how much screen it actually has. It paints its sky, sea and
     // ground across all of it, so there is no second copy in the margin and no
     // seam where the scale would break.
-    setSceneBleed(this.viewport.offsetX, this.viewport.offsetX, this.viewport.offsetY, this.viewport.offsetY);
+    setSceneBleed(this.viewport.bleedX, this.viewport.bleedX, this.viewport.bleedY, this.viewport.bleedY);
     if (drawCampaignScene(ctx, this.model.level)) return;
     const scenes = {
       laundry: () => this.drawLaundryScene(ctx),
@@ -462,10 +462,10 @@ export class GameRenderer {
     const wall = ctx.createLinearGradient(0, 0, 0, 510);
     wall.addColorStop(0, wallTop);
     wall.addColorStop(1, wallBottom);
-    const oy = this.viewport.offsetY;
+    const oy = this.viewport.bleedY;
     this.sceneBand(ctx, -oy, 510 + oy, wall);
     this.sceneBand(ctx, 510, 76, floorTop);
-    this.sceneBand(ctx, 586, 54 + this.viewport.offsetY, floorBottom);
+    this.sceneBand(ctx, 586, 54 + this.viewport.bleedY, floorBottom);
     this.sceneBand(ctx, 496, 14, "rgba(25, 20, 45, 0.14)");
   }
 
@@ -601,13 +601,13 @@ export class GameRenderer {
   drawOutdoorBase(ctx, skyTop, skyBottom, grass) {
     const sky = ctx.createLinearGradient(0, 0, 0, 520);
     sky.addColorStop(0, skyTop); sky.addColorStop(1, skyBottom);
-    this.sceneBand(ctx, -this.viewport.offsetY, 586 + this.viewport.offsetY, sky);
+    this.sceneBand(ctx, -this.viewport.bleedY, 586 + this.viewport.bleedY, sky);
     ctx.fillStyle = "#fff4d8";
     for (const [x, y, s] of [[180, 120, 1], [540, 75, .8], [935, 140, 1.2]]) {
       ctx.beginPath(); ctx.arc(x, y, 32 * s, 0, Math.PI * 2); ctx.arc(x + 40 * s, y - 10, 42 * s, 0, Math.PI * 2); ctx.arc(x + 80 * s, y + 3, 30 * s, 0, Math.PI * 2); ctx.fill();
     }
     ctx.fillStyle = grass; ctx.beginPath(); ctx.moveTo(0, 430); ctx.quadraticCurveTo(310, 350, 610, 440); ctx.quadraticCurveTo(960, 330, 1280, 420); ctx.lineTo(1280, 640); ctx.lineTo(0, 640); ctx.closePath(); ctx.fill();
-    this.sceneBand(ctx, 574, 66 + this.viewport.offsetY, "#2f7d67");
+    this.sceneBand(ctx, 574, 66 + this.viewport.bleedY, "#2f7d67");
   }
 
   drawGardenScene(ctx) {
@@ -654,7 +654,7 @@ export class GameRenderer {
     ctx.strokeStyle = "#6d4d44"; ctx.lineWidth = 7;
     for (let x = 20; x < 500; x += 65) { ctx.beginPath(); ctx.moveTo(x, 510); ctx.lineTo(x, 586); ctx.stroke(); }
     ctx.fillStyle = "#4bbbd0"; ctx.fillRect(515, 515, 765, 71);
-    this.sceneBand(ctx, 586, 54 + this.viewport.offsetY, "#327a91");
+    this.sceneBand(ctx, 586, 54 + this.viewport.bleedY, "#327a91");
     for (let i = 0; i < 9; i += 1) {
       const y = 530 + i % 3 * 17;
       ctx.strokeStyle = i % 2 ? "rgba(255,245,217,.6)" : "rgba(25,20,45,.2)";
@@ -2257,8 +2257,8 @@ export class GameRenderer {
     // Drawn across everything the player can see, not just the authored
     // 1280x640. Stopping at the world edge put a hard darkening seam exactly on
     // the boundary, which is the frame around the board this release removes.
-    const ox = this.viewport.offsetX;
-    const oy = this.viewport.offsetY;
+    const ox = this.viewport.bleedX;
+    const oy = this.viewport.bleedY;
     const outer = 760 + Math.max(ox, oy) * 0.9;
     const gradient = ctx.createRadialGradient(640, 300, 210 + ox * 0.2, 640, 300, outer);
     gradient.addColorStop(0, "rgba(15, 10, 28, 0)");
