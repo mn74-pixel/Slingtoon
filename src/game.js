@@ -1,7 +1,7 @@
-import { DEFAULT_LEVEL, WORLD } from "./levels.js?v=0.51.1";
-import { FIXED_STEP, clamp, contains, magnitude, startBody, stepPhysics, towerFallen } from "./physics.js?v=0.51.1";
-import { cloneWorld, createWorld, stepWorld, worldAsleep } from "./blocks.js?v=0.51.1";
-export { DEFAULT_LEVEL, LEVELS, WORLD, getLevel } from "./levels.js?v=0.51.1";
+import { DEFAULT_LEVEL, WORLD } from "./levels.js?v=0.52.0";
+import { FIXED_STEP, clamp, contains, magnitude, scoreTowerStep, startBody, stepPhysics, SPARED_SHOT_POINTS } from "./physics.js?v=0.52.0";
+import { cloneWorld, createWorld, stepWorld, worldAsleep } from "./blocks.js?v=0.52.0";
+export { DEFAULT_LEVEL, LEVELS, WORLD, getLevel } from "./levels.js?v=0.52.0";
 
 export const GameMode = Object.freeze({ QUICK: "quickSling", ONE_MOVE: "oneMoveChallenge" });
 export const GamePhase = Object.freeze({ READY: "ready", AIMING: "aiming", FLYING: "flying", SUCCEEDED: "succeeded", FAILED: "failed" });
@@ -35,6 +35,13 @@ export const FLIGHT_STYLES = Object.freeze({
 const MAX_PULL = 132;
 const LAUNCH_MULTIPLIER = 7;
 const copy = (p) => ({ x: p.x, y: p.y });
+
+// One to three stars for a fort, from its score: any win is one star, the
+// thresholds above it are measured per fort by scripts/balance-towers.mjs.
+export function towerRating(level, score) {
+  const [two, three] = level.scoreStars ?? [Infinity, Infinity];
+  return score >= three ? 3 : score >= two ? 2 : 1;
+}
 
 export class GameModel {
   constructor(onEvent = () => {}, level = DEFAULT_LEVEL) {
@@ -98,6 +105,8 @@ export class GameModel {
     // every crack and every fallen block from the shots before (see
     // startFlight), the way a slingshot fort has always worked.
     this.world = this.level.towers ? createWorld(this.level.towers, this.level.groundY) : null;
+    this.towerPoints = 0;
+    this.downTargets = new Set();
     this.objectState = Object.create(null);
     this.visited = new Set();
     this.collectedStar = false;
@@ -287,8 +296,7 @@ export class GameModel {
         while (this.accumulator + 1e-10 >= FIXED_STEP) {
           stepWorld(this.world, FIXED_STEP, 620 * this.gravityScale);
           this.accumulator -= FIXED_STEP;
-          for (const broken of this.world.breaks) this.emit("block-break", broken);
-          if (this.roundInProgress && towerFallen(this)) { this.finishAttempt(true); break; }
+          if (scoreTowerStep(this) && this.roundInProgress) { this.finishAttempt(true); break; }
         }
         return;
       }
@@ -323,7 +331,11 @@ export class GameModel {
       this.prepareNextShot();
       return;
     }
-    if (success && this.world) this.sparedShots = this.shotsLeft;
+    if (success && this.world) {
+      this.sparedShots = this.shotsLeft;
+      this.towerScore = this.towerPoints + this.sparedShots * SPARED_SHOT_POINTS;
+      this.towerStars = towerRating(this.level, this.towerScore);
+    }
     this.phase = success ? GamePhase.SUCCEEDED : GamePhase.FAILED;
     this.avatarVelocity = { x: 0, y: 0 };
     if (!success && this.attempts >= this.level.hints.policy.autoAfterAttempts && this.hintStage === 0) this.revealHint(1, true);
@@ -431,14 +443,30 @@ export class GameModel {
   get airMoveUsed() { return Boolean(this.level.airMove) && this.airMovesLeft < this.flightStyle.charges; }
   get diveMoveUsed() { return Boolean(this.level.diveMove) && this.diveMovesLeft < this.flightStyle.charges; }
   get objectiveMet() { return this.level.required.every((id) => this.visited.has(id)); }
-  get activeHint() { return this.level.hints.stages[this.hintStage - 1] ?? null; }
+  get activeHint() {
+    const stage = this.level.hints.stages[this.hintStage - 1] ?? null;
+    // A fort that needs several shots has a plan: the full-route hint shows
+    // the shot of the plan the round is on, not always the first one.
+    const plan = this.level.plan;
+    if (!stage?.pull || !plan || plan.length < 2) return stage;
+    const shot = this.roundInProgress ? this.shotsPerRound - this.shotsLeft : 0;
+    if (this.planHint?.shot === shot && this.planHint.stage === stage) return this.planHint.hint;
+    const hint = { ...stage, pull: plan[shot] ?? null, text: plan[shot] ? `Strzał ${shot + 1} z ${plan.length} według planu. Duch pokazuje naciągnięcie i całą trasę.` : "Plan się skończył — dobij fort po swojemu." };
+    this.planHint = { shot, stage, hint };
+    return hint;
+  }
   get anchor() { return this.level.anchor; }
   get groundY() { return this.level.groundY; }
   get avatarRadius() { return 35 * (this.modifier === Modifier.GIANT_HEAD ? 1.42 : 1); }
   get avatarGrabRadius() { return Math.max(this.avatarRadius + 34, 35 * 2.65); }
   get waterBounds() { return this.level.water; }
   // On a tower the goal is a body on top of it, and it goes where it falls.
-  get towerTarget() { return this.world?.bodies.find((body) => body.target) ?? null; }
+  // With several alarm clocks, the goal is the first one still standing.
+  get towerTargets() { return this.world?.bodies.filter((body) => body.target) ?? []; }
+  get towerTarget() {
+    const targets = this.towerTargets;
+    return targets.find((body) => !this.downTargets?.has(body.id)) ?? targets[0] ?? null;
+  }
   get goalCentre() {
     const target = this.towerTarget;
     if (target) return { x: target.x, y: target.y };

@@ -3,6 +3,7 @@
 import { createRequire } from "node:module";
 import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import { worldAsleep } from "../src/blocks.js";
 import { GameModel, LEVELS, GamePhase } from "../src/game.js";
 import { GameRenderer } from "../src/render.js";
 const require = createRequire(import.meta.url);
@@ -26,9 +27,17 @@ for (const [index, level] of LEVELS.entries()) {
   ctx.fillText(`${level.number}. ${level.name}`, x + 5, y + 11, 150);
   ctx.drawImage(canvas, x, y + 20, 160, 80);
   if ([8, 12, 36, 40, 47, 57, 64, 75, 79].includes(index)) await writeFile(resolve(output, `mission-${level.number}-ready.png`), canvas.toBuffer("image/png"));
-  model.beginSling(model.anchor); model.dragSling(level.assistPull); model.releaseSling();
-  for (let frame = 0; frame < 720 && model.phase === GamePhase.FLYING; frame++) {
-    model.update(1 / 120); renderer.update(1 / 120);
+  // A fort that needs several shots is played by its measured plan, letting
+  // the fort settle between shots as it does for a player.
+  for (const pull of level.plan ?? [level.assistPull]) {
+    if (model.phase !== GamePhase.READY) break;
+    model.beginSling(model.anchor); model.dragSling(pull); model.releaseSling();
+    for (let frame = 0; frame < 1300 && model.phase === GamePhase.FLYING; frame++) {
+      model.update(1 / 120); renderer.update(1 / 120);
+    }
+    for (let frame = 0; frame < 1500 && model.phase === GamePhase.READY && model.world && !worldAsleep(model.world); frame++) {
+      model.update(1 / 120); renderer.update(1 / 120);
+    }
   }
   if (model.phase !== GamePhase.SUCCEEDED) throw new Error(`Render QA shot failed: ${level.id}`);
   if (renderer.particles.length > 140 || renderer.callouts.length > 4) throw new Error("VFX budget exceeded");

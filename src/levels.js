@@ -1,6 +1,6 @@
-import { CHAPTERS, EXTRA_LEVELS } from "./campaign.js?v=0.51.1";
-import { TOWER_CHAPTER, towerMissions } from "./towers.js?v=0.51.1";
-export { CHAPTERS } from "./campaign.js?v=0.51.1";
+import { CHAPTERS, EXTRA_LEVELS } from "./campaign.js?v=0.52.0";
+import { towerMissions } from "./towers.js?v=0.52.0";
+export { CHAPTERS } from "./campaign.js?v=0.52.0";
 const point = (x, y) => ({ x, y });
 function freeze(value) {
   if (value && typeof value === "object") {
@@ -135,7 +135,7 @@ export const LEVELS = freeze([
     win: ["KWAK!", "Kaczka uznała Cię za łódź."], lose: "Jezioro wybrało tryb prania ręcznego.",
   }),
   ...EXTRA_LEVELS.map(level),
-  ...towerMissions(TOWER_CHAPTER.name).map(level),
+  ...towerMissions().map(level),
 ]);
 
 export const DEFAULT_LEVEL = LEVELS[0];

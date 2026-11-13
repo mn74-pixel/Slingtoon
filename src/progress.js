@@ -1,9 +1,10 @@
 export const PROGRESS_KEY = "slingtoon-progress-v3";
 export const TOKEN_SCORE_STEP = 200;
+export const MAX_MISSION_SCORE = 100 + 60 + 60 + 20 + 4 * 30;
 const integer = (value, maximum = 1_000_000) => Number.isFinite(value) ? Math.max(0, Math.min(maximum, Math.floor(value))) : 0;
 
 export function readProgress(storage, levels) {
-  const result = { version: 3, highestUnlockedLevel: 0, resumeLevelId: levels[0].id, score: 0, hintTokens: 2, bestStreak: 0, bestScores: {}, hints: {}, medals: {} };
+  const result = { version: 3, highestUnlockedLevel: 0, resumeLevelId: levels[0].id, score: 0, hintTokens: 2, bestStreak: 0, bestScores: {}, hints: {}, medals: {}, fortScores: {}, fortStars: {} };
   try {
     const current = storage.getItem(PROGRESS_KEY);
     const previous = storage.getItem("slingtoon-progress-v2");
@@ -15,7 +16,13 @@ export function readProgress(storage, levels) {
       result.bestStreak = integer(parsed.bestStreak, levels.length);
       // Old scores are retained in the total. These are new puzzles, with fresh personal records.
       if (parsed.version === 3) for (const { id } of levels) {
-        result.bestScores[id] = integer(parsed.bestScores?.[id], 240);
+        // The cap is the most a mission can score: 100 base, 60 star, 60 first
+        // shot, 20 One Move, and on a fort 30 for each of up to four spared
+        // heroes. A cap below that (it was 240) let a reload forget part of a
+        // record, and the same win then paid out again.
+        result.bestScores[id] = integer(parsed.bestScores?.[id], MAX_MISSION_SCORE);
+        result.fortScores[id] = integer(parsed.fortScores?.[id], 1_000_000);
+        result.fortStars[id] = integer(parsed.fortStars?.[id], 3);
         result.hints[id] = integer(parsed.hints?.[id], 3);
         result.medals[id] = integer(parsed.medals?.[id], 7);
       }
@@ -49,7 +56,7 @@ export function purchaseHint(progress, level, attempts) {
 
 export const SPARED_SHOT_BONUS = 30;
 
-export function rewardSuccess(progress, { id, attempts, star, mode, hintStage, modifier = "none", shotsUsed = 1, sparedShots = 0 }) {
+export function rewardSuccess(progress, { id, attempts, star, mode, hintStage, modifier = "none", shotsUsed = 1, sparedShots = 0, fortScore = null, fortStars = 0 }) {
   // On a tower, precision means the fort fell to the very first hero.
   const precision = attempts === 1 && modifier === "none" && shotsUsed === 1;
   // Brute force has to be visible in the score: the shot bonus is gone by the
@@ -62,9 +69,18 @@ export function rewardSuccess(progress, { id, attempts, star, mode, hintStage, m
   const tokenGain = Math.floor((progress.score + gained) / TOKEN_SCORE_STEP) - Math.floor(progress.score / TOKEN_SCORE_STEP);
   progress.bestScores[id] = Math.max(score, best);
   progress.medals[id] = (progress.medals[id] ?? 0) | 1 | (star ? 2 : 0) | (precision ? 4 : 0);
+  // A fort keeps its own record: the destruction score and the stars it earned.
+  let fortRecord = false;
+  if (fortScore !== null) {
+    progress.fortScores ??= {};
+    progress.fortStars ??= {};
+    fortRecord = fortScore > (progress.fortScores[id] ?? 0);
+    progress.fortScores[id] = Math.max(fortScore, progress.fortScores[id] ?? 0);
+    progress.fortStars[id] = Math.max(fortStars, progress.fortStars[id] ?? 0);
+  }
   progress.score += gained;
   progress.hintTokens += tokenGain;
-  return { score, gained, tokenGain, star, precision, newBest: gained > 0 };
+  return { score, gained, tokenGain, star, precision, newBest: gained > 0, fortScore, fortStars, fortRecord };
 }
 
 // Stars used to feed only the score, which fed hint tokens — the game rewarded

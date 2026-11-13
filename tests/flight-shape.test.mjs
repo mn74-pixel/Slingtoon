@@ -16,7 +16,9 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { GameModel, GamePhase, LEVELS } from "../src/game.js";
 
-const flights = LEVELS.map((level) => {
+// Flight missions only: a fort is knocked down, not flown into, and its own
+// guards live in tests/towers.test.mjs.
+const flights = LEVELS.filter((level) => !level.towers).map((level) => {
   const model = new GameModel(() => {}, level);
   model.beginSling(model.anchor);
   model.dragSling(level.assistPull);

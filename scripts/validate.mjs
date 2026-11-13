@@ -118,9 +118,9 @@ assert.match(levels, /id:\s*"gnome-emergency"/);
 assert.match(levels, /id:\s*"pigeon-protocol"/);
 assert.match(levels, /id:\s*"duck-rescue"/);
 assert.match(levels, /export const LEVELS/);
-// 88 campaign missions plus chapter 12, the eight tower missions (0.50.0).
-assert.equal(LEVELS.length, 96);
-assert.equal(new Set(LEVELS.map((level) => level.id)).size, 96);
+// 88 campaign missions, chapter 12 (towers, 0.50.0) and chapters 13-15 (forts, 0.52.0).
+assert.equal(LEVELS.length, 120);
+assert.equal(new Set(LEVELS.map((level) => level.id)).size, 120);
 assert.match(levels, /assistPull:\s*point/g);
 assert.match(levels, /scene:\s*"lake"/);
 assert.match(levels, /freeStages/);
@@ -385,7 +385,8 @@ assert.ok(/propParts/.test(campaign) && !/function itemCentre/.test(campaign),
 // before 60% of the width and thirty-one before 70%, which reads as a game
 // squeezed into the left half whatever the obstacle spacing says.
 const reachFractions = LEVELS.slice(8).map((level) => {
-  const right = Math.max(level.goal.x, ...level.interactions.flatMap((item) => propParts(item).map((part) => part.right)));
+  // A fort reaches as far as its furthest block, not just its first clock.
+  const right = Math.max(level.goal.x, ...level.interactions.flatMap((item) => propParts(item).map((part) => part.right)), ...(level.towers ?? []).map((block) => block.x + block.width / 2));
   return right / 1280;
 }).sort((a, b) => a - b);
 assert.ok(reachFractions[0] >= 0.55,
