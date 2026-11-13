@@ -10,7 +10,7 @@
 // Each mission's hint pull is measured, not designed: scripts/balance-towers.mjs
 // searches the same grid of pulls the campaign balancer does and stores the
 // most forgiving shot that actually brings the target down.
-import { TOWER_ROUTES } from "./tower-routes.js?v=0.51.0";
+import { TOWER_ROUTES } from "./tower-routes.js?v=0.51.1";
 
 const FLOOR = 586;
 // Vertical post standing on `base` (the floor or the top of something).
@@ -101,7 +101,7 @@ const MISSIONS = [
     },
   },
   {
-    number: 96, name: "Zamek budzika", scene: "bedroom",
+    number: 96, name: "Zamek budzika", scene: "park",
     mechanic: "FINAŁ WIEŻ", clue: "Dwa piętra, trzy materiały, jeden budzik. Szkło w środku jest najsłabszym ogniwem.",
     win: ["ZAMEK ZDOBYTY!", "Budzik kapituluje. Do jutra, 7:03."],
     build: () => {

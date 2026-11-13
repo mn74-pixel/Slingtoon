@@ -1,5 +1,5 @@
 // One deterministic solver for the live game, previews and replays.
-import { stepWorld, worldAsleep } from "./blocks.js?v=0.51.0";
+import { stepWorld, worldAsleep } from "./blocks.js?v=0.51.1";
 export const FIXED_STEP = 1 / 120;
 export const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
 export const magnitude = (p) => Math.hypot(p.x, p.y);

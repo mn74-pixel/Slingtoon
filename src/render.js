@@ -1,13 +1,13 @@
-import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.51.0";
-import { RENDER_MAX_PIXELS, clientPointToWorld, createCropFreeViewport, edgeMarker, renderScale } from "./viewport.js?v=0.51.0";
-import { POUCH_HALF, REST_LEAN, pouchEnds, restPosition, restingGrip, slingFrame, slingGrip } from "./sling-art.js?v=0.51.0";
-import { drawInteractions, drawObjective } from "./interactions-renderer.js?v=0.51.0";
-import { drawCampaignGoal, drawCampaignScene, drawWorldCompanion, setSceneBleed } from "./world-renderer.js?v=0.51.0";
-import { drawSceneLife } from "./scene-life.js?v=0.51.0";
-import { createRng, sprayAngle, stepParticle } from "./particles.js?v=0.51.0";
-import { speechBubbleLayout } from "./prop-art.js?v=0.51.0";
-import { BLOCK_COLOURS, drawTowerBlocks } from "./tower-art.js?v=0.51.0";
-import { surfaceBelow } from "./physics.js?v=0.51.0";
+import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.51.1";
+import { RENDER_MAX_PIXELS, clientPointToWorld, createCropFreeViewport, edgeMarker, renderScale } from "./viewport.js?v=0.51.1";
+import { POUCH_HALF, REST_LEAN, pouchEnds, restPosition, restingGrip, slingFrame, slingGrip } from "./sling-art.js?v=0.51.1";
+import { drawInteractions, drawObjective } from "./interactions-renderer.js?v=0.51.1";
+import { drawCampaignGoal, drawCampaignScene, drawWorldCompanion, setSceneBleed } from "./world-renderer.js?v=0.51.1";
+import { drawSceneLife } from "./scene-life.js?v=0.51.1";
+import { createRng, sprayAngle, stepParticle } from "./particles.js?v=0.51.1";
+import { speechBubbleLayout } from "./prop-art.js?v=0.51.1";
+import { BLOCK_COLOURS, drawTowerBlocks } from "./tower-art.js?v=0.51.1";
+import { surfaceBelow } from "./physics.js?v=0.51.1";
 
 // How long the hero takes to turn around when a bounce sends them back.
 const TURN_SECONDS = 0.12;
@@ -494,11 +494,13 @@ export class GameRenderer {
     ctx.globalAlpha = 0.16;
     ctx.strokeStyle = PALETTE.ink;
     ctx.lineWidth = 3;
-    for (let x = 0; x < WORLD.width; x += 72) {
-      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 510); ctx.stroke();
+    // The tiles cover the whole visible wall, on the same 72 px grid.
+    const tileOx = Math.ceil(this.viewport.offsetX / 72) * 72, tileOy = Math.ceil(this.viewport.bleedY / 72) * 72;
+    for (let x = -tileOx; x < WORLD.width + tileOx; x += 72) {
+      ctx.beginPath(); ctx.moveTo(x, -tileOy); ctx.lineTo(x, 510); ctx.stroke();
     }
-    for (let y = 0; y < 510; y += 72) {
-      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(WORLD.width, y); ctx.stroke();
+    for (let y = -tileOy; y < 510; y += 72) {
+      ctx.beginPath(); ctx.moveTo(-tileOx, y); ctx.lineTo(WORLD.width + tileOx, y); ctx.stroke();
     }
     ctx.restore();
     for (const x of [350, 520]) {
@@ -625,7 +627,10 @@ export class GameRenderer {
     for (const [x, y, s] of [[180, 120, 1], [540, 75, .8], [935, 140, 1.2]]) {
       ctx.beginPath(); ctx.arc(x, y, 32 * s, 0, Math.PI * 2); ctx.arc(x + 40 * s, y - 10, 42 * s, 0, Math.PI * 2); ctx.arc(x + 80 * s, y + 3, 30 * s, 0, Math.PI * 2); ctx.fill();
     }
-    ctx.fillStyle = grass; ctx.beginPath(); ctx.moveTo(0, 430); ctx.quadraticCurveTo(310, 350, 610, 440); ctx.quadraticCurveTo(960, 330, 1280, 420); ctx.lineTo(1280, 640); ctx.lineTo(0, 640); ctx.closePath(); ctx.fill();
+    // The hills run on flat past the world box to whatever the screen shows;
+    // closing them at x 0 and 1280 left sky showing under them on wide phones.
+    const ox = this.viewport.offsetX, oy = this.viewport.bleedY;
+    ctx.fillStyle = grass; ctx.beginPath(); ctx.moveTo(-ox, 430); ctx.lineTo(0, 430); ctx.quadraticCurveTo(310, 350, 610, 440); ctx.quadraticCurveTo(960, 330, 1280, 420); ctx.lineTo(1280 + ox, 420); ctx.lineTo(1280 + ox, 640 + oy); ctx.lineTo(-ox, 640 + oy); ctx.closePath(); ctx.fill();
     this.sceneBand(ctx, 574, 66 + this.viewport.bleedY, "#2f7d67");
   }
 
@@ -663,7 +668,8 @@ export class GameRenderer {
       ctx.fillStyle = x % 2 ? "#5ce1bd" : "#438d67"; ctx.beginPath(); ctx.arc(x + 50, 205, 92, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
     }
     ctx.fillStyle = "#d8bd8b"; ctx.beginPath(); ctx.moveTo(350, 586); ctx.quadraticCurveTo(610, 440, 990, 586); ctx.closePath(); ctx.fill();
-    roundedRect(ctx, 860, 426, 210, 65, 9); strokeFill(ctx, "#9b684d", PALETTE.ink, 6);
+    // A solid-looking bench behind a fort reads as one of its blocks.
+    if (!this.model.level.towers) { roundedRect(ctx, 860, 426, 210, 65, 9); strokeFill(ctx, "#9b684d", PALETTE.ink, 6); }
     ctx.fillStyle = "rgba(25,20,45,.6)"; ctx.font = "900 28px system-ui, sans-serif"; ctx.fillText("PARK · GOŁĘBIE URZĘDUJĄ", 55, 65);
   }
 
@@ -672,7 +678,7 @@ export class GameRenderer {
     ctx.fillStyle = "#ae865b"; ctx.fillRect(-this.viewport.offsetX, 510, 515 + this.viewport.offsetX, 76);
     ctx.strokeStyle = "#6d4d44"; ctx.lineWidth = 7;
     for (let x = 20; x < 500; x += 65) { ctx.beginPath(); ctx.moveTo(x, 510); ctx.lineTo(x, 586); ctx.stroke(); }
-    ctx.fillStyle = "#4bbbd0"; ctx.fillRect(515, 515, 765, 71);
+    ctx.fillStyle = "#4bbbd0"; ctx.fillRect(515, 515, 765 + this.viewport.offsetX, 71);
     this.sceneBand(ctx, 586, 54 + this.viewport.bleedY, "#327a91");
     for (let i = 0; i < 9; i += 1) {
       const y = 530 + i % 3 * 17;
@@ -730,7 +736,7 @@ export class GameRenderer {
       gradient.addColorStop(0, "rgba(75, 89, 222, 0.28)");
       gradient.addColorStop(1, "rgba(105, 245, 225, 0.05)");
       ctx.fillStyle = gradient;
-      ctx.fillRect(0, 0, WORLD.width, WORLD.height);
+      ctx.fillRect(-this.viewport.offsetX, -this.viewport.bleedY, WORLD.width + this.viewport.offsetX * 2, WORLD.height + this.viewport.bleedY * 2);
       ctx.globalAlpha = 0.43;
       ctx.fillStyle = PALETTE.cream;
       for (let index = 0; index < 24; index += 1) {
@@ -742,13 +748,13 @@ export class GameRenderer {
       }
     } else if (modifier === Modifier.STRONGER_FAN) {
       ctx.fillStyle = "rgba(92, 225, 189, 0.075)";
-      ctx.fillRect(0, 0, WORLD.width, WORLD.height);
+      ctx.fillRect(-this.viewport.offsetX, -this.viewport.bleedY, WORLD.width + this.viewport.offsetX * 2, WORLD.height + this.viewport.bleedY * 2);
     } else if (modifier === Modifier.SUPER_BOUNCY) {
       ctx.fillStyle = "rgba(255, 96, 120, 0.075)";
-      ctx.fillRect(0, 0, WORLD.width, WORLD.height);
+      ctx.fillRect(-this.viewport.offsetX, -this.viewport.bleedY, WORLD.width + this.viewport.offsetX * 2, WORLD.height + this.viewport.bleedY * 2);
     } else if (modifier === Modifier.GIANT_HEAD) {
       ctx.fillStyle = "rgba(255, 211, 95, 0.07)";
-      ctx.fillRect(0, 0, WORLD.width, WORLD.height);
+      ctx.fillRect(-this.viewport.offsetX, -this.viewport.bleedY, WORLD.width + this.viewport.offsetX * 2, WORLD.height + this.viewport.bleedY * 2);
     }
     ctx.restore();
   }
