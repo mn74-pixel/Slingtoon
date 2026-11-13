@@ -2,7 +2,7 @@
 // fort before the first shot: warm planks with grain take a beating, pale
 // glass with a shine shatters, grey stone with flecks barely notices. A block
 // shows cracks as it weakens, so the second hit is a decision, not a guess.
-import { bodyCorners } from "./blocks.js?v=0.51.0";
+import { bodyCorners } from "./blocks.js?v=0.51.1";
 
 const INK = "#19142d";
 export const BLOCK_COLOURS = Object.freeze({

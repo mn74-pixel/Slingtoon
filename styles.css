@@ -2032,11 +2032,9 @@ button:focus-visible, canvas:focus-visible { outline: 3px solid #ffd35f; outline
   .flight-moves { gap: 7px; left: max(12px, env(safe-area-inset-left)); bottom: 12px; }
   .objective-status { top: 4px; left: max(12px, env(safe-area-inset-left)); padding: 5px 8px; }
   .level-nav__indicator, body.is-fullscreen-active .level-nav__indicator { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; }
-  body.is-fullscreen-active .objective-status { top: 52px; }
   .level-nav__button, .hint-button, .restart-button, .cta { min-height: 44px; }
   .level-nav__button { min-width: 44px; }
   .status-row { height: 48px; min-height: 48px; }
-  body.is-fullscreen-active .status-row { height: calc(48px + env(safe-area-inset-bottom)); min-height: calc(48px + env(safe-area-inset-bottom)); }
   body.is-fullscreen-active .flight-moves { bottom: calc(62px + env(safe-area-inset-bottom)); }
 }
 

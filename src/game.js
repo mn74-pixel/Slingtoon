@@ -1,7 +1,7 @@
-import { DEFAULT_LEVEL, WORLD } from "./levels.js?v=0.51.0";
-import { FIXED_STEP, clamp, contains, magnitude, startBody, stepPhysics, towerFallen } from "./physics.js?v=0.51.0";
-import { cloneWorld, createWorld, stepWorld, worldAsleep } from "./blocks.js?v=0.51.0";
-export { DEFAULT_LEVEL, LEVELS, WORLD, getLevel } from "./levels.js?v=0.51.0";
+import { DEFAULT_LEVEL, WORLD } from "./levels.js?v=0.51.1";
+import { FIXED_STEP, clamp, contains, magnitude, startBody, stepPhysics, towerFallen } from "./physics.js?v=0.51.1";
+import { cloneWorld, createWorld, stepWorld, worldAsleep } from "./blocks.js?v=0.51.1";
+export { DEFAULT_LEVEL, LEVELS, WORLD, getLevel } from "./levels.js?v=0.51.1";
 
 export const GameMode = Object.freeze({ QUICK: "quickSling", ONE_MOVE: "oneMoveChallenge" });
 export const GamePhase = Object.freeze({ READY: "ready", AIMING: "aiming", FLYING: "flying", SUCCEEDED: "succeeded", FAILED: "failed" });

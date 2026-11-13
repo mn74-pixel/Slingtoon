@@ -90,7 +90,8 @@ export function drawCampaignScene(ctx, level) {
     oval(ctx, sunX, sunY, 55, 55, "#ffe4a0", 0);
     const seaTop = 325 + pick(variant, [0, 16, -12, 8]);
     band(ctx, seaTop, 555 - seaTop, "#499fab"); waves(ctx, seaTop + 35); waves(ctx, seaTop + 84);
-    path(ctx, [[0, 480], [260, 452], [560, 486], [830, 470], [1280, 480], [1280, 640], [0, 640]], sand, 0);
+    // The dune runs out to whatever the screen shows, like the sea above it.
+    ground(ctx, [[0, 480], [260, 452], [560, 486], [830, 470], [1280, 480]], sand);
     for (const [x, y, lean] of pick(variant, [
       [[1200, 480, -40], [72, 400, 25]], [[1160, 492, -26], [118, 414, 18], [995, 470, -14]],
       [[60, 396, 30]], [[1215, 474, -44], [150, 420, 22]],
