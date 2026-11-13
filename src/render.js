@@ -1,13 +1,13 @@
-import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.50.0";
-import { RENDER_MAX_PIXELS, clientPointToWorld, createCropFreeViewport, edgeMarker, renderScale } from "./viewport.js?v=0.50.0";
-import { POUCH_HALF, REST_LEAN, pouchEnds, restPosition, restingGrip, slingFrame, slingGrip } from "./sling-art.js?v=0.50.0";
-import { drawInteractions, drawObjective } from "./interactions-renderer.js?v=0.50.0";
-import { drawCampaignGoal, drawCampaignScene, drawWorldCompanion, setSceneBleed } from "./world-renderer.js?v=0.50.0";
-import { drawSceneLife } from "./scene-life.js?v=0.50.0";
-import { createRng, sprayAngle, stepParticle } from "./particles.js?v=0.50.0";
-import { speechBubbleLayout } from "./prop-art.js?v=0.50.0";
-import { BLOCK_COLOURS, drawTowerBlocks } from "./tower-art.js?v=0.50.0";
-import { surfaceBelow } from "./physics.js?v=0.50.0";
+import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.51.0";
+import { RENDER_MAX_PIXELS, clientPointToWorld, createCropFreeViewport, edgeMarker, renderScale } from "./viewport.js?v=0.51.0";
+import { POUCH_HALF, REST_LEAN, pouchEnds, restPosition, restingGrip, slingFrame, slingGrip } from "./sling-art.js?v=0.51.0";
+import { drawInteractions, drawObjective } from "./interactions-renderer.js?v=0.51.0";
+import { drawCampaignGoal, drawCampaignScene, drawWorldCompanion, setSceneBleed } from "./world-renderer.js?v=0.51.0";
+import { drawSceneLife } from "./scene-life.js?v=0.51.0";
+import { createRng, sprayAngle, stepParticle } from "./particles.js?v=0.51.0";
+import { speechBubbleLayout } from "./prop-art.js?v=0.51.0";
+import { BLOCK_COLOURS, drawTowerBlocks } from "./tower-art.js?v=0.51.0";
+import { surfaceBelow } from "./physics.js?v=0.51.0";
 
 // How long the hero takes to turn around when a bounce sends them back.
 const TURN_SECONDS = 0.12;
@@ -254,6 +254,18 @@ export class GameRenderer {
 
     if (event.type === "block-break") this.spawnDebris(event);
 
+    // The fort survived a shot: the shot that missed stays on screen as the
+    // dashed line to beat, and the next hero hops into the sling.
+    if (event.type === "next-shot") {
+      this.ghost = this.flightPath.length > 2 ? { path: this.flightPath.slice(), end: { ...event.position }, won: false } : this.ghost;
+      this.trail.length = 0;
+      this.lastTrailPoint = null;
+      this.landing = null;
+      this.spawnDust(event.position.x, event.position.y, 8);
+      this.spawnDust(this.model.anchor.x, this.model.anchor.y + 30, 8);
+      this.callouts.push({ x: this.model.anchor.x, y: this.model.anchor.y - 92, text: `STRZAŁ ${event.shot}/${event.of}`, age: 0, life: 1.3, angle: -0.06 });
+    }
+
     if (event.type === "success" || event.type === "failure") {
       this.ghost = this.flightPath.length > 2
         ? { path: this.flightPath.slice(), end: { ...this.model.avatarPosition }, won: event.type === "success" }
@@ -352,6 +364,7 @@ export class GameRenderer {
     this.drawModifierAtmosphere(ctx);
     this.drawGhostPath(ctx);
     this.drawSpeedTrail(ctx);
+    this.drawShotQueue(ctx);
     this.drawSlingBack(ctx);
     this.drawTrajectory(ctx);
     this.drawPhysicalObjects(ctx);
@@ -1118,6 +1131,47 @@ export class GameRenderer {
   // lip, which sits at his seat, is drawn afterwards. That is what keeps the
   // band off the face at every pull: no offset can do it, because a deep pull
   // carries the hero past the fork tips himself.
+  // Heroes still waiting for their turn this round, lined up on the ground
+  // behind the sling. Tower missions only: everywhere else a round is one shot.
+  drawShotQueue(ctx) {
+    const model = this.model;
+    if (!model.level.towers) return;
+    const loaded = model.phase === GamePhase.READY || model.phase === GamePhase.AIMING;
+    const waiting = Math.max(0, model.shotsLeft - (loaded ? 1 : 0));
+    if (waiting === 0) return;
+    // Between the foot of the sling and the companion: the hero resting in the
+    // pouch fills everything to the left of the fork.
+    const radius = model.avatarRadius * 0.38;
+    ctx.save();
+    for (let i = 0; i < waiting; i += 1) {
+      const x = model.anchor.x + 40 + i * radius * 2.05;
+      const hop = Math.max(0, Math.sin(this.time * 4.2 - i * 1.3)) * 5;
+      const y = model.groundY - radius - hop;
+      ctx.fillStyle = "rgba(0,0,0,.16)";
+      ctx.beginPath();
+      ctx.ellipse(x, model.groundY + 2, radius * 0.9, radius * 0.24, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#ffcf5a";
+      ctx.strokeStyle = PALETTE.ink;
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = PALETTE.ink;
+      for (const side of [-1, 1]) {
+        ctx.beginPath();
+        ctx.arc(x + side * radius * 0.32 + radius * 0.12, y - radius * 0.12, radius * 0.13, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(x + radius * 0.12, y + radius * 0.18, radius * 0.3, 0.2, Math.PI - 0.2);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
   drawSlingBack(ctx) {
     const model = this.model;
     const frame = slingFrame(model.anchor);

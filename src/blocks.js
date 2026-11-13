@@ -323,3 +323,9 @@ export function stepWorld(world, dt, gravity, hero = null) {
 
 export const worldAsleep = (world) => world.bodies.every((body) => body.broken || body.asleep);
 export const bodyCorners = corners;
+
+// A copy for the trajectory preview: the same bodies in the same state, with
+// no contact history (the preview only has to show where the hero goes).
+export function cloneWorld(world) {
+  return { bodies: world.bodies.map((body) => ({ ...body })), groundY: world.groundY, contacts: new Map(), time: world.time, breaks: [], hits: [] };
+}

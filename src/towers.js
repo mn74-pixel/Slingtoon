@@ -10,7 +10,7 @@
 // Each mission's hint pull is measured, not designed: scripts/balance-towers.mjs
 // searches the same grid of pulls the campaign balancer does and stores the
 // most forgiving shot that actually brings the target down.
-import { TOWER_ROUTES } from "./tower-routes.js?v=0.50.0";
+import { TOWER_ROUTES } from "./tower-routes.js?v=0.51.0";
 
 const FLOOR = 586;
 // Vertical post standing on `base` (the floor or the top of something).
@@ -128,6 +128,8 @@ export function towerMissions(chapterName) {
       mechanic: m.mechanic, title: m.name, clue: m.clue,
       direction: "Wieża przewraca się od podpór. Trafiony filar ciągnie za sobą wszystko, co na nim stoi.",
       pull, towers,
+      // Shots a round: three, and four for the finale.
+      shots: m.number === 96 ? 4 : 3,
       goal: { kind: "alarm", shape: "circle", x: goal.x, y: goal.y, radius: 44, scale: 1, displayScale: goal.width / 118 },
       star: route?.star ?? null, starPull: route?.starPull, interactions: [], required: [], requirement: "Strąć budzik z wieży.",
       editable: null, water: { enabled: false },
