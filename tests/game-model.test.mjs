@@ -427,10 +427,11 @@ test("a hazard ends the flight on touch and never becomes a required objective",
 });
 
 test("the goal collider matches the drawn object instead of an invisible buffer", () => {
-  const late = LEVELS.filter((level) => level.number >= 49);
+  // Flight missions only: on a tower the goal is a body, not a contact ring.
+  const late = LEVELS.filter((level) => level.number >= 49 && !level.towers);
   assert.ok(late.every((level) => level.goal.radius <= 72), "late goals stay near the honest contact edge");
   assert.ok(late.every((level) => level.goal.radius >= 54), "no goal shrinks below what the art shows");
-  const openers = LEVELS.filter((level) => level.number > 8 && (level.number - 1) % 8 === 0);
+  const openers = LEVELS.filter((level) => level.number > 8 && (level.number - 1) % 8 === 0 && !level.towers);
   assert.ok(openers.every((level) => level.goal.radius > 60), "a new rule is never taught on a pinpoint target");
 });
 
@@ -541,8 +542,10 @@ test("danger outranks hope, and both outrank idle flight flavour", () => {
 test("the campaign asks for many different shots, not one shot eighty times", () => {
   // The shipped campaign put every goal at x 890..1100 with a median of 1070,
   // and 77% of missions flew 850-950 px. Eighty missions, one shot repeated.
-  const distances = LEVELS.map((level) => level.goal.x - level.anchor.x);
-  const heights = LEVELS.map((level) => level.goal.y);
+  // The flight campaign's shot mix. Towers are placed by their forts.
+  const FLIGHT = LEVELS.filter((level) => !level.towers);
+  const distances = FLIGHT.map((level) => level.goal.x - level.anchor.x);
+  const heights = FLIGHT.map((level) => level.goal.y);
   const spread = Math.max(...distances) - Math.min(...distances);
   const ratio = Math.max(...distances) / Math.min(...distances);
   // This floor was 450 px while the shortest flight was 482 px long. The bands
@@ -563,12 +566,12 @@ test("the campaign asks for many different shots, not one shot eighty times", ()
     bands.set(key, (bands.get(key) ?? 0) + 1);
   }
   const biggest = Math.max(...bands.values());
-  assert.ok(biggest <= LEVELS.length / 2, `${biggest} of ${LEVELS.length} missions share one 150 px band`);
+  assert.ok(biggest <= FLIGHT.length / 2, `${biggest} of ${FLIGHT.length} missions share one 150 px band`);
   assert.ok(bands.size >= 4, `flight lengths only fall into ${bands.size} bands`);
 
   // Seven shapes across eighty missions would read as seven target spots.
-  const spots = new Set(LEVELS.map((level) => `${level.goal.x},${level.goal.y}`));
-  assert.equal(spots.size, LEVELS.length, "two missions share the exact same target position");
+  const spots = new Set(FLIGHT.map((level) => `${level.goal.x},${level.goal.y}`));
+  assert.equal(spots.size, FLIGHT.length, "two missions share the exact same target position");
 });
 
 test("no goal is placed where the sling cannot reach it", () => {

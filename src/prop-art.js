@@ -151,7 +151,13 @@ export function gapBetween(a, b) {
 // Every rectangle a mission paints that the star has to stay clear of.
 export const missionParts = (level) =>
   level.interactions.flatMap((item) => propParts(item).map((part) => ({ id: item.id ?? item.type, part })))
-    .concat(goalParts(level.goal).map((part) => ({ id: "goal", part })));
+    .concat(goalParts(level.goal).map((part) => ({ id: "goal", part })))
+    // A tower's blocks are artwork too: a star must not be drawn on a wall.
+    .concat((level.towers ?? []).map((block) => {
+      const reach = Math.hypot(block.width, block.height) / 2;
+      const half = block.angle ? reach : null;
+      return { id: block.id, part: rect(block.x - (half ?? block.width / 2), block.y - (half ?? block.height / 2), block.x + (half ?? block.width / 2), block.y + (half ?? block.height / 2)) };
+    }));
 
 // How close the star comes to the nearest artwork, and to what.
 export function starClearance(star, level) {

@@ -14,7 +14,7 @@ const surface = (width, height) => createCanvas(width, height);
 globalThis.Image = Image;
 const output = resolve(process.argv[2] ?? "/tmp/slingtoon-qa");
 await mkdir(output, { recursive: true });
-const sheet = createCanvas(1280, 1800), ctx = sheet.getContext("2d");
+const sheet = createCanvas(1280, Math.ceil(LEVELS.length / 8) * 180), ctx = sheet.getContext("2d");
 for (const [index, level] of LEVELS.entries()) {
   const canvas = createCanvas(1280, 640), model = new GameModel(() => {}, level), renderer = new GameRenderer(canvas, model, surface);
   model.onEvent = (event) => renderer.handleGameEvent(event);
@@ -45,4 +45,4 @@ for (const [index, width, height] of [[8, 844, 390], [16, 740, 360], [64, 568, 3
   mobile.getContext("2d").drawImage(canvas, 0, 0, width, height);
   await writeFile(resolve(output, `mobile-${index + 1}.png`), mobile.toBuffer("image/png"));
 }
-console.log(`Rendered 80 complete winning flights and three mobile canvas layouts: ${output}`);
+console.log(`Rendered ${LEVELS.length} complete winning flights and three mobile canvas layouts: ${output}`);

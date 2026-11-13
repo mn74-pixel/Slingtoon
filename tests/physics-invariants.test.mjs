@@ -78,7 +78,10 @@ test("every flight ends, and the six-second cap is what ends the long ones", () 
       const { model, t } = fly(level, pull);
       assert.notEqual(model.phase, GamePhase.FLYING,
         `mission ${level.number}: a shot was still in the air after ${t.toFixed(1)}s`);
-      assert.ok(t <= 6.05, `mission ${level.number}: a shot ran ${t.toFixed(2)}s, past the model's own six-second cap`);
+      // A tower gets nine seconds: the target may still be falling after the
+      // hero has stopped, and the shot is decided by where it lands.
+      const cap = level.towers ? 9.05 : 6.05;
+      assert.ok(t <= cap, `mission ${level.number}: a shot ran ${t.toFixed(2)}s, past the model's own ${cap - 0.05}-second cap`);
     }
   }
   // Most shots end by leaving the screen or settling, so the assertions above

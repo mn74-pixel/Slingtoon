@@ -1,6 +1,7 @@
-import { DEFAULT_LEVEL, WORLD } from "./levels.js?v=0.49.0";
-import { FIXED_STEP, clamp, contains, magnitude, startBody, stepPhysics } from "./physics.js?v=0.49.0";
-export { DEFAULT_LEVEL, LEVELS, WORLD, getLevel } from "./levels.js?v=0.49.0";
+import { DEFAULT_LEVEL, WORLD } from "./levels.js?v=0.50.0";
+import { FIXED_STEP, clamp, contains, magnitude, startBody, stepPhysics } from "./physics.js?v=0.50.0";
+import { createWorld, stepWorld, worldAsleep } from "./blocks.js?v=0.50.0";
+export { DEFAULT_LEVEL, LEVELS, WORLD, getLevel } from "./levels.js?v=0.50.0";
 
 export const GameMode = Object.freeze({ QUICK: "quickSling", ONE_MOVE: "oneMoveChallenge" });
 export const GamePhase = Object.freeze({ READY: "ready", AIMING: "aiming", FLYING: "flying", SUCCEEDED: "succeeded", FAILED: "failed" });
@@ -91,6 +92,9 @@ export class GameModel {
     this.emit("reset", { resetAttempts });
   }
   resetFlightObjects() {
+    // A tower stands up again for every attempt: one shot, one intact fort,
+    // so a route stays learnable and a replay sees the same collapse.
+    this.world = this.level.towers ? createWorld(this.level.towers, this.level.groundY) : null;
     this.objectState = Object.create(null);
     this.visited = new Set();
     this.collectedStar = false;
@@ -253,7 +257,20 @@ export class GameModel {
     if (!Number.isFinite(deltaSeconds) || deltaSeconds <= 0) return;
     const dt = Math.min(deltaSeconds, 0.1); // A resumed background tab must not fast-forward a shot.
     this.impactFlash = Math.max(0, this.impactFlash - dt);
-    if (this.phase !== GamePhase.FLYING) { this.accumulator = 0; return; }
+    if (this.phase !== GamePhase.FLYING) {
+      // The shot is decided, but a tower that is still coming down keeps
+      // coming down: the collapse is the payoff, not a frozen frame.
+      if (this.world && !worldAsleep(this.world)) {
+        this.accumulator += dt;
+        while (this.accumulator + 1e-10 >= FIXED_STEP) {
+          stepWorld(this.world, FIXED_STEP, 620 * this.gravityScale);
+          this.accumulator -= FIXED_STEP;
+        }
+        return;
+      }
+      this.accumulator = 0;
+      return;
+    }
     this.accumulator += dt;
     while (this.accumulator + 1e-10 >= FIXED_STEP && this.phase === GamePhase.FLYING) {
       if (this.replaying) this.replayRecordedMoves();
@@ -290,7 +307,9 @@ export class GameModel {
     simulation.layoutOffset = this.layoutOffset;
     simulation.startFlight(this.velocityForPull(launch), false, launch);
     const allPoints = [];
-    for (let frame = 0; frame < duration * 120 && simulation.phase === GamePhase.FLYING; frame += 1) {
+    // A tower can take a few seconds to finish falling after the hero lands.
+    const limit = this.level.towers ? Math.max(duration, 9.5) : duration;
+    for (let frame = 0; frame < limit * 120 && simulation.phase === GamePhase.FLYING; frame += 1) {
       simulation.update(FIXED_STEP);
       if (frame % 6 === 0) allPoints.push(copy(simulation.avatarPosition));
     }
@@ -369,7 +388,11 @@ export class GameModel {
   get avatarRadius() { return 35 * (this.modifier === Modifier.GIANT_HEAD ? 1.42 : 1); }
   get avatarGrabRadius() { return Math.max(this.avatarRadius + 34, 35 * 2.65); }
   get waterBounds() { return this.level.water; }
+  // On a tower the goal is a body on top of it, and it goes where it falls.
+  get towerTarget() { return this.world?.bodies.find((body) => body.target) ?? null; }
   get goalCentre() {
+    const target = this.towerTarget;
+    if (target) return { x: target.x, y: target.y };
     const { x, y, motion } = this.level.goal;
     const centre = { x, y };
     if (motion) centre[motion.axis] += Math.sin(this.flightTime * motion.speed) * motion.amplitude;

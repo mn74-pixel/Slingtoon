@@ -118,8 +118,9 @@ assert.match(levels, /id:\s*"gnome-emergency"/);
 assert.match(levels, /id:\s*"pigeon-protocol"/);
 assert.match(levels, /id:\s*"duck-rescue"/);
 assert.match(levels, /export const LEVELS/);
-assert.equal(LEVELS.length, 88);
-assert.equal(new Set(LEVELS.map((level) => level.id)).size, 88);
+// 88 campaign missions plus chapter 12, the eight tower missions (0.50.0).
+assert.equal(LEVELS.length, 96);
+assert.equal(new Set(LEVELS.map((level) => level.id)).size, 96);
 assert.match(levels, /assistPull:\s*point/g);
 assert.match(levels, /scene:\s*"lake"/);
 assert.match(levels, /freeStages/);
@@ -545,7 +546,7 @@ for (const file of requiredFiles.filter((file) => !file.startsWith(".github") &&
   }
 }
 
-for (const file of ["campaign", "campaign-routes", "physics", "prop-art", "sling-art", "aim-settle", "progress", "streak", "interactions-renderer", "world-renderer", "scene-life", "time-feel", "particles"]) assert.ok(worker.includes(`./src/${file}.js?v=${version}`));
+for (const file of ["campaign", "campaign-routes", "physics", "prop-art", "sling-art", "aim-settle", "progress", "streak", "interactions-renderer", "world-renderer", "scene-life", "time-feel", "particles", "blocks", "towers", "tower-routes", "tower-art"]) assert.ok(worker.includes(`./src/${file}.js?v=${version}`));
 
 // A real phone in fullscreen landscape (iPhone SE-sized: 568x320) had its
 // mission-map button completely unclickable, and separately its mission name
