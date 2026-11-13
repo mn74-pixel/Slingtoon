@@ -47,11 +47,16 @@ export function purchaseHint(progress, level, attempts) {
   return { ok: true, offer };
 }
 
-export function rewardSuccess(progress, { id, attempts, star, mode, hintStage, modifier = "none" }) {
-  const precision = attempts === 1 && modifier === "none";
+export const SPARED_SHOT_BONUS = 30;
+
+export function rewardSuccess(progress, { id, attempts, star, mode, hintStage, modifier = "none", shotsUsed = 1, sparedShots = 0 }) {
+  // On a tower, precision means the fort fell to the very first hero.
+  const precision = attempts === 1 && modifier === "none" && shotsUsed === 1;
   // Brute force has to be visible in the score: the shot bonus is gone by the
   // fourth attempt, while the flat base keeps a hard mission from dead-ending.
-  const score = 100 + (star ? 60 : 0) + Math.max(0, 60 - Math.max(0, attempts - 1) * 20) + (mode === "oneMoveChallenge" && hintStage < 3 ? 20 : 0);
+  const score = 100 + (star ? 60 : 0) + Math.max(0, 60 - Math.max(0, attempts - 1) * 20) + (mode === "oneMoveChallenge" && hintStage < 3 ? 20 : 0)
+    // A hero still waiting by the sling when the tower falls is worth having.
+    + sparedShots * SPARED_SHOT_BONUS;
   const best = progress.bestScores[id] ?? 0;
   const gained = Math.max(0, score - best);
   const tokenGain = Math.floor((progress.score + gained) / TOKEN_SCORE_STEP) - Math.floor(progress.score / TOKEN_SCORE_STEP);

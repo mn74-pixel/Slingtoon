@@ -1,6 +1,6 @@
-import { CHAPTERS, EXTRA_LEVELS } from "./campaign.js?v=0.50.0";
-import { TOWER_CHAPTER, towerMissions } from "./towers.js?v=0.50.0";
-export { CHAPTERS } from "./campaign.js?v=0.50.0";
+import { CHAPTERS, EXTRA_LEVELS } from "./campaign.js?v=0.51.0";
+import { TOWER_CHAPTER, towerMissions } from "./towers.js?v=0.51.0";
+export { CHAPTERS } from "./campaign.js?v=0.51.0";
 const point = (x, y) => ({ x, y });
 function freeze(value) {
   if (value && typeof value === "object") {

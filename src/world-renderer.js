@@ -274,7 +274,9 @@ export function drawCampaignGoal(ctx, model, time, pulse = 0, wobble = 0) {
 export function drawWorldCompanion(ctx, model, time) {
   if (!model.level.chapterId || model.level.number < 9) return;
   const id = model.level.chapterId, happy = model.phase === "succeeded";
-  const x = 290, y = 558 - (happy ? Math.abs(Math.sin(time * 9)) * 13 : 0);
+  // On a tower the heroes waiting their turn queue up at the foot of the
+  // sling, so the companion steps aside for them.
+  const x = model.level.towers ? 336 : 290, y = 558 - (happy ? Math.abs(Math.sin(time * 9)) * 13 : 0);
   ctx.save(); ctx.globalAlpha = .8;
   if (id === "reef" || id === "wreck") fish(ctx, x, 180 + Math.sin(time * 1.8) * 9, .44, C.coral, happy);
   else {

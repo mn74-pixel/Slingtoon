@@ -1,7 +1,7 @@
-import { DEFAULT_LEVEL, WORLD } from "./levels.js?v=0.50.0";
-import { FIXED_STEP, clamp, contains, magnitude, startBody, stepPhysics } from "./physics.js?v=0.50.0";
-import { createWorld, stepWorld, worldAsleep } from "./blocks.js?v=0.50.0";
-export { DEFAULT_LEVEL, LEVELS, WORLD, getLevel } from "./levels.js?v=0.50.0";
+import { DEFAULT_LEVEL, WORLD } from "./levels.js?v=0.51.0";
+import { FIXED_STEP, clamp, contains, magnitude, startBody, stepPhysics, towerFallen } from "./physics.js?v=0.51.0";
+import { cloneWorld, createWorld, stepWorld, worldAsleep } from "./blocks.js?v=0.51.0";
+export { DEFAULT_LEVEL, LEVELS, WORLD, getLevel } from "./levels.js?v=0.51.0";
 
 export const GameMode = Object.freeze({ QUICK: "quickSling", ONE_MOVE: "oneMoveChallenge" });
 export const GamePhase = Object.freeze({ READY: "ready", AIMING: "aiming", FLYING: "flying", SUCCEEDED: "succeeded", FAILED: "failed" });
@@ -82,6 +82,8 @@ export class GameModel {
     this.movingObject = false;
     this.moveUsed = false;
     this.resetFlightObjects();
+    this.shotsLeft = this.shotsPerRound;
+    this.sparedShots = 0;
     this.trajectoryCache = null;
     this.hintCache = null;
     if (resetAttempts) {
@@ -92,8 +94,9 @@ export class GameModel {
     this.emit("reset", { resetAttempts });
   }
   resetFlightObjects() {
-    // A tower stands up again for every attempt: one shot, one intact fort,
-    // so a route stays learnable and a replay sees the same collapse.
+    // A tower stands up again for every new round. Within a round it keeps
+    // every crack and every fallen block from the shots before (see
+    // startFlight), the way a slingshot fort has always worked.
     this.world = this.level.towers ? createWorld(this.level.towers, this.level.groundY) : null;
     this.objectState = Object.create(null);
     this.visited = new Set();
@@ -181,8 +184,27 @@ export class GameModel {
     this.emit("move-complete");
     return true;
   }
+  // Towers give several shots a round; every other mission is one shot.
+  get shotsPerRound() { return this.level.towers ? (this.level.shots ?? 3) : 1; }
+  get roundInProgress() { return Boolean(this.level.towers) && this.shotsLeft < this.shotsPerRound; }
   startFlight(velocity, countsAsNewAttempt = true, startPosition = this.avatarPosition) {
-    this.resetFlightObjects();
+    const continuing = this.roundInProgress && this.shotsLeft > 0;
+    if (continuing) {
+      // The next shot of a round: the fort stays as the last shot left it,
+      // and so does a star already collected this round.
+      this.airMovesLeft = this.level.airMove ? this.flightStyle.charges : 0;
+      this.diveMovesLeft = this.level.diveMove ? this.flightStyle.charges : 0;
+      this.replayCursor = 0;
+      this.replaying = false;
+      this.portalCooldown = 0;
+    } else {
+      this.resetFlightObjects();
+      this.shotsLeft = this.shotsPerRound;
+      this.sparedShots = 0;
+    }
+    if (this.level.towers) this.shotsLeft -= 1;
+    // A round is one attempt, however many shots it takes.
+    if (continuing) countsAsNewAttempt = false;
     this.phase = GamePhase.FLYING;
     this.modifier = Modifier.NONE;
     this.avatarPosition = copy(startPosition);
@@ -196,7 +218,7 @@ export class GameModel {
     this.emit("launch", { position: copy(this.avatarPosition), velocity: copy(velocity) });
   }
   replayWith(modifier) {
-    if (this.phase !== GamePhase.FAILED || !this.previousShot || this.previousShot.levelId !== this.level.id || !Object.values(Modifier).includes(modifier) || modifier === Modifier.NONE) return false;
+    if (this.level.towers || this.phase !== GamePhase.FAILED || !this.previousShot || this.previousShot.levelId !== this.level.id || !Object.values(Modifier).includes(modifier) || modifier === Modifier.NONE) return false;
     const shot = this.previousShot;
     this.layoutOffset = shot.layoutOffset;
     // What If promises the same shot with one law changed, so it has to replay
@@ -265,6 +287,8 @@ export class GameModel {
         while (this.accumulator + 1e-10 >= FIXED_STEP) {
           stepWorld(this.world, FIXED_STEP, 620 * this.gravityScale);
           this.accumulator -= FIXED_STEP;
+          for (const broken of this.world.breaks) this.emit("block-break", broken);
+          if (this.roundInProgress && towerFallen(this)) { this.finishAttempt(true); break; }
         }
         return;
       }
@@ -292,11 +316,33 @@ export class GameModel {
     this.emit("impact", { speed, x, y, surface, normal: { x: normal.x, y: normal.y } });
   }
   finishAttempt(success) {
-    if (this.phase !== GamePhase.FLYING) return;
+    // A tower can still finish falling after the shot that hit it is over.
+    const lateFall = success && this.world && (this.phase === GamePhase.READY || this.phase === GamePhase.AIMING);
+    if (this.phase !== GamePhase.FLYING && !lateFall) return;
+    if (!success && this.world && this.shotsLeft > 0) {
+      this.prepareNextShot();
+      return;
+    }
+    if (success && this.world) this.sparedShots = this.shotsLeft;
     this.phase = success ? GamePhase.SUCCEEDED : GamePhase.FAILED;
     this.avatarVelocity = { x: 0, y: 0 };
     if (!success && this.attempts >= this.level.hints.policy.autoAfterAttempts && this.hintStage === 0) this.revealHint(1, true);
     this.emit(success ? "success" : "failure", { position: copy(this.avatarPosition), attempt: this.attempts, levelId: this.level.id, goalKind: this.level.goal.kind, star: this.collectedStar });
+  }
+  // The fort still stands: back to the sling for the next shot of the round.
+  prepareNextShot() {
+    const landed = copy(this.avatarPosition);
+    this.phase = GamePhase.READY;
+    this.avatarPosition = copy(this.anchor);
+    this.avatarVelocity = { x: 0, y: 0 };
+    this.rotation = 0;
+    this.facing = 1;
+    this.bodyAngle = 0;
+    this.spin = 0;
+    this.turnedAt = -1;
+    this.settledTime = 0;
+    this.trajectoryCache = null;
+    this.emit("next-shot", { position: landed, left: this.shotsLeft, of: this.shotsPerRound, shot: this.shotsPerRound - this.shotsLeft + 1 });
   }
   simulate(pull, numberOfDots = 32, duration = 6) {
     // Same reason as dragSling: `trajectoryForPull` right below refuses a
@@ -306,6 +352,9 @@ export class GameModel {
     const simulation = new GameModel(() => {}, this.level);
     simulation.layoutOffset = this.layoutOffset;
     simulation.startFlight(this.velocityForPull(launch), false, launch);
+    // Mid-round, the preview has to fly at the fort as it is now, not as it
+    // stood before the first shot.
+    if (this.roundInProgress && this.world) simulation.world = cloneWorld(this.world);
     const allPoints = [];
     // A tower can take a few seconds to finish falling after the hero lands.
     const limit = this.level.towers ? Math.max(duration, 9.5) : duration;
@@ -435,6 +484,7 @@ export class GameModel {
   }
   get statusText() {
     if (this.phase === GamePhase.READY && this.mode === GameMode.ONE_MOVE && !this.moveUsed) return `Przesuń ${this.movableName} raz, potem wystrzel. Dotknięcie bez ruchu się nie liczy.`;
+    if (this.phase === GamePhase.READY && this.roundInProgress && this.shotsLeft > 0) return `Wieża jeszcze stoi. Strzał ${this.shotsPerRound - this.shotsLeft + 1} z ${this.shotsPerRound} — każde pęknięcie zostaje.`;
     if (this.phase === GamePhase.READY && this.activeHint) return this.activeHint.text;
     if (this.phase === GamePhase.FAILED) return this.failureReason;
     return this.level.status[this.phase] ?? this.level.result.successTitle;
