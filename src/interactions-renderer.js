@@ -1,6 +1,6 @@
 // Visual language: mint = active/entry, coral = obstacle, gold = optional reward,
 // crimson + spikes = the one thing that ends the flight on touch.
-import { movedBody, pendulumAngle, pendulumBob } from "./physics.js?v=0.49.0";
+import { movedBody, pendulumAngle, pendulumBob } from "./physics.js?v=0.50.0";
 const ink = "#19142d", cream = "#fff5d9", mint = "#5ce1bd", coral = "#ff6078", gold = "#ffd35f", violet = "#a28bff", danger = "#d6002f";
 function box(ctx, x, y, w, h, color, radius = 12) {
   ctx.beginPath(); ctx.roundRect(x, y, w, h, radius);
@@ -248,8 +248,13 @@ export function drawObjective(ctx, model, time) {
   // states whether it is open. The full sentence lives in the UI strip.
   // The collider may sit inside the drawn object, so the caption clears the
   // artwork rather than the hit circle.
-  const captionLift = Math.max(model.goalRadius, 74) + 28;
-  if (!landed) label(ctx, model.objectiveMet ? "TRAF TUTAJ" : "CEL ZAMKNIĘTY", goal.x, goal.y - captionLift, model.objectiveMet ? mint : coral, 11);
+  // A tower's target is a small block: its caption sits just above it, not
+  // where a big flight goal's would.
+  const target = model.towerTarget;
+  const captionLift = target ? target.height / 2 + 30 : Math.max(model.goalRadius, 74) + 28;
+  // On a tower the instruction is the verb of the chapter: bring it down.
+  const caption = model.level.towers ? "STRĄĆ!" : model.objectiveMet ? "TRAF TUTAJ" : "CEL ZAMKNIĘTY";
+  if (!landed && !model.towerTarget?.broken) label(ctx, caption, goal.x, goal.y - captionLift, model.objectiveMet ? mint : coral, 11);
   const star = model.level.star;
   if (star && !model.collectedStar) {
     ctx.save(); ctx.translate(star.x, star.y); ctx.rotate(Math.sin(time * 2) * .13);

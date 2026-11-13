@@ -1,7 +1,8 @@
+import { TOWER_CHAPTER } from "./towers.js?v=0.50.0";
 // Authored campaign layouts. Coordinates describe actual colliders, not decoration.
 // Routes are measured offline with the same solver used by the game.
-import { CAMPAIGN_ROUTES } from "./campaign-routes.js?v=0.49.0";
-import { PROP_CLEARANCE, clearanceBetween, goalParts, propParts, spansVertically } from "./prop-art.js?v=0.49.0";
+import { CAMPAIGN_ROUTES } from "./campaign-routes.js?v=0.50.0";
+import { PROP_CLEARANCE, clearanceBetween, goalParts, propParts, spansVertically } from "./prop-art.js?v=0.50.0";
 
 export const CHAPTERS = Object.freeze([
   { id: "home", name: "Domowy chaos", subtitle: "Od drzemki do pierwszej kaczki", scene: "bedroom" },
@@ -15,7 +16,11 @@ export const CHAPTERS = Object.freeze([
   { id: "station", name: "Orbita absurdu", subtitle: "Podłoga ma dziś wolne", scene: "station", environment: { gravity: .18, drag: .02 } },
   { id: "homebound", name: "Powrót pod kołdrę", subtitle: "Wszechświat odprowadza Cię do łóżka", scene: "comet", environment: { gravity: .4, drag: .025 } },
   { id: "lab", name: "Szkolna pracownia fizyki", subtitle: "Wahadło wie, która godzina. Sprężyna pamięta, jak mocno wszedłeś.", scene: "laundry" },
+  TOWER_CHAPTER,
 ].map((chapter, index) => Object.freeze({ ...chapter, number: index + 1, first: index * 8 + 1, last: index * 8 + 8 })));
+
+// The flight campaign proper: chapters 1-11. Chapter 12 is towers.
+const FLIGHT_CHAPTERS = 11;
 
 const p = (x, y) => ({ x, y });
 const crate = (id, x, y = 190, height = 396, label = "OSTROŻNIE: ZAWARTOŚĆ") => ({ id, type: "breakable", x, y, width: 60, height, label });
@@ -158,7 +163,9 @@ function shotFor(number, override) {
   const options = HEIGHT_ORDER.filter((name) => band[name] !== undefined);
   // Height climbs from forgiving to demanding across the campaign; a chapter's
   // opener and breather step back down it.
-  const rank = Math.round((chapter / (CHAPTERS.length - 1)) * (options.length - 1) + LOCAL_STEP[local] * 0.6);
+  // The difficulty curve spans the eleven flight chapters. Counting the tower
+  // chapter in here re-laid every mission in the campaign when it was added.
+  const rank = Math.round((chapter / (FLIGHT_CHAPTERS - 1)) * (options.length - 1) + LOCAL_STEP[local] * 0.6);
   const requested = override?.height ?? options[Math.max(0, Math.min(options.length - 1, rank))];
   // An override may ask for a height this distance does not have — a long high
   // shot does not exist — so it falls back to the nearest one that does.

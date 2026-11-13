@@ -1,4 +1,5 @@
 // One deterministic solver for the live game, previews and replays.
+import { stepWorld, worldAsleep } from "./blocks.js?v=0.50.0";
 export const FIXED_STEP = 1 / 120;
 export const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
 export const magnitude = (p) => Math.hypot(p.x, p.y);
@@ -319,6 +320,25 @@ export function stepPhysics(model, dt = FIXED_STEP) {
     v.x *= Math.exp(-3.5 * dt);
   }
 
+  // A tower: the hero trades impulses with the blocks, and the mission is won
+  // by bringing the target down — broken, or knocked off onto the floor.
+  if (model.world) {
+    const gravity = 620 * model.gravityScale;
+    const result = stepWorld(model.world, dt, gravity, { x: p.x, y: p.y, vx: v.x, vy: v.y, radius });
+    if (result) {
+      p.x = result.x; p.y = result.y; v.x = result.vx; v.y = result.vy;
+    }
+    for (const hit of model.world.hits) {
+      model.contactNormal = { x: hit.nx, y: hit.ny };
+      if (hit.speed > 90) model.triggerImpact(hit.speed, hit.x, hit.y, "block");
+    }
+    for (const broken of model.world.breaks) model.emit("block-break", broken);
+    if (towerFallen(model)) {
+      model.finishAttempt(true);
+      return;
+    }
+  }
+
   const star = model.level.star;
   if (star && !model.collectedStar && segmentDistance(before, p, star) <= radius + 19) {
     model.collectedStar = true;
@@ -334,7 +354,7 @@ export function stepPhysics(model, dt = FIXED_STEP) {
     // wrong instead of offering the same shrug every time.
     model.closestGoalPoint = { x: p.x, y: p.y };
   }
-  if (model.objectiveMet && segmentDistance(before, p, model.goalCentre) <= radius + model.goalRadius) {
+  if (!model.world && model.objectiveMet && segmentDistance(before, p, model.goalCentre) <= radius + model.goalRadius) {
     model.finishAttempt(true);
     return;
   }
@@ -342,7 +362,10 @@ export function stepPhysics(model, dt = FIXED_STEP) {
   stepBody(model, dt);
   const grounded = p.y + radius >= model.groundY - 1 && magnitude(v) < 100;
   model.settledTime = grounded ? model.settledTime + dt : 0;
-  if (p.x < -120 || p.x > 1410 || p.y > 760 || model.flightTime > 6 || model.settledTime > 0.28) {
+  // On a tower the shot is not over while the tower is still falling: the hero
+  // may be long gone and the target still on its way to the floor.
+  const towerBusy = model.world && !worldAsleep(model.world) && model.flightTime < 9;
+  if (!towerBusy && (p.x < -120 || p.x > 1410 || p.y > 760 || model.flightTime > (model.world ? 9 : 6) || model.settledTime > 0.28)) {
     model.failureReason = describeMiss(model);
     model.finishAttempt(false);
   }
@@ -392,5 +415,24 @@ export function surfaceBelow(model, x, y) {
       best = item.y;
     }
   }
+  // Tower blocks catch a shadow on their top, wherever they have fallen.
+  for (const block of model.world?.bodies ?? []) {
+    if (block.broken) continue;
+    const reachX = Math.abs(Math.cos(block.angle)) * block.width / 2 + Math.abs(Math.sin(block.angle)) * block.height / 2;
+    const reachY = Math.abs(Math.sin(block.angle)) * block.width / 2 + Math.abs(Math.cos(block.angle)) * block.height / 2;
+    const top = block.y - reachY;
+    if (Math.abs(x - block.x) <= reachX && top >= y && top < best) best = top;
+  }
   return best;
+}
+
+// The target is down when it breaks, or when any corner of it reaches the
+// floor: knocked off the tower is knocked out.
+export function towerFallen(model) {
+  const target = model.world?.bodies.find((body) => body.target);
+  if (!target) return false;
+  if (target.broken) return true;
+  const c = Math.cos(target.angle), s = Math.sin(target.angle);
+  const lowest = target.y + Math.abs(s) * target.width / 2 + Math.abs(c) * target.height / 2;
+  return lowest >= model.world.groundY - 2;
 }

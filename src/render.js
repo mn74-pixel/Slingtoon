@@ -1,12 +1,13 @@
-import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.49.0";
-import { RENDER_MAX_PIXELS, clientPointToWorld, createCropFreeViewport, edgeMarker, renderScale } from "./viewport.js?v=0.49.0";
-import { POUCH_HALF, REST_LEAN, pouchEnds, restPosition, restingGrip, slingFrame, slingGrip } from "./sling-art.js?v=0.49.0";
-import { drawInteractions, drawObjective } from "./interactions-renderer.js?v=0.49.0";
-import { drawCampaignGoal, drawCampaignScene, drawWorldCompanion, setSceneBleed } from "./world-renderer.js?v=0.49.0";
-import { drawSceneLife } from "./scene-life.js?v=0.49.0";
-import { createRng, sprayAngle, stepParticle } from "./particles.js?v=0.49.0";
-import { speechBubbleLayout } from "./prop-art.js?v=0.49.0";
-import { surfaceBelow } from "./physics.js?v=0.49.0";
+import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.50.0";
+import { RENDER_MAX_PIXELS, clientPointToWorld, createCropFreeViewport, edgeMarker, renderScale } from "./viewport.js?v=0.50.0";
+import { POUCH_HALF, REST_LEAN, pouchEnds, restPosition, restingGrip, slingFrame, slingGrip } from "./sling-art.js?v=0.50.0";
+import { drawInteractions, drawObjective } from "./interactions-renderer.js?v=0.50.0";
+import { drawCampaignGoal, drawCampaignScene, drawWorldCompanion, setSceneBleed } from "./world-renderer.js?v=0.50.0";
+import { drawSceneLife } from "./scene-life.js?v=0.50.0";
+import { createRng, sprayAngle, stepParticle } from "./particles.js?v=0.50.0";
+import { speechBubbleLayout } from "./prop-art.js?v=0.50.0";
+import { BLOCK_COLOURS, drawTowerBlocks } from "./tower-art.js?v=0.50.0";
+import { surfaceBelow } from "./physics.js?v=0.50.0";
 
 // How long the hero takes to turn around when a bounce sends them back.
 const TURN_SECONDS = 0.12;
@@ -237,16 +238,21 @@ export class GameRenderer {
       // side of the phone or the ice cream like a sprite that lost its update.
       // Landing settles them onto the goal instead: centred, upright, and sunk
       // to the chest so the head and shoulders stay above the rim.
-      this.landing = { from: { ...event.position }, at: this.time, goal: { ...this.model.goalCentre }, radius: this.model.goalRadius, puffed: false };
-      this.spawnConfetti(event.position.x, event.position.y, 64);
       const goal = this.model.goalCentre;
+      // On a tower the target is brought down, not reached: the hero stays
+      // where the collapse left them and the confetti goes up at the target.
+      const tower = Boolean(this.model.level.towers);
+      this.landing = tower ? null : { from: { ...event.position }, at: this.time, goal: { ...goal }, radius: this.model.goalRadius, puffed: false };
+      this.spawnConfetti(tower ? goal.x : event.position.x, tower ? goal.y : event.position.y, 64);
       // Clear the landed head rather than a fixed offset from the goal: the hero
       // now sits on top of the target, and a photo head reaches much higher than
       // the drawn one, so a constant would print the tag across the player's face.
       const headroom = this.faceImage ? 150 : 88;
-      const tagY = Math.max(58, this.landing.goal.y - this.landing.radius * 0.15 - 8 - headroom);
+      const tagY = Math.max(58, goal.y - this.model.goalRadius * 0.15 - 8 - headroom);
       this.callouts.push({ x: goal.x, y: tagY, text: this.model.level.result.successTag, age: 0, life: 1.6, angle: -0.08 });
     }
+
+    if (event.type === "block-break") this.spawnDebris(event);
 
     if (event.type === "success" || event.type === "failure") {
       this.ghost = this.flightPath.length > 2
@@ -737,10 +743,24 @@ export class GameRenderer {
   drawPhysicalObjects(ctx) {
     if (this.model.waterBounds?.enabled) this.drawWater(ctx);
     drawInteractions(ctx, this.model, this.time);
+    if (this.model.world) drawTowerBlocks(ctx, this.model.world);
     this.drawGoalTarget(ctx);
   }
 
   drawGoalTarget(ctx) {
+    // A tower's target is a body: it turns with the block it is, and once it
+    // has broken there is nothing left standing to draw.
+    const target = this.model.towerTarget;
+    if (target) {
+      if (target.broken) return;
+      ctx.save();
+      ctx.translate(target.x, target.y);
+      ctx.rotate(target.angle);
+      ctx.translate(-target.x, -target.y);
+      this.drawAlarmClock(ctx);
+      ctx.restore();
+      return;
+    }
     if (drawCampaignGoal(ctx, this.model, this.time, this.successPulse, this.goalWobble)) return;
     const drawers = {
       alarm: () => this.drawAlarmClock(ctx),
@@ -2001,6 +2021,32 @@ export class GameRenderer {
         spin: (this.random() - 0.5) * 14,
       });
     }
+  }
+
+  // A block that breaks comes apart into chips of its own material, thrown
+  // outward and down with the same floor and seeded random as every effect.
+  spawnDebris(piece) {
+    const colour = BLOCK_COLOURS[piece.material] ?? BLOCK_COLOURS.wood;
+    const count = piece.target ? 22 : Math.round(8 + (piece.width * piece.height) / 260);
+    for (let index = 0; index < Math.min(count, 26); index += 1) {
+      const angle = -Math.PI * (0.1 + this.random() * 0.8);
+      const speed = 120 + this.random() * 320;
+      this.particles.push({
+        kind: piece.material === "glass" ? "spark" : "confetti",
+        x: piece.x + (this.random() - 0.5) * piece.width * 0.8,
+        y: piece.y + (this.random() - 0.5) * piece.height * 0.8,
+        velocity: { x: Math.cos(angle) * speed, y: Math.sin(angle) * speed },
+        gravity: 900,
+        size: 4 + this.random() * (piece.material === "stone" ? 9 : 6),
+        color: index % 3 === 0 ? colour.edge : colour.fill,
+        age: 0,
+        life: 0.9 + this.random() * 0.7,
+        rotation: this.random() * Math.PI,
+        spin: (this.random() - 0.5) * 16,
+      });
+    }
+    this.shake = Math.max(this.shake, piece.material === "stone" ? 6 : 3);
+    if (this.particles.length > 140) this.particles.splice(0, this.particles.length - 140);
   }
 
   spawnConfetti(x, y, count) {
