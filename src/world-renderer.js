@@ -99,8 +99,11 @@ export function drawCampaignScene(ctx, level) {
     const hutX = pick(variant, [915, 840, 960, 890]);
     // Decorative words sit at gameplay altitude and compete for the player's
     // reading, so the hut keeps its silhouette and loses its sign.
-    box(ctx, hutX, 355, 155, 125, "#b77882", 7, 3); path(ctx, [[hutX - 20, 355], [hutX + 75, 302], [hutX + 170, 355]], "#e9c18e", 3);
-    line(ctx, [[hutX + 30, 400], [hutX + 125, 400]], "#96616e", 5); line(ctx, [[hutX + 30, 432], [hutX + 125, 432]], "#96616e", 5);
+    // Behind a fort, a hut reads as one more block of it: forts go without.
+    if (!level.towers) {
+      box(ctx, hutX, 355, 155, 125, "#b77882", 7, 3); path(ctx, [[hutX - 20, 355], [hutX + 75, 302], [hutX + 170, 355]], "#e9c18e", 3);
+      line(ctx, [[hutX + 30, 400], [hutX + 125, 400]], "#96616e", 5); line(ctx, [[hutX + 30, 432], [hutX + 125, 432]], "#96616e", 5);
+    }
     const parasolX = 215 + variant * 26;
     line(ctx, [[parasolX + 65, 465], [parasolX + 95, 350]], "#ad7880", 7);
     path(ctx, [[parasolX, 360], [parasolX + 95, 305], [parasolX + 165, 375]], "#b690ad", 3);
@@ -138,7 +141,8 @@ export function drawCampaignScene(ctx, level) {
     const quay = 397 + pick(variant, [0, 14, -10, 6]);
     band(ctx, quay, 586 - quay, "#6d9cac"); waves(ctx, quay + 28); waves(ctx, quay + 68);
     const stackBase = pick(variant, [650, 590, 700, 630]);
-    for (let i = 0; i < pick(variant, [3, 4, 2, 3]); i++) { box(ctx, stackBase + i * 165, 350 - i % 2 * 82, 153, 145, ["#9689ae", "#b88f91", "#819da6", "#a08fa6"][i % 4], 3, 3); for (let x = stackBase + 15 + i * 165; x < stackBase + 140 + i * 165; x += 23) line(ctx, [[x, 360 - i % 2 * 82], [x, 480 - i % 2 * 82]], "#6a6287", 2); }
+    // The container stack likewise: crates behind a fort look like its blocks.
+    for (let i = 0; i < (level.towers ? 0 : pick(variant, [3, 4, 2, 3])); i++) { box(ctx, stackBase + i * 165, 350 - i % 2 * 82, 153, 145, ["#9689ae", "#b88f91", "#819da6", "#a08fa6"][i % 4], 3, 3); for (let x = stackBase + 15 + i * 165; x < stackBase + 140 + i * 165; x += 23) line(ctx, [[x, 360 - i % 2 * 82], [x, 480 - i % 2 * 82]], "#6a6287", 2); }
     const craneX = pick(variant, [320, 245, 395, 290]);
     line(ctx, [[craneX, 505], [craneX, 125], [craneX + 410, 125]], "#99848e", 20); line(ctx, [[craneX + 2, 150], [craneX + 190, 126]], "#665974", 5);
     line(ctx, [[craneX + 330, 125], [craneX + 330, 250]], "#625770", 4); box(ctx, craneX + 315, 245, 30, 40, "#b99b8b", 7, 3);

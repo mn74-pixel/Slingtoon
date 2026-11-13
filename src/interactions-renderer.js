@@ -1,6 +1,6 @@
 // Visual language: mint = active/entry, coral = obstacle, gold = optional reward,
 // crimson + spikes = the one thing that ends the flight on touch.
-import { movedBody, pendulumAngle, pendulumBob } from "./physics.js?v=0.51.1";
+import { movedBody, pendulumAngle, pendulumBob } from "./physics.js?v=0.52.0";
 const ink = "#19142d", cream = "#fff5d9", mint = "#5ce1bd", coral = "#ff6078", gold = "#ffd35f", violet = "#a28bff", danger = "#d6002f";
 function box(ctx, x, y, w, h, color, radius = 12) {
   ctx.beginPath(); ctx.roundRect(x, y, w, h, radius);
@@ -223,12 +223,19 @@ export function drawObjective(ctx, model, time) {
   // Chapter scenery sits at fixed coordinates and can land right behind a
   // mission goal. This halo knocks the decoration back so the one object the
   // player must hit always reads first, without flattening the whole scene.
+  // A fort can carry several alarm clocks: each standing one gets the halo
+  // and the ring, so none of them hides in the scenery.
+  const spots = model.world
+    ? model.towerTargets.filter((body) => !model.downTargets.has(body.id)).map((body) => ({ x: body.x, y: body.y }))
+    : [goal];
   const haloRadius = Math.max(model.goalRadius, 74) + 108;
-  const halo = ctx.createRadialGradient(goal.x, goal.y, haloRadius * 0.32, goal.x, goal.y, haloRadius);
-  halo.addColorStop(0, "rgba(20,13,34,.28)");
-  halo.addColorStop(1, "rgba(20,13,34,0)");
-  ctx.fillStyle = halo;
-  ctx.beginPath(); ctx.arc(goal.x, goal.y, haloRadius, 0, Math.PI * 2); ctx.fill();
+  for (const spot of spots) {
+    const halo = ctx.createRadialGradient(spot.x, spot.y, haloRadius * 0.32, spot.x, spot.y, haloRadius);
+    halo.addColorStop(0, model.world ? "rgba(20,13,34,.18)" : "rgba(20,13,34,.28)");
+    halo.addColorStop(1, "rgba(20,13,34,0)");
+    ctx.fillStyle = halo;
+    ctx.beginPath(); ctx.arc(spot.x, spot.y, haloRadius, 0, Math.PI * 2); ctx.fill();
+  }
   if (motion) {
     ctx.strokeStyle = "rgba(255,245,217,.45)"; ctx.lineWidth = 3; ctx.setLineDash([4, 10]);
     ctx.beginPath(); ctx.moveTo(model.level.goal.x, model.level.goal.y - motion.amplitude); ctx.lineTo(model.level.goal.x, model.level.goal.y + motion.amplitude); ctx.stroke(); ctx.setLineDash([]);
@@ -240,7 +247,8 @@ export function drawObjective(ctx, model, time) {
   if (!landed) {
     ctx.strokeStyle = model.objectiveMet ? mint : coral;
     ctx.lineWidth = 3; ctx.globalAlpha = .55 + Math.sin(time * 3) * .12; ctx.setLineDash([7, 7]);
-    ctx.beginPath(); ctx.arc(goal.x, goal.y, model.goalRadius, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
+    for (const spot of spots) { ctx.beginPath(); ctx.arc(spot.x, spot.y, model.goalRadius, 0, Math.PI * 2); ctx.stroke(); }
+    ctx.setLineDash([]); ctx.globalAlpha = 1;
   }
   // The caption used to repeat the requirement at the goal while the object it
   // described stood elsewhere on screen — an instruction pointing at the wrong
@@ -254,7 +262,19 @@ export function drawObjective(ctx, model, time) {
   const captionLift = target ? target.height / 2 + 30 : Math.max(model.goalRadius, 74) + 28;
   // On a tower the instruction is the verb of the chapter: bring it down.
   const caption = model.level.towers ? "STRĄĆ!" : model.objectiveMet ? "TRAF TUTAJ" : "CEL ZAMKNIĘTY";
-  if (!landed && !model.towerTarget?.broken) label(ctx, caption, goal.x, goal.y - captionLift, model.objectiveMet ? mint : coral, 11);
+  if (model.world) {
+    // Every alarm clock still standing carries its own order.
+    // Clocks standing side by side share one caption: three labels shoulder
+    // to shoulder read as one smudge.
+    const placed = [];
+    for (const body of model.towerTargets) {
+      if (model.downTargets.has(body.id) || model.phase === "succeeded") continue;
+      const y = body.y - body.height / 2 - 30;
+      if (placed.some((spot) => Math.abs(spot.x - body.x) < 110 && Math.abs(spot.y - y) < 60)) continue;
+      placed.push({ x: body.x, y });
+      label(ctx, caption, body.x, y, mint, 11);
+    }
+  } else if (!landed) label(ctx, caption, goal.x, goal.y - captionLift, model.objectiveMet ? mint : coral, 11);
   const star = model.level.star;
   if (star && !model.collectedStar) {
     ctx.save(); ctx.translate(star.x, star.y); ctx.rotate(Math.sin(time * 2) * .13);

@@ -1,8 +1,8 @@
-import { TOWER_CHAPTER } from "./towers.js?v=0.51.1";
+import { TOWER_CHAPTERS } from "./towers.js?v=0.52.0";
 // Authored campaign layouts. Coordinates describe actual colliders, not decoration.
 // Routes are measured offline with the same solver used by the game.
-import { CAMPAIGN_ROUTES } from "./campaign-routes.js?v=0.51.1";
-import { PROP_CLEARANCE, clearanceBetween, goalParts, propParts, spansVertically } from "./prop-art.js?v=0.51.1";
+import { CAMPAIGN_ROUTES } from "./campaign-routes.js?v=0.52.0";
+import { PROP_CLEARANCE, clearanceBetween, goalParts, propParts, spansVertically } from "./prop-art.js?v=0.52.0";
 
 export const CHAPTERS = Object.freeze([
   { id: "home", name: "Domowy chaos", subtitle: "Od drzemki do pierwszej kaczki", scene: "bedroom" },
@@ -16,7 +16,7 @@ export const CHAPTERS = Object.freeze([
   { id: "station", name: "Orbita absurdu", subtitle: "Podłoga ma dziś wolne", scene: "station", environment: { gravity: .18, drag: .02 } },
   { id: "homebound", name: "Powrót pod kołdrę", subtitle: "Wszechświat odprowadza Cię do łóżka", scene: "comet", environment: { gravity: .4, drag: .025 } },
   { id: "lab", name: "Szkolna pracownia fizyki", subtitle: "Wahadło wie, która godzina. Sprężyna pamięta, jak mocno wszedłeś.", scene: "laundry" },
-  TOWER_CHAPTER,
+  ...TOWER_CHAPTERS,
 ].map((chapter, index) => Object.freeze({ ...chapter, number: index + 1, first: index * 8 + 1, last: index * 8 + 8 })));
 
 // The flight campaign proper: chapters 1-11. Chapter 12 is towers.

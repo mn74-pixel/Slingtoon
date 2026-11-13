@@ -10,6 +10,20 @@ import { MATERIALS, createWorld, stepWorld, worldAsleep } from "../src/blocks.js
 import { towerFallen } from "../src/physics.js";
 
 const towers = LEVELS.filter((level) => level.towers);
+// Shot after shot through the real input path, letting the fort settle in
+// between, as scripts/balance-towers.mjs measured the plan.
+const playPlan = (level, pulls) => {
+  const model = new GameModel(() => {}, level);
+  for (const pull of pulls) {
+    if (model.phase !== GamePhase.READY) break;
+    model.beginSling(model.anchor);
+    model.dragSling(pull);
+    model.releaseSling();
+    for (let i = 0; i < 1300 && model.phase === GamePhase.FLYING; i += 1) model.update(1 / 120);
+    for (let i = 0; i < 1500 && model.phase === GamePhase.READY && !worldAsleep(model.world); i += 1) model.update(1 / 120);
+  }
+  return model;
+};
 const fly = (level, pull) => {
   const model = new GameModel(() => {}, level);
   model.beginSling(model.anchor);
@@ -19,13 +33,31 @@ const fly = (level, pull) => {
   return model;
 };
 
-test("chapter 12 is eight tower missions after the flight campaign", () => {
-  assert.equal(towers.length, 8);
-  assert.deepEqual(towers.map((level) => level.number), [89, 90, 91, 92, 93, 94, 95, 96]);
+test("chapters 12-15 are thirty-two forts after the flight campaign", () => {
+  assert.equal(towers.length, 32);
+  assert.deepEqual(towers.map((level) => level.number), Array.from({ length: 32 }, (_, i) => 89 + i));
   assert.ok(LEVELS.filter((level) => level.number <= 88).every((level) => !level.towers), "a flight mission grew a tower");
   for (const level of towers) {
-    assert.equal(level.towers.filter((block) => block.target).length, 1, `mission ${level.number} needs exactly one target`);
+    const clocks = level.towers.filter((block) => block.target);
+    // Chapter 12 teaches the materials on one clock; the fort chapters add more.
+    if (level.number <= 96) assert.equal(clocks.length, 1, `mission ${level.number} needs exactly one target`);
+    else assert.ok(clocks.length >= 1 && clocks.length <= 4, `mission ${level.number} has ${clocks.length} clocks`);
+    assert.equal(new Set(level.towers.map((block) => block.id)).size, level.towers.length, `mission ${level.number} repeats a block id`);
     assert.ok(new Set(level.towers.map((block) => block.material)).size >= 2, `mission ${level.number} is one material`);
+  }
+});
+
+test("no block of any fort starts inside another", () => {
+  for (const level of towers) {
+    const t = level.towers;
+    for (let i = 0; i < t.length; i += 1) for (let j = i + 1; j < t.length; j += 1) {
+      const a = t[i], b = t[j];
+      const ox = Math.min(a.x + a.width / 2, b.x + b.width / 2) - Math.max(a.x - a.width / 2, b.x - b.width / 2);
+      const oy = Math.min(a.y + a.height / 2, b.y + b.height / 2) - Math.max(a.y - a.height / 2, b.y - b.height / 2);
+      assert.ok(!(ox > 0.5 && oy > 0.5), `mission ${level.number}: ${a.id} overlaps ${b.id}`);
+    }
+    // A clock on the floor would already count as knocked down.
+    for (const clock of t.filter((block) => block.target)) assert.ok(clock.y + clock.height / 2 < level.groundY - 2, `mission ${level.number}: ${clock.id} starts down`);
   }
 });
 
@@ -54,11 +86,14 @@ test("a tall stack of stone carries its own weight without wearing out", () => {
   assert.ok(world.bodies.every((body) => body.health === body.strength), "weight was counted as a blow");
 });
 
-test("every fort comes down to its stored shot", () => {
+test("every fort comes down to its stored plan within its shots", () => {
   for (const level of towers) {
-    const model = fly(level, level.assistPull);
-    assert.equal(model.phase, GamePhase.SUCCEEDED, `mission ${level.number}: the hint shot left the target standing`);
-    assert.ok(towerFallen(model), `mission ${level.number} was won without the target coming down`);
+    assert.ok(level.plan.length >= 1 && level.plan.length <= level.shots, `mission ${level.number}: a plan of ${level.plan.length} for ${level.shots} shots`);
+    assert.deepEqual(level.plan[0], level.assistPull, `mission ${level.number}: the hint is not the plan's first shot`);
+    const model = playPlan(level, level.plan);
+    assert.equal(model.phase, GamePhase.SUCCEEDED, `mission ${level.number}: the stored plan left a clock standing`);
+    assert.ok(towerFallen(model), `mission ${level.number} was won without every clock coming down`);
+    assert.ok(Array.isArray(level.scoreStars) && level.scoreStars[0] < level.scoreStars[1], `mission ${level.number} has no star thresholds`);
   }
 });
 

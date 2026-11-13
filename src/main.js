@@ -1,13 +1,13 @@
-import { GameModel, GameMode, GamePhase, LEVELS, modifierName } from "./game.js?v=0.51.1";
-import { GameRenderer } from "./render.js?v=0.51.1";
-import { GameAudio } from "./audio.js?v=0.51.1";
-import { FaceStudio } from "./face-studio.js?v=0.51.1";
-import { CHARACTER_UNLOCKS, PROGRESS_KEY, TOKEN_SCORE_STEP, characterLock, countMastered, countStars, isMastered, readProgress, hintOffer, purchaseHint, recordStreak, rewardSuccess, medalText } from "./progress.js?v=0.51.1";
-import { STREAK_MAX_SHOTS, STREAK_MIN_POOL, canStartStreak, clearStreakMission, createStreakRun, drawStreakMission, spendStreakShot, streakSummary } from "./streak.js?v=0.51.1";
-import { CHAPTERS } from "./levels.js?v=0.51.1";
-import { settledAim, trimAimTrail } from "./aim-settle.js?v=0.51.1";
-import { RENDER_MAX_PIXELS, nextPixelBudget, overlayInset } from "./viewport.js?v=0.51.1";
-import { approachTimeFeel, armTimeFeel, createTimeFeel, punchTimeFeel, timeScale } from "./time-feel.js?v=0.51.1";
+import { GameModel, GameMode, GamePhase, LEVELS, modifierName } from "./game.js?v=0.52.0";
+import { GameRenderer } from "./render.js?v=0.52.0";
+import { GameAudio } from "./audio.js?v=0.52.0";
+import { FaceStudio } from "./face-studio.js?v=0.52.0";
+import { CHARACTER_UNLOCKS, PROGRESS_KEY, TOKEN_SCORE_STEP, characterLock, countMastered, countStars, isMastered, readProgress, hintOffer, purchaseHint, recordStreak, rewardSuccess, medalText } from "./progress.js?v=0.52.0";
+import { STREAK_MAX_SHOTS, STREAK_MIN_POOL, canStartStreak, clearStreakMission, createStreakRun, drawStreakMission, spendStreakShot, streakSummary } from "./streak.js?v=0.52.0";
+import { CHAPTERS } from "./levels.js?v=0.52.0";
+import { settledAim, trimAimTrail } from "./aim-settle.js?v=0.52.0";
+import { RENDER_MAX_PIXELS, nextPixelBudget, overlayInset } from "./viewport.js?v=0.52.0";
+import { approachTimeFeel, armTimeFeel, createTimeFeel, punchTimeFeel, timeScale } from "./time-feel.js?v=0.52.0";
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -109,7 +109,7 @@ let progress = loadProgress();
 let highestUnlockedLevel = progress.highestUnlockedLevel;
 let mapChapterIndex = 0;
 let lastReward = null;
-const FULLSCREEN_TIP_KEY = "slingtoon-fullscreen-tip-0.51.1";
+const FULLSCREEN_TIP_KEY = "slingtoon-fullscreen-tip-0.52.0";
 
 function loadProgress() {
   try {
@@ -189,7 +189,7 @@ function endStreak(quit = false) {
 
 function scoreSuccess() {
   const starsBefore = countStars(progress, LEVELS);
-  lastReward = rewardSuccess(progress, { id: model.level.id, attempts: model.attempts, star: model.collectedStar, mode: model.mode, hintStage: model.hintStage, modifier: model.modifier, ...(model.level.towers ? { shotsUsed: model.shotsPerRound - model.sparedShots, sparedShots: model.sparedShots } : {}) });
+  lastReward = rewardSuccess(progress, { id: model.level.id, attempts: model.attempts, star: model.collectedStar, mode: model.mode, hintStage: model.hintStage, modifier: model.modifier, ...(model.level.towers ? { shotsUsed: model.shotsPerRound - model.sparedShots, sparedShots: model.sparedShots, fortScore: model.towerScore, fortStars: model.towerStars } : {}) });
   if (announceUnlocks(starsBefore)) refreshCharacters();
 }
 
@@ -679,6 +679,9 @@ function renderMissionChapter() {
     title.textContent = level.name;
     mechanic.textContent = level.mechanic;
     medals.textContent = button.disabled ? "Ukończ poprzednią misję, by odblokować" : medalText(progress.medals[level.id]);
+    // A fort also shows its stars and its record, like a scoreboard.
+    const fortStars = level.towers ? progress.fortStars?.[level.id] ?? 0 : 0;
+    if (!button.disabled && fortStars) medals.textContent = `${"★".repeat(fortStars)}${"☆".repeat(3 - fortStars)} ${formatPoints(progress.fortScores[level.id])} · ${medals.textContent}`;
     button.append(chapter, title, mechanic, medals);
     button.addEventListener("click", () => {
       if (index === currentLevelIndex) model.resetLevel(true);
@@ -770,6 +773,11 @@ function showStreakResult() {
   elements.againButton.textContent = "⚡ JESZCZE JEDNA SERIA";
 }
 
+// 12 500, not 12500: a scoreboard number reads in groups of three.
+function formatPoints(points) {
+  return String(Math.round(points)).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+}
+
 function showResult() {
   if (streakResult && !streakRun) { showStreakResult(); return; }
   const success = model.phase === GamePhase.SUCCEEDED;
@@ -791,6 +799,11 @@ function showResult() {
     elements.resultReward.textContent = (lastReward.gained > 0
       ? `★ +${lastReward.gained} Punktów Sprytu${tokenText}`
       : `★ ${lastReward.score} · rekord tego poziomu już zapisany`) + `\n${medalText(progress.medals[model.level.id])}`;
+    // A fort also has its own score and one to three stars, like a scoreboard.
+    if (lastReward.fortScore !== null && lastReward.fortScore !== undefined) {
+      const stars = "★".repeat(lastReward.fortStars) + "☆".repeat(3 - lastReward.fortStars);
+      elements.resultReward.textContent = `${stars}  FORT: ${formatPoints(lastReward.fortScore)} pkt${lastReward.fortRecord ? " · REKORD!" : ""}\n` + elements.resultReward.textContent;
+    }
   }
   // A round on a tower is several shots against a fort that changes, so a
   // single-shot replay with a twist has nothing honest to replay.
@@ -1038,7 +1051,7 @@ window.addEventListener("keydown", (event) => {
 
 window.addEventListener("load", () => {
   if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
-    navigator.serviceWorker.register("./sw.js?v=0.51.1").catch(() => {});
+    navigator.serviceWorker.register("./sw.js?v=0.52.0").catch(() => {});
   }
   scheduleFullscreenSuggestion();
   syncGameViewport();

@@ -1,13 +1,13 @@
-import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.51.1";
-import { RENDER_MAX_PIXELS, clientPointToWorld, createCropFreeViewport, edgeMarker, renderScale } from "./viewport.js?v=0.51.1";
-import { POUCH_HALF, REST_LEAN, pouchEnds, restPosition, restingGrip, slingFrame, slingGrip } from "./sling-art.js?v=0.51.1";
-import { drawInteractions, drawObjective } from "./interactions-renderer.js?v=0.51.1";
-import { drawCampaignGoal, drawCampaignScene, drawWorldCompanion, setSceneBleed } from "./world-renderer.js?v=0.51.1";
-import { drawSceneLife } from "./scene-life.js?v=0.51.1";
-import { createRng, sprayAngle, stepParticle } from "./particles.js?v=0.51.1";
-import { speechBubbleLayout } from "./prop-art.js?v=0.51.1";
-import { BLOCK_COLOURS, drawTowerBlocks } from "./tower-art.js?v=0.51.1";
-import { surfaceBelow } from "./physics.js?v=0.51.1";
+import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.52.0";
+import { RENDER_MAX_PIXELS, clientPointToWorld, createCropFreeViewport, edgeMarker, renderScale } from "./viewport.js?v=0.52.0";
+import { POUCH_HALF, REST_LEAN, pouchEnds, restPosition, restingGrip, slingFrame, slingGrip } from "./sling-art.js?v=0.52.0";
+import { drawInteractions, drawObjective } from "./interactions-renderer.js?v=0.52.0";
+import { drawCampaignGoal, drawCampaignScene, drawWorldCompanion, setSceneBleed } from "./world-renderer.js?v=0.52.0";
+import { drawSceneLife } from "./scene-life.js?v=0.52.0";
+import { createRng, sprayAngle, stepParticle } from "./particles.js?v=0.52.0";
+import { speechBubbleLayout } from "./prop-art.js?v=0.52.0";
+import { BLOCK_COLOURS, drawTowerBlocks } from "./tower-art.js?v=0.52.0";
+import { surfaceBelow } from "./physics.js?v=0.52.0";
 
 // How long the hero takes to turn around when a bounce sends them back.
 const TURN_SECONDS = 0.12;
@@ -252,7 +252,21 @@ export class GameRenderer {
       this.callouts.push({ x: goal.x, y: tagY, text: this.model.level.result.successTag, age: 0, life: 1.6, angle: -0.08 });
     }
 
-    if (event.type === "block-break") this.spawnDebris(event);
+    if (event.type === "block-break") {
+      this.spawnDebris(event);
+      // Points from blocks breaking close together add up in one number
+      // instead of stacking a column of them over the collapse.
+      if (event.points) {
+        const near = this.callouts.find((c) => c.points && c.age < 0.5 && Math.hypot(c.x - event.x, c.y - event.y + 18) < 160);
+        if (near) { near.value += event.points; near.text = `+${near.value}`; near.age = Math.min(near.age, 0.1); }
+        else this.callouts.push({ x: event.x, y: event.y - 18, text: `+${event.points}`, value: event.points, points: true, age: 0, life: 0.9, angle: 0 });
+      }
+    }
+    if (event.type === "target-down" && event.points) {
+      this.shake = Math.max(this.shake, 4);
+      this.spawnConfetti(event.x, event.y, 26);
+      this.callouts.push({ x: event.x, y: event.y - 46, text: `BUDZIK! +${event.points}`, age: 0, life: 1.3, angle: -0.05 });
+    }
 
     // The fort survived a shot: the shot that missed stays on screen as the
     // dashed line to beat, and the next hero hops into the sling.
@@ -598,7 +612,7 @@ export class GameRenderer {
     ctx.beginPath(); ctx.moveTo(100, 120); ctx.lineTo(100, 205); ctx.moveTo(170, 120); ctx.lineTo(170, 205); ctx.stroke();
     ctx.fillStyle = PALETTE.coral; ctx.beginPath(); ctx.arc(100, 218, 25, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
     this.drawKitchenCorner(ctx);
-    ctx.fillStyle = "rgba(25,20,45,.58)"; ctx.font = "900 28px system-ui, sans-serif"; ctx.fillText("KUCHNIA · BHP WYSZŁO", 55, 65);
+    if (!this.model.level.towers) { ctx.fillStyle = "rgba(25,20,45,.58)"; ctx.font = "900 28px system-ui, sans-serif"; ctx.fillText("KUCHNIA · BHP WYSZŁO", 55, 65); }
   }
 
   // Koniec kuchni: lodówka i półka ze słoikami. Pierwsza wersja postawiła je w
@@ -644,7 +658,7 @@ export class GameRenderer {
       ctx.fillStyle = colour; ctx.beginPath(); ctx.arc(x + 45, 275, 70, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
     }
     this.drawGardenCorner(ctx);
-    ctx.fillStyle = "rgba(25,20,45,.58)"; ctx.font = "900 28px system-ui, sans-serif"; ctx.fillText("OGRÓD · STREFA GNOMA", 55, 65);
+    if (!this.model.level.towers) { ctx.fillStyle = "rgba(25,20,45,.58)"; ctx.font = "900 28px system-ui, sans-serif"; ctx.fillText("OGRÓD · STREFA GNOMA", 55, 65); }
   }
 
   // Koniec ogrodu: drzewo i płot. Krasnal-cel stoi nisko przy x=1080, więc płot
@@ -670,7 +684,7 @@ export class GameRenderer {
     ctx.fillStyle = "#d8bd8b"; ctx.beginPath(); ctx.moveTo(350, 586); ctx.quadraticCurveTo(610, 440, 990, 586); ctx.closePath(); ctx.fill();
     // A solid-looking bench behind a fort reads as one of its blocks.
     if (!this.model.level.towers) { roundedRect(ctx, 860, 426, 210, 65, 9); strokeFill(ctx, "#9b684d", PALETTE.ink, 6); }
-    ctx.fillStyle = "rgba(25,20,45,.6)"; ctx.font = "900 28px system-ui, sans-serif"; ctx.fillText("PARK · GOŁĘBIE URZĘDUJĄ", 55, 65);
+    if (!this.model.level.towers) { ctx.fillStyle = "rgba(25,20,45,.6)"; ctx.font = "900 28px system-ui, sans-serif"; ctx.fillText("PARK · GOŁĘBIE URZĘDUJĄ", 55, 65); }
   }
 
   drawLakeScene(ctx) {
@@ -686,7 +700,7 @@ export class GameRenderer {
       ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(535 + i * 73, y); ctx.quadraticCurveTo(560 + i * 73, y - 8, 590 + i * 73, y); ctx.stroke();
     }
     this.drawLakeCorner(ctx);
-    ctx.fillStyle = "rgba(25,20,45,.6)"; ctx.font = "900 28px system-ui, sans-serif"; ctx.fillText("JEZIORO · RATOWNIK: KACZKA", 55, 65);
+    if (!this.model.level.towers) { ctx.fillStyle = "rgba(25,20,45,.6)"; ctx.font = "900 28px system-ui, sans-serif"; ctx.fillText("JEZIORO · RATOWNIK: KACZKA", 55, 65); }
   }
 
   // Koniec jeziora: przywiązana łódka i trzciny. Woda ciągnęła się przez pół
@@ -769,15 +783,17 @@ export class GameRenderer {
   drawGoalTarget(ctx) {
     // A tower's target is a body: it turns with the block it is, and once it
     // has broken there is nothing left standing to draw.
-    const target = this.model.towerTarget;
-    if (target) {
-      if (target.broken) return;
-      ctx.save();
-      ctx.translate(target.x, target.y);
-      ctx.rotate(target.angle);
-      ctx.translate(-target.x, -target.y);
-      this.drawAlarmClock(ctx);
-      ctx.restore();
+    if (this.model.world) {
+      // Every alarm clock on the fort, each turning with its own body.
+      for (const target of this.model.towerTargets) {
+        if (target.broken) continue;
+        ctx.save();
+        ctx.translate(target.x, target.y);
+        ctx.rotate(target.angle);
+        ctx.translate(-target.x, -target.y);
+        this.drawAlarmClock(ctx, target, target.width / 118);
+        ctx.restore();
+      }
       return;
     }
     if (drawCampaignGoal(ctx, this.model, this.time, this.successPulse, this.goalWobble)) return;
@@ -818,9 +834,7 @@ export class GameRenderer {
     ctx.restore();
   }
 
-  drawAlarmClock(ctx) {
-    const centre = this.model.goalCentre;
-    const displayScale = this.model.level.goal.displayScale ?? 1;
+  drawAlarmClock(ctx, centre = this.model.goalCentre, displayScale = this.model.level.goal.displayScale ?? 1) {
     const wobble = Math.sin(this.time * 26) * (0.025 + this.goalWobble * 0.11);
     const pulse = 1 + Math.sin(this.time * 5) * 0.015 + this.successPulse * 0.08;
     ctx.save();
@@ -2243,12 +2257,14 @@ export class GameRenderer {
       ctx.rotate(callout.angle);
       ctx.scale(scale, scale);
       ctx.globalAlpha = clamp(1 - Math.max(0, progress - 0.67) / 0.33, 0, 1);
-      ctx.font = "900 33px Impact, system-ui, sans-serif";
+      // Block points are small and white, so a collapse reads as a shower of
+      // numbers without drowning the words that matter.
+      ctx.font = callout.points ? "900 22px Impact, system-ui, sans-serif" : "900 33px Impact, system-ui, sans-serif";
       ctx.lineJoin = "round";
-      ctx.lineWidth = 9;
+      ctx.lineWidth = callout.points ? 6 : 9;
       ctx.strokeStyle = PALETTE.ink;
       ctx.strokeText(callout.text, 0, 0);
-      ctx.fillStyle = callout.failure ? PALETTE.coral : PALETTE.gold;
+      ctx.fillStyle = callout.failure ? PALETTE.coral : callout.points ? PALETTE.cream : PALETTE.gold;
       ctx.fillText(callout.text, 0, 0);
       ctx.restore();
     }

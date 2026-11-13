@@ -1,5 +1,5 @@
 // One deterministic solver for the live game, previews and replays.
-import { stepWorld, worldAsleep } from "./blocks.js?v=0.51.1";
+import { stepWorld, worldAsleep } from "./blocks.js?v=0.52.0";
 export const FIXED_STEP = 1 / 120;
 export const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
 export const magnitude = (p) => Math.hypot(p.x, p.y);
@@ -332,8 +332,7 @@ export function stepPhysics(model, dt = FIXED_STEP) {
       model.contactNormal = { x: hit.nx, y: hit.ny };
       if (hit.speed > 90) model.triggerImpact(hit.speed, hit.x, hit.y, "block");
     }
-    for (const broken of model.world.breaks) model.emit("block-break", broken);
-    if (towerFallen(model)) {
+    if (scoreTowerStep(model)) {
       model.finishAttempt(true);
       return;
     }
@@ -426,13 +425,56 @@ export function surfaceBelow(model, x, y) {
   return best;
 }
 
-// The target is down when it breaks, or when any corner of it reaches the
+// A target is down when it breaks, or when any corner of it reaches the
 // floor: knocked off the tower is knocked out.
-export function towerFallen(model) {
-  const target = model.world?.bodies.find((body) => body.target);
-  if (!target) return false;
+export function targetDown(target, groundY) {
   if (target.broken) return true;
   const c = Math.cos(target.angle), s = Math.sin(target.angle);
   const lowest = target.y + Math.abs(s) * target.width / 2 + Math.abs(c) * target.height / 2;
-  return lowest >= model.world.groundY - 2;
+  return lowest >= groundY - 2;
+}
+
+// A fort is won when every alarm clock on it is down.
+export function towerFallen(model) {
+  const world = model.world;
+  if (!world) return false;
+  let any = false;
+  for (const body of world.bodies) {
+    if (!body.target) continue;
+    any = true;
+    if (!targetDown(body, world.groundY)) return false;
+  }
+  return any;
+}
+
+// Fort points. A block is worth what it costs to break, an alarm clock brought
+// down is worth ten blocks, and a hero who never had to fly is worth the most.
+export const BLOCK_POINTS = Object.freeze({ glass: 300, wood: 500, stone: 800 });
+export const TARGET_POINTS = 5000;
+export const SPARED_SHOT_POINTS = 10000;
+
+// One step of fort bookkeeping, shared by the flight and by a fort still
+// settling between shots: points for what broke and for every alarm clock that
+// went down, an event for each, and whether the whole fort is now won. Points
+// only count while the round is being played: a collapse that goes on after
+// the round is decided is a show, not a score.
+export function scoreTowerStep(model) {
+  const world = model.world;
+  const live = model.phase === "flying" || model.phase === "ready" || model.phase === "aiming";
+  for (const broken of world.breaks) {
+    const points = live && !broken.target ? BLOCK_POINTS[broken.material] ?? 0 : 0;
+    model.towerPoints += points;
+    model.emit("block-break", { ...broken, points });
+  }
+  let standing = 0;
+  for (const body of world.bodies) {
+    if (!body.target) continue;
+    if (model.downTargets.has(body.id)) continue;
+    if (!targetDown(body, world.groundY)) { standing += 1; continue; }
+    model.downTargets.add(body.id);
+    const points = live ? TARGET_POINTS : 0;
+    model.towerPoints += points;
+    model.emit("target-down", { id: body.id, x: body.x, y: body.y, points });
+  }
+  return model.downTargets.size > 0 && standing === 0;
 }

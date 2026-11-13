@@ -26,7 +26,7 @@ const DENT = { 89: { x: 110, y: 545 }, 95: { x: 40, y: 485 } };
 
 test("towers get several shots a round, every other mission gets one", () => {
   for (const level of towers) {
-    assert.equal(level.shots, level.number === 96 ? 4 : 3, `mission ${level.number}`);
+    assert.equal(level.shots, [96, 104, 112, 119, 120].includes(level.number) ? 4 : 3, `mission ${level.number}`);
     assert.equal(new GameModel(() => {}, level).shotsLeft, level.shots);
   }
   for (const level of LEVELS.filter((item) => !item.towers)) assert.equal(new GameModel(() => {}, level).shotsPerRound, 1);
