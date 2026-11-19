@@ -1,5 +1,5 @@
 // One deterministic solver for the live game, previews and replays.
-import { stepWorld, worldAsleep } from "./blocks.js?v=0.52.0";
+import { HERO_MASS, blastWorld, stepWorld, worldAsleep } from "./blocks.js?v=0.53.0";
 export const FIXED_STEP = 1 / 120;
 export const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
 export const magnitude = (p) => Math.hypot(p.x, p.y);
@@ -324,11 +324,32 @@ export function stepPhysics(model, dt = FIXED_STEP) {
   // by bringing the target down — broken, or knocked off onto the floor.
   if (model.world) {
     const gravity = 620 * model.gravityScale;
-    const result = stepWorld(model.world, dt, gravity, { x: p.x, y: p.y, vx: v.x, vy: v.y, radius });
+    const hero = { x: p.x, y: p.y, vx: v.x, vy: v.y, radius, mass: HERO_MASS * model.powerMass };
+    const clones = model.clones.filter((clone) => clone.alive);
+    let result;
+    if (clones.length) {
+      // A split hero: the copies fly on their own and hit the fort with the hero.
+      stepClones(model, clones, dt, gravity);
+      const results = stepWorld(model.world, dt, gravity, [hero, ...clones]);
+      result = results[0];
+      clones.forEach((clone, i) => Object.assign(clone, { x: results[i + 1].x, y: results[i + 1].y, vx: results[i + 1].vx, vy: results[i + 1].vy }));
+    } else {
+      result = stepWorld(model.world, dt, gravity, hero);
+    }
     if (result) {
       p.x = result.x; p.y = result.y; v.x = result.vx; v.y = result.vy;
     }
+    // OM: the first thing the falling hero meets, block or floor, takes the
+    // shock wave.
+    if (model.stompArmed && (result?.touched || p.y + radius >= model.groundY - 1)) {
+      model.stompArmed = false;
+      blastWorld(model.world, p.x, p.y + radius * 0.5, POWER.stompRadius, POWER.stompImpulse, POWER.stompBlow);
+      model.emit("stomp", { x: p.x, y: p.y + radius });
+    }
     for (const hit of model.world.hits) {
+      // A copy's hits break blocks like any other; the hero's own face,
+      // shake and callouts answer only to the hero.
+      if (hit.heroId && hit.heroId !== "hero") continue;
       model.contactNormal = { x: hit.nx, y: hit.ny };
       if (hit.speed > 90) model.triggerImpact(hit.speed, hit.x, hit.y, "block");
     }
@@ -363,7 +384,7 @@ export function stepPhysics(model, dt = FIXED_STEP) {
   model.settledTime = grounded ? model.settledTime + dt : 0;
   // On a tower the shot is not over while the tower is still falling: the hero
   // may be long gone and the target still on its way to the floor.
-  const towerBusy = model.world && !worldAsleep(model.world) && model.flightTime < 9;
+  const towerBusy = model.world && (!worldAsleep(model.world) || model.clones.some((clone) => clone.alive)) && model.flightTime < 9;
   if (!towerBusy && (p.x < -120 || p.x > 1410 || p.y > 760 || model.flightTime > (model.world ? 9 : 6) || model.settledTime > 0.28)) {
     model.failureReason = describeMiss(model);
     model.finishAttempt(false);
@@ -449,6 +470,16 @@ export function towerFallen(model) {
 
 // Fort points. A block is worth what it costs to break, an alarm clock brought
 // down is worth ten blocks, and a hero who never had to fly is worth the most.
+// Hero powers (src/game.js usePower); tuning, measured in tests/hero-powers.test.mjs.
+export const POWER = Object.freeze({
+  splitAngle: 0.21, splitRadius: 0.72, splitMass: 0.55,
+  ramSpeed: 1.45, ramMinSpeed: 720, ramMass: 2.4,
+  blastRadius: 175, blastImpulse: 300, blastBlow: 720,
+  dropSpeed: 760, dropBrake: 0.12, dropMass: 3,
+  // OM lands with a shock wave of its own: smaller than a panic, under the hero.
+  stompRadius: 120, stompImpulse: 240, stompBlow: 520,
+});
+
 export const BLOCK_POINTS = Object.freeze({ glass: 300, wood: 500, stone: 800 });
 export const TARGET_POINTS = 5000;
 export const SPARED_SHOT_POINTS = 10000;
@@ -477,4 +508,21 @@ export function scoreTowerStep(model) {
     model.emit("target-down", { id: body.id, x: body.x, y: body.y, points });
   }
   return model.downTargets.size > 0 && standing === 0;
+}
+
+// The copies of a split hero fly free: gravity, the floor, and out of the
+// game once they stop or leave the screen.
+export function stepClones(model, clones, dt, gravity) {
+  for (const clone of clones) {
+    clone.vy += gravity * dt;
+    clone.x += clone.vx * dt; clone.y += clone.vy * dt;
+    clone.age += dt;
+    if (clone.y + clone.radius > model.groundY) {
+      clone.y = model.groundY - clone.radius;
+      if (clone.vy > 0) clone.vy = clone.vy > 35 ? -clone.vy * 0.25 : 0;
+      clone.vx *= Math.exp(-3.5 * dt);
+    }
+    clone.still = Math.hypot(clone.vx, clone.vy) < 30 ? clone.still + dt : 0;
+    if (clone.x < -120 || clone.x > 1410 || clone.age > 8 || clone.still > 0.4) clone.alive = false;
+  }
 }

@@ -10,7 +10,7 @@
 // Each mission's hint pull is measured, not designed: scripts/balance-towers.mjs
 // searches the same grid of pulls the campaign balancer does and stores the
 // most forgiving shot that actually brings the target down.
-import { TOWER_ROUTES } from "./tower-routes.js?v=0.52.0";
+import { TOWER_ROUTES } from "./tower-routes.js?v=0.53.0";
 
 const FLOOR = 586;
 // Vertical post standing on `base` (the floor or the top of something).
@@ -373,6 +373,8 @@ export function towerMissions() {
       mechanic: m.mechanic, title: m.name, clue: m.clue,
       direction: "Wieża przewraca się od podpór. Trafiony filar ciągnie za sobą wszystko, co na nim stoi.",
       pull, towers,
+      airMove: false, diveMove: false,
+      flyingStatus: "Dotknij ekranu w locie, a bohater użyje swojej mocy. Jeden raz na strzał.",
       // The measured shots that win the fort, in order; one shot where one does.
       plan: route?.plan ?? [pull],
       shots: shotsFor(m),

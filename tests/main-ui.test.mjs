@@ -21,7 +21,9 @@ test("real main module: campaign navigation, touch shots, hints, medals, FIK and
       `mission ${i + 1}: the mode switch must appear and disappear as a pair`);
     shoot(LEVELS[i].assistPull);
     assert.equal(elements.nextLevel.disabled, true);
-    assert.equal(elements.airMoveButton.hidden, i < 4);
+    assert.equal(elements.airMoveButton.hidden, i < 4 || Boolean(LEVELS[i].towers));
+    // A fort brings its hero power instead of FIK and KAMIEŃ.
+    assert.equal(elements.powerButton.hidden, !LEVELS[i].towers);
     advance(410);
     assert.equal(elements.resultPanel.hidden, false);
     assert.ok(elements.resultPanel.classes.has("is-success"), `mission ${i + 1} should succeed through actual UI handlers`);
