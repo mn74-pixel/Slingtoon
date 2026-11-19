@@ -1,7 +1,7 @@
-import { DEFAULT_LEVEL, WORLD } from "./levels.js?v=0.52.0";
-import { FIXED_STEP, clamp, contains, magnitude, scoreTowerStep, startBody, stepPhysics, SPARED_SHOT_POINTS } from "./physics.js?v=0.52.0";
-import { cloneWorld, createWorld, stepWorld, worldAsleep } from "./blocks.js?v=0.52.0";
-export { DEFAULT_LEVEL, LEVELS, WORLD, getLevel } from "./levels.js?v=0.52.0";
+import { DEFAULT_LEVEL, WORLD } from "./levels.js?v=0.53.0";
+import { FIXED_STEP, clamp, contains, magnitude, POWER, scoreTowerStep, startBody, stepPhysics, SPARED_SHOT_POINTS } from "./physics.js?v=0.53.0";
+import { HERO_MASS, blastWorld, cloneWorld, createWorld, stepWorld, worldAsleep } from "./blocks.js?v=0.53.0";
+export { DEFAULT_LEVEL, LEVELS, WORLD, getLevel } from "./levels.js?v=0.53.0";
 
 export const GameMode = Object.freeze({ QUICK: "quickSling", ONE_MOVE: "oneMoveChallenge" });
 export const GamePhase = Object.freeze({ READY: "ready", AIMING: "aiming", FLYING: "flying", SUCCEEDED: "succeeded", FAILED: "failed" });
@@ -32,6 +32,22 @@ export const FLIGHT_STYLES = Object.freeze({
   [Personality.ZEN]: { lift: 250, push: 80, drop: 235, brake: 0.72, charges: 1, air: "SPOKOJNY SKOK", dive: "WYHAMOWANIE" },
 });
 
+// Hero powers: one per shot, on the fort chapters only, fired by a tap
+// anywhere during the flight. Each character breaks a fort differently:
+// - split: Drama Queen becomes three, two smaller copies fanning out;
+// - ram: Tough Guy surges forward and hits like a much heavier hero;
+// - blast: Panic panics — everything close is shoved away and cracked;
+// - drop: Zen stops dead in the air and comes down like a stone.
+// The flight missions keep FIK and KAMIEŃ: their measured routes and medals
+// are built around those, and a power is about blocks, not about reaching a
+// goal.
+export const HERO_POWERS = Object.freeze({
+  [Personality.DRAMA_QUEEN]: Object.freeze({ kind: "split", name: "TRZY DRAMY", icon: "✦", hint: "Rozdziela się na trzy" }),
+  [Personality.TOUGH_GUY]: Object.freeze({ kind: "ram", name: "TARAN", icon: "➤", hint: "Zryw do przodu, cios jak ciężarówka" }),
+  [Personality.PANIC]: Object.freeze({ kind: "blast", name: "PANIKA!", icon: "✸", hint: "Wybuch paniki rozrzuca klocki" }),
+  [Personality.ZEN]: Object.freeze({ kind: "drop", name: "OM", icon: "▼", hint: "Zatrzymuje się i spada jak kamień" }),
+});
+
 const MAX_PULL = 132;
 const LAUNCH_MULTIPLIER = 7;
 const copy = (p) => ({ x: p.x, y: p.y });
@@ -42,6 +58,8 @@ export function towerRating(level, score) {
   const [two, three] = level.scoreStars ?? [Infinity, Infinity];
   return score >= three ? 3 : score >= two ? 2 : 1;
 }
+
+export { POWER };
 
 export class GameModel {
   constructor(onEvent = () => {}, level = DEFAULT_LEVEL) {
@@ -107,6 +125,7 @@ export class GameModel {
     this.world = this.level.towers ? createWorld(this.level.towers, this.level.groundY) : null;
     this.towerPoints = 0;
     this.downTargets = new Set();
+    this.resetPower();
     this.objectState = Object.create(null);
     this.visited = new Set();
     this.collectedStar = false;
@@ -206,6 +225,7 @@ export class GameModel {
       this.replayCursor = 0;
       this.replaying = false;
       this.portalCooldown = 0;
+      this.resetPower();
     } else {
       this.resetFlightObjects();
       this.shotsLeft = this.shotsPerRound;
@@ -240,6 +260,42 @@ export class GameModel {
     this.modifier = modifier;
     this.replaying = true;
     this.emit("what-if", { modifier, position: copy(this.avatarPosition) });
+    return true;
+  }
+  resetPower() {
+    this.powerUsed = false;
+    this.powerMass = 1;
+    this.clones = [];
+    this.stompArmed = false;
+  }
+  get heroPower() { return HERO_POWERS[this.personality] ?? HERO_POWERS[Personality.DRAMA_QUEEN]; }
+  get canUsePower() { return this.phase === GamePhase.FLYING && Boolean(this.level.towers) && !this.powerUsed && !this.replaying; }
+  usePower() {
+    if (!this.canUsePower) return false;
+    const power = this.heroPower;
+    const p = this.avatarPosition, v = this.avatarVelocity;
+    this.powerUsed = true;
+    if (power.kind === "split") {
+      const radius = this.avatarRadius * POWER.splitRadius;
+      for (const turn of [-POWER.splitAngle, POWER.splitAngle]) {
+        const c = Math.cos(turn), s = Math.sin(turn);
+        this.clones.push({ x: p.x, y: p.y, vx: v.x * c - v.y * s, vy: v.x * s + v.y * c, radius, mass: HERO_MASS * POWER.splitMass, alive: true, age: 0, still: 0, spin: turn > 0 ? 7 : -7 });
+      }
+    } else if (power.kind === "ram") {
+      const speed = Math.hypot(v.x, v.y) || 1;
+      const boosted = Math.max(speed * POWER.ramSpeed, POWER.ramMinSpeed);
+      v.x = (v.x / speed) * boosted; v.y = (v.y / speed) * boosted;
+      this.powerMass = POWER.ramMass;
+    } else if (power.kind === "blast") {
+      if (this.world) blastWorld(this.world, p.x, p.y, POWER.blastRadius, POWER.blastImpulse, POWER.blastBlow);
+      // The hero is thrown up and back by their own panic.
+      v.x *= 0.3; v.y = -260;
+    } else if (power.kind === "drop") {
+      v.x *= POWER.dropBrake; v.y = Math.max(v.y, 0) + POWER.dropSpeed;
+      this.powerMass = POWER.dropMass;
+      this.stompArmed = true;
+    }
+    this.emit("power", { kind: power.kind, name: power.name, x: p.x, y: p.y });
     return true;
   }
   useAirMove(automatic = false) {
@@ -354,6 +410,7 @@ export class GameModel {
     this.turnedAt = -1;
     this.settledTime = 0;
     this.trajectoryCache = null;
+    this.resetPower();
     this.emit("next-shot", { position: landed, left: this.shotsLeft, of: this.shotsPerRound, shot: this.shotsPerRound - this.shotsLeft + 1 });
   }
   simulate(pull, numberOfDots = 32, duration = 6) {

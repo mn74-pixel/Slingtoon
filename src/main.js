@@ -1,13 +1,13 @@
-import { GameModel, GameMode, GamePhase, LEVELS, modifierName } from "./game.js?v=0.52.0";
-import { GameRenderer } from "./render.js?v=0.52.0";
-import { GameAudio } from "./audio.js?v=0.52.0";
-import { FaceStudio } from "./face-studio.js?v=0.52.0";
-import { CHARACTER_UNLOCKS, PROGRESS_KEY, TOKEN_SCORE_STEP, characterLock, countMastered, countStars, isMastered, readProgress, hintOffer, purchaseHint, recordStreak, rewardSuccess, medalText } from "./progress.js?v=0.52.0";
-import { STREAK_MAX_SHOTS, STREAK_MIN_POOL, canStartStreak, clearStreakMission, createStreakRun, drawStreakMission, spendStreakShot, streakSummary } from "./streak.js?v=0.52.0";
-import { CHAPTERS } from "./levels.js?v=0.52.0";
-import { settledAim, trimAimTrail } from "./aim-settle.js?v=0.52.0";
-import { RENDER_MAX_PIXELS, nextPixelBudget, overlayInset } from "./viewport.js?v=0.52.0";
-import { approachTimeFeel, armTimeFeel, createTimeFeel, punchTimeFeel, timeScale } from "./time-feel.js?v=0.52.0";
+import { GameModel, GameMode, GamePhase, LEVELS, modifierName } from "./game.js?v=0.53.0";
+import { GameRenderer } from "./render.js?v=0.53.0";
+import { GameAudio } from "./audio.js?v=0.53.0";
+import { FaceStudio } from "./face-studio.js?v=0.53.0";
+import { CHARACTER_UNLOCKS, PROGRESS_KEY, TOKEN_SCORE_STEP, characterLock, countMastered, countStars, isMastered, readProgress, hintOffer, purchaseHint, recordStreak, rewardSuccess, medalText } from "./progress.js?v=0.53.0";
+import { STREAK_MAX_SHOTS, STREAK_MIN_POOL, canStartStreak, clearStreakMission, createStreakRun, drawStreakMission, spendStreakShot, streakSummary } from "./streak.js?v=0.53.0";
+import { CHAPTERS } from "./levels.js?v=0.53.0";
+import { settledAim, trimAimTrail } from "./aim-settle.js?v=0.53.0";
+import { RENDER_MAX_PIXELS, nextPixelBudget, overlayInset } from "./viewport.js?v=0.53.0";
+import { approachTimeFeel, armTimeFeel, createTimeFeel, punchTimeFeel, timeScale } from "./time-feel.js?v=0.53.0";
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -79,6 +79,7 @@ const elements = {
   toast: $("#toast"),
   airMove: $("#airMoveButton"),
   diveMove: $("#diveMoveButton"),
+  power: $("#powerButton"),
   objective: $("#objectiveStatus"),
   missions: $("#missionMap"),
   missionList: $("#missionList"),
@@ -109,7 +110,7 @@ let progress = loadProgress();
 let highestUnlockedLevel = progress.highestUnlockedLevel;
 let mapChapterIndex = 0;
 let lastReward = null;
-const FULLSCREEN_TIP_KEY = "slingtoon-fullscreen-tip-0.52.0";
+const FULLSCREEN_TIP_KEY = "slingtoon-fullscreen-tip-0.53.0";
 
 function loadProgress() {
   try {
@@ -697,7 +698,8 @@ function beginPointer(event) {
   event.preventDefault();
   audio.unlock().catch(() => {});
   if (!elements.faceStudio.hidden || !elements.fullscreenGuide.hidden || elements.missions.open) return;
-  if (model.phase === GamePhase.FLYING) { model.useAirMove(); return; }
+  // A tap in flight: the hero power on a fort, FIK everywhere else.
+  if (model.phase === GamePhase.FLYING) { if (model.level.towers) model.usePower(); else model.useAirMove(); return; }
   if (model.phase === GamePhase.FAILED) model.resetLevel(false);
   if (activePointer !== null) return;
 
@@ -833,6 +835,9 @@ function instructionForState() {
   }
   if (model.phase === GamePhase.AIMING) return { icon: "◎", title: "Wybierz kierunek i puść" };
   if (model.phase === GamePhase.FLYING) {
+    if (model.level.towers) return model.powerUsed
+      ? { icon: "✓", title: `Moc użyta (${model.heroPower.name}) — patrz, jak leci` }
+      : { icon: model.heroPower.icon, title: `Dotknij ekranu: ${model.heroPower.name} · ${model.heroPower.hint}` };
     if (!model.level.airMove && !model.level.diveMove) return { icon: "⚡", title: "Obserwuj tor — następny strzał będzie Twój" };
     const left = [];
     if (model.airMovesLeft > 0) left.push(`↗ FIK ×${model.airMovesLeft}`);
@@ -886,6 +891,10 @@ function updateUi() {
   elements.airMove.hidden = !model.level.airMove || !flying;
   elements.airMove.disabled = !flying || model.airMovesLeft <= 0 || model.replaying;
   elements.airMove.textContent = model.airMovesLeft > 0 ? `↗ FIK! · ${model.airMovesLeft}` : "✓ FIK ZUŻYTY";
+  const power = model.heroPower;
+  elements.power.hidden = !model.level.towers || !flying;
+  elements.power.disabled = !model.canUsePower;
+  elements.power.textContent = model.powerUsed ? `✓ ${power.name}` : `${power.icon} ${power.name}`;
   elements.diveMove.hidden = !model.level.diveMove || !flying;
   elements.diveMove.disabled = !flying || !model.canDive || model.replaying;
   elements.diveMove.textContent = model.diveMovesLeft <= 0
@@ -954,10 +963,14 @@ elements.resumeMission.addEventListener("click", () => {
 });
 elements.airMove.addEventListener("click", () => { audio.unlock().catch(() => {}); model.useAirMove(); });
 elements.diveMove.addEventListener("click", () => { audio.unlock().catch(() => {}); model.useDiveMove(); });
+elements.power.addEventListener("click", () => { audio.unlock().catch(() => {}); model.usePower(); });
 elements.personality.addEventListener("change", (event) => {
   model.setPersonality(event.target.value);
   const style = model.flightStyle;
-  showToast(`${style.air} · ${style.dive}${style.charges > 1 ? ` · ${style.charges} ładunki każdego` : ""}`);
+  // On a fort the character's power is what changes; in flight, FIK and KAMIEŃ.
+  showToast(model.level.towers
+    ? `Moc: ${model.heroPower.name} — ${model.heroPower.hint}. Dotknij ekranu w locie.`
+    : `${style.air} · ${style.dive}${style.charges > 1 ? ` · ${style.charges} ładunki każdego` : ""} · na fortach: ${model.heroPower.name}`);
   updateUi();
 });
 elements.faceButton.addEventListener("click", () => faceStudio.openEditor());
@@ -1027,7 +1040,7 @@ window.addEventListener("keydown", (event) => {
   if (event.code === "Space") {
     event.preventDefault();
     audio.unlock().catch(() => {});
-    if (model.phase === GamePhase.FLYING) model.useAirMove();
+    if (model.phase === GamePhase.FLYING) { if (model.level.towers) model.usePower(); else model.useAirMove(); }
     else if (model.phase === GamePhase.AIMING) model.releaseSling();
     else if (model.phase === GamePhase.FAILED) model.resetLevel(false);
     else if (model.phase === GamePhase.SUCCEEDED) elements.againButton.click();
@@ -1051,7 +1064,7 @@ window.addEventListener("keydown", (event) => {
 
 window.addEventListener("load", () => {
   if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
-    navigator.serviceWorker.register("./sw.js?v=0.52.0").catch(() => {});
+    navigator.serviceWorker.register("./sw.js?v=0.53.0").catch(() => {});
   }
   scheduleFullscreenSuggestion();
   syncGameViewport();

@@ -1932,6 +1932,7 @@ body.is-fullscreen-active .keyboard-help {
 /* Mint lifts, violet drops: the two corrections never share a colour. */
 .air-move-button { background: #5ce1bd; }
 .dive-move-button { background: #a28bff; }
+.power-button { background: #ffd35f; }
 .flight-move:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 2px 0 #19142d; }
 .flight-move:disabled { opacity: .7; background: #eadfca; cursor: default; }
 .result-reward { white-space: pre-line; line-height: 1.7; }

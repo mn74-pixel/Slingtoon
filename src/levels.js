@@ -1,6 +1,6 @@
-import { CHAPTERS, EXTRA_LEVELS } from "./campaign.js?v=0.52.0";
-import { towerMissions } from "./towers.js?v=0.52.0";
-export { CHAPTERS } from "./campaign.js?v=0.52.0";
+import { CHAPTERS, EXTRA_LEVELS } from "./campaign.js?v=0.53.0";
+import { towerMissions } from "./towers.js?v=0.53.0";
+export { CHAPTERS } from "./campaign.js?v=0.53.0";
 const point = (x, y) => ({ x, y });
 function freeze(value) {
   if (value && typeof value === "object") {
@@ -22,15 +22,16 @@ export function level(config) {
     chapterId: CHAPTERS[Math.floor((number - 1) / 8)].id,
     // KAMIEŃ arrives on the reef, where weak gravity makes a sudden drop the
     // most readable thing on screen.
-    ...data, number, mechanic, airMove: number >= 5, diveMove: number >= 17,
+    // A fort mission brings a hero power instead of FIK and KAMIEŃ.
+    ...data, number, mechanic, airMove: data.airMove ?? number >= 5, diveMove: data.diveMove ?? number >= 17,
     mission: { kicker: `MISJA ${String(number).padStart(2, "0")} · ${mechanic}`, title, canvasLabel: title },
     result: { successTag: win[0], successTitle: win[1], failureTag: "UPS!", failureTitle: lose },
     status: {
       ready: clue,
       aiming: "Kierunek wybierasz Ty. Konsekwencje bierze bohater.",
-      flying: number >= 17
+      flying: data.flyingStatus ?? (number >= 17
         ? "FIK podbija w górę. KAMIEŃ ścina tor w dół, ale tylko dopóki jeszcze się wznosisz."
-        : number >= 5 ? "Masz jeden FIK! — przycisk lub spacja podbija w górę." : "Trzymaj kciuki. Możesz też trzymać kawę.",
+        : number >= 5 ? "Masz jeden FIK! — przycisk lub spacja podbija w górę." : "Trzymaj kciuki. Możesz też trzymać kawę."),
     },
     speech: { succeeded: { dramaQueen: win[1], toughGuy: "DOKŁADNIE TAK PLANOWAŁEM.", panic: "CZY TO JUŻ BEZPIECZNE?!", zen: "CHAOS ODNALAZŁ RÓWNOWAGĘ." } },
     tutorial: number === 1 ? { pull, title: "Pociągnij w dół i w lewo", status: "Zielone kropki pomogą tylko na rozgrzewce." } : null,

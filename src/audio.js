@@ -37,6 +37,13 @@ export class GameAudio {
     if (event.type === "success") this.success(event.goalKind);
     if (event.type === "failure") this.failure();
     if (event.type === "move-complete") this.pop(240, 0.07);
+    if (event.type === "stomp") this.impact(700, "block");
+    if (event.type === "power") {
+      if (event.kind === "split") { this.pop(620, .08); this.pop(820, .07); }
+      if (event.kind === "ram") { this.noise(.18, .08); this.pop(160, .1); }
+      if (event.kind === "blast") { this.noise(.32, .14); this.impact(900, "block"); }
+      if (event.kind === "drop") { this.pop(320, .1); this.pop(110, .12); }
+    }
     if (event.type === "air-move") {
       this.tone({ frequency: 180, endFrequency: 850, duration: .16, type: "triangle", volume: .09 });
       this.noise(.06, .05);

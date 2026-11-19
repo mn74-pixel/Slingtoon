@@ -74,7 +74,7 @@ export function createBody(spec, id) {
 }
 
 export function createWorld(specs = [], groundY = 586) {
-  return { bodies: specs.map(createBody), groundY, contacts: new Map(), time: 0, breaks: [], hits: [] };
+  return { bodies: specs.map(createBody), groundY, contacts: new Map(), time: 0, breaks: [], hits: [], pending: [] };
 }
 
 // The four corners of a box, in world coordinates, counter-clockwise from the
@@ -186,9 +186,14 @@ function wake(body) { if (body && body.asleep) { body.asleep = false; body.still
 // One fixed step. `hero` is { x, y, vx, vy, radius } or null; it is moved by
 // the caller's own integrator, so here it only exchanges impulses and is
 // pushed out of what it overlaps. Returns the hero's updated velocity.
+//
+// `hero` may also be an array of such discs (a hero that split in flight); each
+// may carry its own `mass`. The result is then an array in the same order.
 export function stepWorld(world, dt, gravity, hero = null) {
   world.time += dt;
-  world.breaks = [];
+  // Blocks a blast broke between steps are reported with this step's breaks.
+  world.breaks = world.pending?.length ? world.pending : [];
+  world.pending = [];
   world.hits = [];
   const bodies = world.bodies.filter((body) => !body.broken);
   for (const body of bodies) {
@@ -199,7 +204,10 @@ export function stepWorld(world, dt, gravity, hero = null) {
   }
 
   // Collect contacts. Pairs are keyed so last step's impulses warm-start this one.
-  const heroBody = hero ? { id: "hero", x: hero.x, y: hero.y, angle: 0, vx: hero.vx, vy: hero.vy, spin: 0, invMass: 1 / HERO_MASS, invInertia: 0, friction: HERO_FRICTION, restitution: 0.25, asleep: false } : null;
+  const several = Array.isArray(hero);
+  const heroes = (several ? hero : hero ? [hero] : []).map((disc, index) => ({
+    disc, body: { id: index ? `hero-${index}` : "hero", x: disc.x, y: disc.y, angle: 0, vx: disc.vx, vy: disc.vy, spin: 0, invMass: 1 / (disc.mass ?? HERO_MASS), invInertia: 0, friction: HERO_FRICTION, restitution: 0.25, asleep: false, hero: true },
+  }));
   const ground = { id: "ground", x: 0, y: 0, vx: 0, vy: 0, spin: 0, invMass: 0, invInertia: 0, friction: 0.8, restitution: 0.1, asleep: false };
   const manifolds = [];
   for (let i = 0; i < bodies.length; i += 1) {
@@ -215,11 +223,11 @@ export function stepWorld(world, dt, gravity, hero = null) {
       const points = boxGround(a, world.groundY);
       if (points.length) manifolds.push({ a: ground, b: a, points, key: `ground|${a.id}` });
     }
-    if (heroBody) {
-      const point = circleBox({ x: hero.x, y: hero.y, radius: hero.radius }, a);
+    for (const { disc, body: heroBody } of heroes) {
+      const point = circleBox({ x: disc.x, y: disc.y, radius: disc.radius }, a);
       if (point) {
         wake(a);
-        manifolds.push({ a, b: heroBody, points: [point], key: `${a.id}|hero` });
+        manifolds.push({ a, b: heroBody, points: [point], key: `${a.id}|${heroBody.id}` });
       }
     }
   }
@@ -291,8 +299,8 @@ export function stepWorld(world, dt, gravity, hero = null) {
     // of its 520), which is exactly backwards for glass.
     const blow = c.impact - DAMAGE_SPEED;
     for (const body of [c.a, c.b]) if (body.material) struck.set(body, (struck.get(body) ?? 0) + blow);
-    if (c.a.id === "hero" || c.b.id === "hero" || c.impact > 160) {
-      world.hits.push({ x: c.p.x, y: c.p.y, speed: c.impact, nx: c.p.nx, ny: c.p.ny, hero: c.a.id === "hero" || c.b.id === "hero" });
+    if (c.a.hero || c.b.hero || c.impact > 160) {
+      world.hits.push({ x: c.p.x, y: c.p.y, speed: c.impact, nx: c.p.nx, ny: c.p.ny, hero: Boolean(c.a.hero || c.b.hero), heroId: c.b.hero ? c.b.id : c.a.hero ? c.a.id : null });
     }
   }
   for (const [body, blow] of struck) {
@@ -311,14 +319,40 @@ export function stepWorld(world, dt, gravity, hero = null) {
     body.still = quiet ? body.still + dt : 0;
     if (body.still >= SLEEP_SECONDS) { body.asleep = true; body.vx = body.vy = body.spin = 0; }
   }
-  if (!heroBody) return null;
-  // The hero is moved by its own integrator; push it out of what it is in.
-  for (const c of contacts) {
-    if (c.b !== heroBody || c.p.separation >= -SLOP) continue;
-    heroBody.x -= c.p.nx * (c.p.separation + SLOP) * 0.8;
-    heroBody.y -= c.p.ny * (c.p.separation + SLOP) * 0.8;
+  if (!heroes.length) return several ? [] : null;
+  // A hero is moved by its own integrator; push it out of what it is in.
+  const results = heroes.map(({ body: heroBody }) => {
+    for (const c of contacts) {
+      if (c.b !== heroBody || c.p.separation >= -SLOP) continue;
+      heroBody.x -= c.p.nx * (c.p.separation + SLOP) * 0.8;
+      heroBody.y -= c.p.ny * (c.p.separation + SLOP) * 0.8;
+    }
+    return { x: heroBody.x, y: heroBody.y, vx: heroBody.vx, vy: heroBody.vy, touched: contacts.some((c) => c.b === heroBody) };
+  });
+  return several ? results : results[0];
+}
+
+// A blast at (x, y): every block within `radius` is shoved away from the
+// centre and takes a blow, both falling off with distance. Blocks it breaks
+// are reported with the next step's breaks, like any other. Lighter blocks
+// fly further: the shove is an impulse, divided by the block's mass.
+export function blastWorld(world, x, y, radius, impulse, blow) {
+  for (const body of world.bodies) {
+    if (body.broken) continue;
+    const dx = body.x - x, dy = body.y - y, distance = Math.hypot(dx, dy);
+    if (distance >= radius) continue;
+    const falloff = 1 - distance / radius;
+    const nx = distance > 1e-6 ? dx / distance : 0, ny = distance > 1e-6 ? dy / distance : -1;
+    wake(body);
+    body.vx += nx * impulse * falloff * body.invMass;
+    body.vy += (ny - 0.35) * impulse * falloff * body.invMass;
+    body.spin += (nx >= 0 ? 1 : -1) * falloff * 2.2;
+    body.health -= blow * falloff;
+    if (body.health <= 0) {
+      body.broken = true;
+      (world.pending ??= []).push({ id: body.id, x: body.x, y: body.y, material: body.material, target: body.target, width: body.width, height: body.height, angle: body.angle });
+    }
   }
-  return { x: heroBody.x, y: heroBody.y, vx: heroBody.vx, vy: heroBody.vy, touched: contacts.some((c) => c.b === heroBody) };
 }
 
 export const worldAsleep = (world) => world.bodies.every((body) => body.broken || body.asleep);
@@ -327,5 +361,5 @@ export const bodyCorners = corners;
 // A copy for the trajectory preview: the same bodies in the same state, with
 // no contact history (the preview only has to show where the hero goes).
 export function cloneWorld(world) {
-  return { bodies: world.bodies.map((body) => ({ ...body })), groundY: world.groundY, contacts: new Map(), time: world.time, breaks: [], hits: [] };
+  return { bodies: world.bodies.map((body) => ({ ...body })), groundY: world.groundY, contacts: new Map(), time: world.time, breaks: [], hits: [], pending: [] };
 }

@@ -202,10 +202,13 @@ for (const dial of ["lift", "push", "drop", "brake"]) {
   assert.equal(new Set(values).size, values.length, `characters share the same ${dial}`);
 }
 assert.ok(Object.values(FLIGHT_STYLES).every((style) => style.charges >= 1 && style.brake > 0 && style.brake < 1));
+// Flight missions keep FIK and KAMIEŃ; a fort brings the hero power instead.
 for (const level of LEVELS) {
-  assert.equal(level.airMove, level.number >= 5);
-  assert.equal(level.diveMove, level.number >= 17);
+  assert.equal(level.airMove, !level.towers && level.number >= 5);
+  assert.equal(level.diveMove, !level.towers && level.number >= 17);
 }
+assert.match(html, /id="powerButton"/);
+assert.match(main, /model\.usePower\(\)/);
 assert.match(html, /id="fullscreenButton"/);
 assert.match(html, /id="fullscreenGuide"/);
 assert.match(main, /window\.navigator\.standalone/);

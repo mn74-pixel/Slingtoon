@@ -1,13 +1,13 @@
-import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.52.0";
-import { RENDER_MAX_PIXELS, clientPointToWorld, createCropFreeViewport, edgeMarker, renderScale } from "./viewport.js?v=0.52.0";
-import { POUCH_HALF, REST_LEAN, pouchEnds, restPosition, restingGrip, slingFrame, slingGrip } from "./sling-art.js?v=0.52.0";
-import { drawInteractions, drawObjective } from "./interactions-renderer.js?v=0.52.0";
-import { drawCampaignGoal, drawCampaignScene, drawWorldCompanion, setSceneBleed } from "./world-renderer.js?v=0.52.0";
-import { drawSceneLife } from "./scene-life.js?v=0.52.0";
-import { createRng, sprayAngle, stepParticle } from "./particles.js?v=0.52.0";
-import { speechBubbleLayout } from "./prop-art.js?v=0.52.0";
-import { BLOCK_COLOURS, drawTowerBlocks } from "./tower-art.js?v=0.52.0";
-import { surfaceBelow } from "./physics.js?v=0.52.0";
+import { GameMode, GamePhase, Modifier, Personality, WORLD } from "./game.js?v=0.53.0";
+import { RENDER_MAX_PIXELS, clientPointToWorld, createCropFreeViewport, edgeMarker, renderScale } from "./viewport.js?v=0.53.0";
+import { POUCH_HALF, REST_LEAN, pouchEnds, restPosition, restingGrip, slingFrame, slingGrip } from "./sling-art.js?v=0.53.0";
+import { drawInteractions, drawObjective } from "./interactions-renderer.js?v=0.53.0";
+import { drawCampaignGoal, drawCampaignScene, drawWorldCompanion, setSceneBleed } from "./world-renderer.js?v=0.53.0";
+import { drawSceneLife } from "./scene-life.js?v=0.53.0";
+import { createRng, sprayAngle, stepParticle } from "./particles.js?v=0.53.0";
+import { speechBubbleLayout } from "./prop-art.js?v=0.53.0";
+import { BLOCK_COLOURS, drawTowerBlocks } from "./tower-art.js?v=0.53.0";
+import { surfaceBelow } from "./physics.js?v=0.53.0";
 
 // How long the hero takes to turn around when a bounce sends them back.
 const TURN_SECONDS = 0.12;
@@ -115,6 +115,7 @@ export class GameRenderer {
     this.fanAngle = 0;
     this.time = 0;
     this.sceneSpan = { left: 0, width: WORLD.width };
+    this.blasts = [];
     // Seeded, and reseeded per flight, so the same shot throws the same sparks
     // in the game, in a replay and in an offline render.
     this.random = createRng(1);
@@ -176,6 +177,7 @@ export class GameRenderer {
   handleGameEvent(event) {
     if (event.type === "reset" || event.type === "mode") {
       this.particles.length = 0;
+      if (this.blasts) this.blasts.length = 0;
       this.callouts.length = 0;
       this.trail.length = 0;
       this.lastTrailPoint = null;
@@ -252,6 +254,27 @@ export class GameRenderer {
       this.callouts.push({ x: goal.x, y: tagY, text: this.model.level.result.successTag, age: 0, life: 1.6, angle: -0.08 });
     }
 
+    // A hero power: its name over the hero, and a burst that reads as that power.
+    if (event.type === "power") {
+      this.callouts.push({ x: event.x, y: event.y - 70, text: event.name, age: 0, life: 1.1, angle: -0.06 });
+      if (event.kind === "blast") {
+        (this.blasts ??= []).push({ x: event.x, y: event.y, age: 0 });
+        this.shake = Math.max(this.shake, 8);
+        this.spawnImpact(event.x, event.y, 26);
+      } else if (event.kind === "ram") {
+        this.shake = Math.max(this.shake, 4);
+        this.spawnDust(event.x, event.y, 12);
+      } else if (event.kind === "drop") {
+        this.spawnDust(event.x, event.y, 10);
+      } else {
+        this.spawnDust(event.x, event.y, 16);
+      }
+    }
+    if (event.type === "stomp") {
+      (this.blasts ??= []).push({ x: event.x, y: event.y, age: 0, small: true });
+      this.shake = Math.max(this.shake, 6);
+      this.spawnImpact(event.x, event.y, 18);
+    }
     if (event.type === "block-break") {
       this.spawnDebris(event);
       // Points from blocks breaking close together add up in one number
@@ -342,6 +365,11 @@ export class GameRenderer {
     this.trail = this.trail.filter((point) => point.age < 0.75);
 
     for (const particle of this.particles) stepParticle(particle, dt, this.model.groundY);
+    // Some tests drive a bare renderer prototype; the ring list may not exist.
+    if (this.blasts?.length) {
+      for (const blast of this.blasts) blast.age += dt;
+      if (this.blasts[0].age > 0.6) this.blasts.shift();
+    }
     this.particles = this.particles.filter((particle) => particle.age < particle.life);
 
     for (const callout of this.callouts) callout.age += dt;
@@ -384,8 +412,10 @@ export class GameRenderer {
     this.drawPhysicalObjects(ctx);
     drawWorldCompanion(ctx, this.model, this.time);
     this.drawAvatarShadow(ctx);
+    this.drawClones(ctx);
     this.drawAvatar(ctx);
     this.drawSlingFront(ctx);
+    this.drawBlasts(ctx);
     this.drawOffscreenMarker(ctx);
     this.drawParticles(ctx);
     this.drawCallouts(ctx);
@@ -1151,6 +1181,47 @@ export class GameRenderer {
   // lip, which sits at his seat, is drawn afterwards. That is what keeps the
   // band off the face at every pull: no offset can do it, because a deep pull
   // carries the hero past the fork tips himself.
+  // The copies of a split hero: the same character, smaller, tumbling.
+  drawClones(ctx) {
+    const model = this.model;
+    if (!model.clones?.length) return;
+    const scale = (model.avatarRadius / 35) * 0.72;
+    for (const clone of model.clones) {
+      if (!clone.alive) continue;
+      ctx.save();
+      ctx.translate(clone.x, clone.y);
+      ctx.rotate(clone.age * clone.spin * 0.35);
+      ctx.scale(scale * model.facing, scale);
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
+      this.drawPersonalityBack(ctx, model.personality);
+      this.drawLimbs(ctx, model.personality, model.phase);
+      this.drawBody(ctx, model.personality);
+      this.drawHead(ctx, "panic", model.personality);
+      this.drawPersonalityFront(ctx, model.personality);
+      ctx.restore();
+    }
+  }
+
+  // The shock ring of a blast (PANIKA!) or of a stone drop (OM).
+  drawBlasts(ctx) {
+    if (!this.blasts?.length) return;
+    ctx.save();
+    for (const blast of this.blasts) {
+      const life = blast.small ? 0.35 : 0.5;
+      const t = clamp(blast.age / life, 0, 1);
+      const radius = (blast.small ? 120 : 175) * (0.25 + t * 0.75);
+      ctx.globalAlpha = 1 - t;
+      ctx.strokeStyle = PALETTE.gold;
+      ctx.lineWidth = 10 * (1 - t) + 2;
+      ctx.beginPath(); ctx.arc(blast.x, blast.y, radius, 0, Math.PI * 2); ctx.stroke();
+      ctx.strokeStyle = PALETTE.cream;
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(blast.x, blast.y, radius * 0.7, 0, Math.PI * 2); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
   // Heroes still waiting for their turn this round, lined up on the ground
   // behind the sling. Tower missions only: everywhere else a round is one shot.
   drawShotQueue(ctx) {
